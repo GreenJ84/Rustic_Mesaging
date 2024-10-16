@@ -8,42 +8,22 @@ use crate::contexts::member_context::{MemberDispatch, get_servers, TMemberContex
 use crate::models::server::{MultiServer, Server};
 use crate::utils::auth_token;
 use crate::comps::modal::Modal;
+use crate::models::server_membership::ServerMembership;
+use crate::utils::api_requests::{api_delete, api_get, api_post};
 use crate::views::home::HomeRoute;
 use crate::views::home::me::MeRoute;
 
 #[function_component(DiscoverServersModal)]
 pub fn discover_servers() -> Html {
     let member_ctx = use_context::<TMemberContext>().unwrap();
-    let servers = use_state(|| MultiServer::default());
+    let servers_state = use_state(|| MultiServer::default());
 
     {
-        let servers = servers.clone();
+        let servers_state = servers_state.clone();
         use_effect_with(member_ctx.servers.clone(), move|_|{
             spawn_local(async move {
-                let request = Request::get("http://localhost:8000/server/all")
-                    .header("Content-Type", "application/x-www-form-urlencoded")
-                    .header("Authorization", &auth_token())
-                    .build()
-                    .unwrap()
-                    .send()
-                    .await;
-                match request {
-                    Ok(response) => {
-                        if response.ok() {
-                            let text = response.text().await.unwrap_or_default();
-                            // Try to parse the response body into the expected struct
-                            match serde_json::from_str::<MultiServer>(&text) {
-                                Ok(server_data) => {
-                                    servers.set(server_data);
-                                }
-                                Err(_) => {
-                                    log::error!("Failed to parse response");
-                                }
-                            }
-                        }
-                    },
-                    Err(err) => { log::error!("Failed to send request: {:?}", err); }
-                }
+                let servers = api_get::<MultiServer>(String::from("server/all")).await.unwrap();
+                servers_state.set(servers);
             })
         });
     }
@@ -64,7 +44,7 @@ pub fn discover_servers() -> Html {
             <>
                 <h2>{ "Discover Servers" }</h2>
                 <ul>
-                    { for servers.servers.clone().into_iter().map(|server| {
+                    { for servers_state.servers.clone().into_iter().map(|server| {
                         html!(
                             <ServerDiscoveryItem server={server}/>
                         )
@@ -91,7 +71,7 @@ fn discover_server_item(ServerItemProps { server }: &ServerItemProps) -> Html {
         let server = server.clone();
         use_effect_with(member_ctx.servers.clone(), move |_| {
             is_member.set(member_ctx.servers.servers.contains(&server));
-        })
+        });
     }
 
     let on_click = {

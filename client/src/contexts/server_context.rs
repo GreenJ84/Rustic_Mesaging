@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::models::channel::{Channel, MultiChannel};
 use crate::models::post::{MultiPost, Post};
 use crate::models::server::Server;
-use crate::utils::auth_token;
+use crate::utils::api_requests::api_get;
 
 pub type TServerContext = UseReducerHandle<ServerContext>;
 
@@ -115,73 +115,13 @@ pub fn server_provider(props: &ChildrenProps) -> Html {
 }
 
 pub async fn get_server(server_id: i32) -> Result<Server, ()> {
-    let result =
-        Request::get(&format!("http://localhost:8000/server/{}", server_id))
-            .header("Authorization", &auth_token())
-            .send()
-            .await;
-    match result {
-        Ok(response) => {
-            if response.ok() {
-                match response.json::<Server>().await {
-                    Ok(server) => {
-                        Ok(server)
-                    }
-                    Err(err) => { log::error!("Failed to parse response: {:?}", err); Err(()) },
-                }
-            } else {
-                log::error!("Failed to fetch servers: {}", response.status());
-                Err(())
-            }
-        }
-        Err(err) => { log::error!("Request failed: {:?}", err); Err(()) },
-    }
+     api_get::<Server>(format!("server/{}", server_id)).await
 }
 
 pub async fn get_server_channels(server_id: i32) -> Result<MultiChannel, ()> {
-    let result =
-        Request::get(&format!("http://localhost:8000/server/{}/channels", server_id))
-            .header("Authorization", &auth_token())
-            .send()
-            .await;
-    match result {
-        Ok(response) => {
-            if response.ok() {
-                match response.json::<MultiChannel>().await {
-                    Ok(thread) => {
-                        Ok(thread)
-                    }
-                    Err(err) => { log::error!("Failed to parse response: {:?}", err); Err(()) },
-                }
-            } else {
-                log::error!("Failed to fetch servers: {}", response.status());
-                Err(())
-            }
-        }
-        Err(err) => { log::error!("Request failed: {:?}", err); Err(()) },
-    }
+    api_get::<MultiChannel>(format!("server/{}/channels", server_id)).await
 }
 
 pub async fn get_channel_thread(channel_id: i32) -> Result<MultiPost, ()> {
-    let result =
-        Request::get(&format!("http://localhost:8000/channel/{}/posts", channel_id))
-            .header("Authorization", &auth_token())
-            .send()
-            .await;
-    match result {
-        Ok(response) => {
-            if response.ok() {
-                match response.json::<MultiPost>().await {
-                    Ok(thread) => {
-                        Ok(thread)
-                    }
-                    Err(err) => { log::error!("Failed to parse response: {:?}", err); Err(()) },
-                }
-            } else {
-                log::error!("Failed to fetch servers: {}", response.status());
-                Err(())
-            }
-        }
-        Err(err) => { log::error!("Request failed: {:?}", err); Err(()) },
-    }
+    api_get::<MultiPost>(format!("channel/{}/posts", channel_id)).await
 }

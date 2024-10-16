@@ -11,7 +11,6 @@ use crate::models::{
     server::MultiServer
 };
 use crate::utils::api_requests::api_get;
-use crate::utils::auth_token;
 
 pub type TChatContext = UseReducerHandle<ChatContext>;
 

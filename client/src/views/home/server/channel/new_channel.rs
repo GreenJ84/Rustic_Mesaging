@@ -6,11 +6,11 @@ use yew_router::hooks::use_navigator;
 use crate::models::channel::Channel;
 use crate::contexts::member_context::{MemberDispatch, get_servers, TMemberContext};
 use crate::models::server::{MultiServer, Server};
-use crate::utils::auth_token;
 use crate::comps::modal::{Modal, toggle_modal};
 use crate::views::home::HomeRoute;
 use crate::views::home::me::MeRoute;
 use crate::contexts::server_context::{get_server_channels, ServerDispatch, TServerContext};
+use crate::utils::api_requests::{api_post, PostResponse};
 use crate::views::home::server::ServerRoute;
 
 #[function_component(NewChannelForm)]
@@ -35,40 +35,17 @@ pub fn new_channel_modal() -> Html {
 
             let name = name_ref.cast::<web_sys::HtmlInputElement>().unwrap().value();
             let mut form_data = vec![
-                ("name", name.clone()),
-                ("server_id", server_ctx.current_server.id.clone().to_string())
+                (String::from("name"), name.clone()),
+                (String::from("server_id"), server_ctx.current_server.id.clone().to_string())
             ];
             wasm_bindgen_futures::spawn_local(async move {
-                let app_ctx = app_ctx.clone();
-                let server_ctx = server_ctx.clone();
-                let request = Request::post("http://localhost:8000/channel")
-                    .header("Content-Type", "application/x-www-form-urlencoded")
-                    .header("Authorization", &auth_token())
-                    .body(form_data.iter()
-                        .map(|(key, value)| format!("{}={}", key, urlencoding::encode(value)))
-                        .collect::<Vec<String>>()
-                        .join("&")
-                    )
-                    .unwrap()
-                    .send()
-                    .await;
-
-                match request {
-                    Ok(response) => {
-                        if response.ok() {
-                            let text = response.text().await.unwrap_or_default();
-                            match serde_json::from_str::<Channel>(&text) {
-                                Ok(channel) => {
-                                    server_ctx.dispatch(ServerDispatch::UpdateServerChannels(get_server_channels(server_ctx.current_server.id.clone()).await.unwrap()));
-                                    server_ctx.dispatch(ServerDispatch::UpdateChannel(channel.clone()));
-                                    toggle_modal("modal_overlay");
-                                    submit_nav.push(&ServerRoute::Channel { server_id: server_ctx.current_channel.id, channel_id: channel.id })
-                                }
-                                Err(_) => { log::error!("Failed to parse response"); }
-                            }
-                        } else { log::error!("Request failed with status: {}", response.status()); }
+                if let Ok(post_response) = api_post::<Channel>(String::from("channel"), form_data, false).await{
+                    if let PostResponse::NonResponse(channel) = post_response {
+                        server_ctx.dispatch(ServerDispatch::UpdateServerChannels(get_server_channels(server_ctx.current_server.id.clone()).await.unwrap()));
+                        server_ctx.dispatch(ServerDispatch::UpdateChannel(channel.clone()));
+                        toggle_modal("modal_overlay");
+                        submit_nav.push(&ServerRoute::Channel { server_id: server_ctx.current_channel.id, channel_id: channel.id })
                     }
-                    Err(err) => { log::error!("Failed to send request: {:?}", err); }
                 }
             });
         })

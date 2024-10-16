@@ -6,11 +6,11 @@ use crate::models::chat::Chat;
 use crate::contexts::member_context::TMemberContext;
 use crate::models::friends::FullFriend;
 use crate::models::server::Server;
-use crate::utils::auth_token;
 use crate::comps::icon::get_random_svg;
 use crate::comps::modal::Modal;
 use crate::views::home::HomeRoute;
 use crate::contexts::chat_context::{ChatDispatch, TChatContext};
+use crate::utils::api_requests::{api_post, api_put, PostResponse};
 use crate::views::home::me::MeRoute;
 
 #[function_component(NewChatForm)]
@@ -58,37 +58,19 @@ pub fn new_chat_modal() -> Html {
                 .map(|friend: &FullFriend| { friend.member.username.clone() })
                 .collect::<Vec<String>>();
 
-            wasm_bindgen_futures::spawn_local(async move {
-                let request = Request::post("http://localhost:8000/chat")
-                    .header("Content-Type", "application/x-www-form-urlencoded")
-                    .header("Authorization", &auth_token())
-                    .body(format!("name={}&{}",
-                        if name.is_empty() {selected_friends.join(",")} else {name.clone()},
-                        selected_friend_ids.iter().map(|id|{
-                            format!("members={}", id)
-                        }).collect::<Vec<String>>().join("&")
-                    ))
-                    .unwrap()
-                    .send()
-                    .await;
+            let mut form_data = vec![
+                (String::from("name"), if name.is_empty() {selected_friends.join(",")} else {name.clone()}),
+            ];
+            form_data.extend(selected_friend_ids.iter().map(|id|{
+                (String::from("member"), id.to_string())
+            }).collect::<Vec<(String, String)>>());
 
-                match request {
-                    Ok(response) => {
-                        // Check if the response is okay (2xx status)
-                        if response.ok() {
-                            let text = response.text().await.unwrap_or_default();
-                            // Try to parse the response body into the expected struct
-                            match serde_json::from_str::<Chat>(&text) {
-                                Ok(chat) => {
-                                    chat_ctx.dispatch(ChatDispatch::UpdateCurrentChat(chat.clone()));
-                                    navigation.push(&MeRoute::ChatRoom { chat_id: chat.id });
-                                }
-                                Err(_) => {log::error!("Failed to parse response");}
-                            }
-                        } else {log::error!("Request failed with status: {}", response.status());}
+            wasm_bindgen_futures::spawn_local(async move {
+                if let Ok(post_response) = api_post::<Chat>(String::from("chat"), form_data, false).await {
+                    if let PostResponse::NonResponse(chat) = post_response {
+                        chat_ctx.dispatch(ChatDispatch::UpdateCurrentChat(chat.clone()));
+                        navigation.push(&MeRoute::ChatRoom { chat_id: chat.id });
                     }
-                    // Handle request failure
-                    Err(err) => { log::error!("Failed to send request: {:?}", err); }
                 }
             });
         })

@@ -17,12 +17,12 @@ use crate::contexts::{
     chat_context::{ChatDispatch, TChatContext},
     member_context::TMemberContext,
 };
+use crate::utils::api_requests::api_get;
 use crate::views::home::me::{
     chat_menu::chat_menu_items::ChatMenuItem,
     MeRoute,
     new_chat::NewChatForm,
 };
-use crate::utils::auth_token;
 
 #[function_component(ChatMenu)]
 pub fn chat_menu() -> Html {
@@ -32,25 +32,8 @@ pub fn chat_menu() -> Html {
     let inner_ctx = chat_ctx.clone();
     use_effect_with((), move |_| {
         spawn_local(async move {
-            let result =
-                Request::get("http://localhost:8000/member/chats")
-                    .header("Authorization", &auth_token())
-                    .send()
-                    .await;
-            match result {
-                Ok(response) => {
-                    if response.ok() {
-                        match response.json::<MultiChatPreview>().await {
-                            Ok(multi_chat_preview) => {
-                                inner_ctx.dispatch(ChatDispatch::UpdatePreviews(multi_chat_preview));
-                            }
-                            Err(err) => log::error!("Failed to parse response: {:?}", err),
-                        }
-                    } else {
-                        log::error!("Failed to fetch servers: {}", response.status());
-                    }
-                }
-                Err(err) => log::error!("Request failed: {:?}", err),
+            if let Ok(previews) = api_get::<MultiChatPreview>(String::from("member/chats")).await {
+                inner_ctx.dispatch(ChatDispatch::UpdatePreviews(previews));
             }
         });
     });

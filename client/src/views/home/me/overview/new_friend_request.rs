@@ -4,11 +4,11 @@ use yew::prelude::*;
 use yew_router::hooks::use_navigator;
 use crate::models::member::{Member, MemberShort};
 use crate::models::server::Server;
-use crate::utils::auth_token;
 use crate::comps::modal::toggle_modal;
 use crate::comps::modal_portal::ModalPortal;
 use crate::views::home::HomeRoute;
 use crate::contexts::member_context::{MemberDispatch, get_friends, get_requests, get_servers, TMemberContext};
+use crate::utils::api_requests::{api_get, api_post, PostResponse};
 
 #[function_component(NewFriendRequest)]
 pub fn new_friend_request() -> Html {
@@ -34,27 +34,10 @@ pub fn new_friend_request() -> Html {
             let username = username_ref.cast::<web_sys::HtmlInputElement>().unwrap().value();
 
             wasm_bindgen_futures::spawn_local(async move {
-                let request = Request::get(&format!("http://localhost:8000/member/{}", username))
-                    .header("Content-Type", "application/x-www-form-urlencoded")
-                    .header("Authorization", &auth_token())
-                    .send()
-                    .await;
-
-                match request {
-                    Ok(response) => {
-                        if response.ok() {
-                            let text = response.text().await.unwrap_or_default();
-                            match serde_json::from_str::<MemberShort>(&text) {
-                                Ok(member) => {
-                                    receiver.set(member);
-                                    toggle_modal("modal_overlay");
-                                    is_modal_open.set(!*is_modal_open);
-                                }
-                                Err(_) => { log::error!("Failed to parse response"); }
-                            }
-                        } else { log::error!("Request failed with status: {}", response.status()); }
-                    }
-                    Err(err) => { log::error!("Failed to send request: {:?}", err); }
+                if let Ok(member) = api_get::<MemberShort>(format!("member/{}", username)).await {
+                    receiver.set(member);
+                    toggle_modal("modal_overlay");
+                    is_modal_open.set(!*is_modal_open);
                 }
             });
         })
@@ -73,43 +56,28 @@ pub fn new_friend_request() -> Html {
             let receiver = receiver.clone();
             let note = note_ref.cast::<web_sys::HtmlTextAreaElement>().unwrap().value();
             let mut form_data = vec![
-                ("sender_id", app_ctx.member.id.to_string()),
-                ("receiver_id", receiver.id.to_string()),
-                ("note", note.clone()),
+                (String::from("sender_id"), app_ctx.member.id.to_string()),
+                (String::from("receiver_id"), receiver.id.to_string()),
+                (String::from("note"), note.clone()),
             ];
             wasm_bindgen_futures::spawn_local(async move {
-                let request = Request::post("http://localhost:8000/request")
-                    .header("Content-Type", "application/x-www-form-urlencoded")
-                    .header("Authorization", &auth_token())
-                    .body(form_data.into_iter()
-                        .map(|(key, value)| format!("{}={}", key, urlencoding::encode(&value)))
-                        .collect::<Vec<String>>()
-                        .join("&")
-                    )
-                    .unwrap()
-                    .send()
-                    .await;
-
-                match request {
-                    Ok(response) => {
-                        if response.ok() {
-                            match response.status(){
-                                201 => {
-                                    toggle_modal("modal_overlay");
-                                    app_ctx.dispatch(MemberDispatch::UpdateRequests(get_requests().await.unwrap()));
-                                },
-                                200 => {
-                                    toggle_modal("modal_overlay");
-                                    app_ctx.dispatch(MemberDispatch::UpdateRequests(get_requests().await.unwrap()));
-                                    app_ctx.dispatch(MemberDispatch::UpdateFriends(get_friends().await.unwrap()));
-                                },
-                                _ => {
-                                    log::error!("Failed to process response");
-                                }
+                if let Ok(res) = api_post::<()>(String::from("request"), form_data, true).await {
+                    if let PostResponse::Response(_, response) = res {
+                        match response.status(){
+                            201 => {
+                                toggle_modal("modal_overlay");
+                                app_ctx.dispatch(MemberDispatch::UpdateRequests(get_requests().await.unwrap()));
+                            },
+                            200 => {
+                                toggle_modal("modal_overlay");
+                                app_ctx.dispatch(MemberDispatch::UpdateRequests(get_requests().await.unwrap()));
+                                app_ctx.dispatch(MemberDispatch::UpdateFriends(get_friends().await.unwrap()));
+                            },
+                            _ => {
+                                log::error!("Failed to process response");
                             }
-                        } else { log::error!("Request failed with status: {}", response.status()); }
+                        }
                     }
-                    Err(err) => { log::error!("Failed to send request: {:?}", err); }
                 }
             });
         })

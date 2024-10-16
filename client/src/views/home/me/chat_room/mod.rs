@@ -8,11 +8,11 @@ use yew::{Callback, function_component, Html, html, Properties, use_context, use
 use crate::contexts::member_context::{MemberDispatch, get_servers, TMemberContext};
 use crate::models::message::{Message, MessageThread};
 use crate::models::server::{MultiServer, Server};
-use crate::utils::auth_token;
 use crate::comps::icon::get_random_svg;
 use crate::comps::modal::toggle_modal;
 use crate::views::home::HomeRoute;
 use crate::contexts::chat_context::{ChatContext, ChatDispatch, get_message_thread, TChatContext};
+use crate::utils::api_requests::api_post;
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
@@ -41,39 +41,24 @@ pub fn direct_message(Props { chat_id }: &Props) -> Html {
         let member_ctx = member_ctx.clone();
         let chat_ctx = chat_ctx.clone();
 
-        move || {
+        Callback::from(move |e: SubmitEvent| {
             let member_ctx = member_ctx.clone();
             let chat_ctx = chat_ctx.clone();
             let message: HtmlTextAreaElement = textarea_ref.cast::<HtmlTextAreaElement>().unwrap();
             let mut form_data = vec![
-                ("content", message.value().clone()),
-                ("sender_id", member_ctx.member.id.to_string()),
-                ("chat_id", chat_ctx.current_chat.id.to_string()),
+                (String::from("content"), message.value().clone()),
+                (String::from("sender_id"), member_ctx.member.id.to_string()),
+                (String::from("chat_id"), chat_ctx.current_chat.id.to_string()),
             ];
             spawn_local(async move {
-                let request = Request::post("http://localhost:8000/message")
-                    .header("Content-Type", "application/x-www-form-urlencoded")
-                    .header("Authorization", &auth_token())
-                    .body(form_data.iter()
-                        .map(|(key, value)| format!("{}={}", key, urlencoding::encode(value)))
-                        .collect::<Vec<String>>()
-                        .join("&")
-                    )
-                    .unwrap()
-                    .send()
-                    .await;
-
-                match request {
-                    Ok(response) => {
-                        if response.ok() {
-                            message.set_value("");
-                            chat_ctx.dispatch(ChatDispatch::UpdateCurrentThread(get_message_thread(chat_ctx.current_chat.id).await.unwrap()));
-                        } else { log::error!("Request failed with status: {}", response.status()); }
-                    }
-                    Err(err) => { log::error!("Failed to send request: {:?}", err); }
+                if let Ok(post_response) = api_post::<Message>(String::from("message"), form_data, false).await {
+                    message.set_value("");
+                    chat_ctx.dispatch(ChatDispatch::UpdateCurrentThread(
+                        get_message_thread(chat_ctx.current_chat.id).await.unwrap()
+                    ));
                 }
             });
-        }
+        })
     };
 
     html! {
@@ -125,7 +110,7 @@ pub fn direct_message(Props { chat_id }: &Props) -> Html {
                     onkeydown={Callback::from(move |e: KeyboardEvent| {
                         if e.key() == "Enter" && !e.shift_key() {
                             e.prevent_default();
-                            on_submit();
+                            on_submit.emit(SubmitEvent::new("submit").unwrap());
                         }
                     })}
                 >

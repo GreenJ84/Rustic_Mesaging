@@ -5,11 +5,11 @@ use yew::{Callback, function_component, Html, html, Properties, use_context, use
 use yew_router::hooks::{use_location, use_navigator};
 use crate::contexts::member_context::{MemberDispatch, get_servers, TMemberContext};
 use crate::models::server::{MultiServer, Server};
-use crate::utils::auth_token;
 use crate::comps::modal::{Modal, toggle_modal};
 use crate::views::home::HomeRoute;
 use crate::views::home::me::MeRoute;
 use crate::contexts::server_context::{ServerDispatch, TServerContext};
+use crate::utils::api_requests::api_put;
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
@@ -45,44 +45,20 @@ pub fn edit_server_modal(Props { callback }: &Props) -> Html {
             let name = name_ref.cast::<web_sys::HtmlInputElement>().unwrap().value();
             let description = description_ref.cast::<web_sys::HtmlInputElement>().unwrap().value();
             let mut form_data = vec![
-                ("name", name.clone()),
-                ("description", description.clone()),
-                ("icon", String::new()),
-                ("owner_id", app_ctx.member.id.clone().to_string())
+                (String::from("name"), name.clone()),
+                (String::from("description"), description.clone()),
+                (String::from("icon"), String::new()),
+                (String::from("owner_id"), app_ctx.member.id.clone().to_string())
             ];
             wasm_bindgen_futures::spawn_local(async move {
-                let request = Request::put(
-                    &format!("http://localhost:8000/server/{}",
-                            server_ctx.current_server.id
-                    ))
-                    .header("Content-Type", "application/x-www-form-urlencoded")
-                    .header("Authorization", &auth_token())
-                    .body(form_data.iter()
-                        .map(|(key, value)| format!("{}={}", key, urlencoding::encode(value)))
-                        .collect::<Vec<String>>()
-                        .join("&")
-                    )
-                    .unwrap()
-                    .send()
-                    .await;
-
-                match request {
-                    Ok(response) => {
-                        if response.ok() {
-                            let text = response.text().await.unwrap_or_default();
-                            match serde_json::from_str::<Server>(&text) {
-                                Ok(server) => {
-                                    app_ctx.dispatch(MemberDispatch::UpdateServers(get_servers().await.unwrap()));
-                                    toggle_modal("modal_overlay");
-                                    callback.emit(MouseEvent::new("submit").unwrap());
-                                    server_ctx.dispatch(ServerDispatch::UpdateServer(server.clone()));
-                                    // location.refresh();
-                                }
-                                Err(_) => { log::error!("Failed to parse response"); }
-                            }
-                        } else { log::error!("Request failed with status: {}", response.status()); }
-                    }
-                    Err(err) => { log::error!("Failed to send request: {:?}", err); }
+                if let Ok(server) = api_put::<Server>(
+                    format!("server/{}", server_ctx.current_server.id),
+                    form_data
+                ).await{
+                    app_ctx.dispatch(MemberDispatch::UpdateServers(get_servers().await.unwrap()));
+                    toggle_modal("modal_overlay");
+                    callback.emit(MouseEvent::new("submit").unwrap());
+                    server_ctx.dispatch(ServerDispatch::UpdateServer(server.clone()));
                 }
             });
         })

@@ -5,8 +5,8 @@ use rand::prelude::IndexedRandom;
 use crate::comps::icon::get_random_svg;
 use crate::models::chat::{Chat, MultiChatPreview};
 use crate::contexts::chat_context::{ChatDispatch, TChatContext};
+use crate::utils::api_requests::api_delete;
 use crate::views::home::me::MeRoute;
-use crate::utils::auth_token;
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
@@ -45,24 +45,17 @@ pub fn chat_menu_icon(Props { chat }: &Props) -> Html {
                             let inner_ctx = inner_ctx.clone();
 
                             wasm_bindgen_futures::spawn_local(async move {
-                                let request = Request::delete(&format!("http://localhost:8000/chat/{}/leave", chat_clone.id))
-                                    .header("Authorization", &auth_token())
-                                    .send()
-                                    .await;
-                                match request {
-                                    Ok(response) => {
-                                       inner_ctx.dispatch(ChatDispatch::UpdatePreviews(
-                                            MultiChatPreview { chat_previews: inner_ctx.previews.chat_previews
-                                                .clone()
-                                                .into_iter()
-                                                .filter(|preview|
-                                                    preview.ne(&chat_clone)
-                                                )
-                                                .collect::<Vec<Chat>>()
-                                            }
-                                       ))
-                                    }
-                                    Err(err) => log::error!("Request failed: {:?}", err),
+                                if let Ok(_) = api_delete(format!("chat/{}/leave", chat_clone.id)).await {
+                                    inner_ctx.dispatch(ChatDispatch::UpdatePreviews(
+                                        MultiChatPreview { chat_previews: inner_ctx.previews.chat_previews
+                                            .clone()
+                                            .into_iter()
+                                            .filter(|preview|
+                                                preview.ne(&chat_clone)
+                                            )
+                                            .collect::<Vec<Chat>>()
+                                        }
+                                    ))
                                 }
                             })
                         }

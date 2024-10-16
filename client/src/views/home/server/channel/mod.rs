@@ -3,10 +3,11 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
 use web_sys::{HtmlTextAreaElement, InputEvent, KeyboardEvent, ScrollBehavior};
 use yew::{Callback, function_component, Html, html, use_context, use_effect_with, use_node_ref};
-use crate::utils::auth_token;
 use crate::comps::icon::get_random_svg;
 use crate::contexts::server_context::{get_channel_thread, ServerDispatch, TServerContext};
 use crate::contexts::member_context::TMemberContext;
+use crate::models::post::Post;
+use crate::utils::api_requests::api_post;
 
 pub(crate) mod welcome;
 pub(crate) mod new_channel;
@@ -40,31 +41,14 @@ pub fn channel() -> Html {
             let server_ctx = server_ctx.clone();
             let message: HtmlTextAreaElement = textarea_ref.cast::<HtmlTextAreaElement>().unwrap();
             let mut form_data = vec![
-                ("content", message.value().clone()),
-                ("author_id", member_ctx.member.id.to_string()),
-                ("channel_id", server_ctx.current_channel.id.to_string()),
+                (String::from("content"), message.value().clone()),
+                (String::from("author_id"), member_ctx.member.id.to_string()),
+                (String::from("channel_id"), server_ctx.current_channel.id.to_string()),
             ];
             spawn_local(async move {
-                let request = Request::post("http://localhost:8000/post")
-                    .header("Content-Type", "application/x-www-form-urlencoded")
-                    .header("Authorization", &auth_token())
-                    .body(form_data.iter()
-                        .map(|(key, value)| format!("{}={}", key, urlencoding::encode(value)))
-                        .collect::<Vec<String>>()
-                        .join("&")
-                    )
-                    .unwrap()
-                    .send()
-                    .await;
-
-                match request {
-                    Ok(response) => {
-                        if response.ok() {
-                            message.set_value("");
-                            server_ctx.dispatch(ServerDispatch::UpdateChannelThread(get_channel_thread(server_ctx.current_channel.id).await.unwrap()));
-                        } else { log::error!("Request failed with status: {}", response.status()); }
-                    }
-                    Err(err) => { log::error!("Failed to send request: {:?}", err); }
+                if let Ok(_) = api_post::<Post>(String::from("post"), form_data,false).await{
+                    message.set_value("");
+                    server_ctx.dispatch(ServerDispatch::UpdateChannelThread(get_channel_thread(server_ctx.current_channel.id).await.unwrap()));
                 }
             });
         }

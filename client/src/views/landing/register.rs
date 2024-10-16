@@ -9,6 +9,7 @@ use crate::AppRoute;
 use crate::comps::modal::toggle_modal;
 use crate::models::member::Member;
 use crate::utils::api_requests::{api_post, PostResponse};
+use crate::utils::set_auth_token;
 use crate::views::{
     home::me::MeRoute,
     landing::LandingRoute
@@ -53,17 +54,11 @@ pub fn register_modal() -> Html {
                         if let PostResponse::Response(member, response) = post_response {
                             if let Some(auth_header) = response.headers().get("authorization") {
                                 if let Some(bearer_token) = auth_header.strip_prefix("Bearer ") {
-                                    if let Err(_) = web_sys::window()
-                                        .unwrap()
-                                        .local_storage()
-                                        .unwrap()
-                                        .unwrap()
-                                        .set_item("jwt_token", bearer_token)
+                                    if let Err(_) = set_auth_token(bearer_token.to_string())
                                     {
                                         log::error!("Failed to save authentication");
                                     } else {
                                         log::info!("Registration successful.");
-                                        // Save member
                                         member_ctx.dispatch(MemberDispatch::UpdateMember(member));
                                         navigation.push(&MeRoute::Overview)
                                     }

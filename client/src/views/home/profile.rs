@@ -7,13 +7,12 @@ use yew_router::navigator::Navigator;
 use crate::AppRoute;
 use crate::models::member::Member;
 use crate::models::server::Server;
-use crate::utils::auth_token;
 use crate::comps::icon::get_random_svg;
 use crate::comps::modal::{Modal, toggle_modal};
 use crate::views::home::edit_member::EditMemberModal;
 use crate::views::home::HomeRoute;
 use crate::contexts::member_context::{MemberDispatch, get_friends, get_requests, get_servers, TMemberContext};
-
+use crate::utils::api_requests::{api_delete, api_put};
 
 #[function_component(Profile)]
 pub fn profile() -> Html {
@@ -50,23 +49,11 @@ pub fn profile() -> Html {
 
     let delete_account = {
         let logout = logout.clone();
-
         Callback::from(move |e: MouseEvent| {
             let logout = logout.clone();
-
             spawn_local(async move {
-                let request = Request::delete("http://localhost:8000/member")
-                    .header("Authorization", &auth_token())
-                    .send()
-                    .await;
-                match request {
-                    Ok(response) => {
-                        if response.ok() {
-                            log::info!("User deleted");
-                            logout.emit(e);
-                        } else { log::error!("Request failed with status: {}", response.status()); }
-                    }
-                    Err(err) => { log::error!("Failed to send request: {:?}", err); }
+                if let Ok(_) = api_delete(String::from("member")).await {
+                    logout.emit(e);
                 }
             });
         })
@@ -77,33 +64,8 @@ pub fn profile() -> Html {
         let member_ctx = member_ctx_clone.clone();
 
         spawn_local(async move {
-            let request = Request::put(
-                &format!("http://localhost:8000/member{}", if is_password {"/password"} else {""})
-                )
-                .header("Content-Type", "application/x-www-form-urlencoded")
-                .header("Authorization", &auth_token())
-                .body(data.iter()
-                    .map(|(key, value)| format!("{}={}", key, urlencoding::encode(value)))
-                    .collect::<Vec<String>>()
-                    .join("&")
-                )
-                .unwrap()
-                .send()
-                .await;
-            match request {
-                Ok(response) => {
-                    if response.ok() {
-                        let text = response.text().await.unwrap_or_default();
-                        match serde_json::from_str::<Member>(&text) {
-                            Ok(member) => {
-                                member_ctx.dispatch(MemberDispatch::UpdateMember(member));
-                                toggle_modal("new_server_modal_overlay");
-                            }
-                            Err(_) => { log::error!("Failed to parse response"); }
-                        }
-                    } else { log::error!("Request failed with status: {}", response.status()); }
-                }
-                Err(err) => { log::error!("Failed to send request: {:?}", err); }
+            if let Ok(member) = api_put::<Member>(format!("member{}", if is_password {"/password"} else {""}), data).await {
+                member_ctx.dispatch(MemberDispatch::UpdateMember(member));
             }
         });
     };
@@ -120,6 +82,7 @@ pub fn profile() -> Html {
         let old_password_ref = old_password_ref.clone();
 
         Callback::from(move |e: SubmitEvent| {
+            e.prevent_default();
             let update = update.clone();
             let member_ctx = member_ctx.clone();
             let username = new_username_ref.cast::<web_sys::HtmlInputElement>().unwrap().value();
@@ -138,6 +101,7 @@ pub fn profile() -> Html {
         let new_password_ref = new_password_ref.clone();
         let old_password_ref = old_password_ref.clone();
         Callback::from(move |e: SubmitEvent| {
+            e.prevent_default();
             let update = update.clone();
             let member_ctx = member_ctx.clone();
             let password = new_password_ref.cast::<web_sys::HtmlInputElement>().unwrap().value();
@@ -156,6 +120,7 @@ pub fn profile() -> Html {
         let new_email_ref = new_email_ref.clone();
         let old_password_ref = old_password_ref.clone();
         Callback::from(move |e: SubmitEvent| {
+            e.prevent_default();
             let update = update.clone();
             let member_ctx = member_ctx.clone();
             let email = new_email_ref.cast::<web_sys::HtmlInputElement>().unwrap().value();

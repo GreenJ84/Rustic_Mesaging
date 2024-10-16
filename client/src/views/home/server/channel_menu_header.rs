@@ -4,13 +4,13 @@ use web_sys::MouseEvent;
 use yew::{Callback, CallbackRef, function_component, Html, html, Properties, use_context, use_state};
 use yew_router::hooks::use_navigator;
 use crate::models::channel::NewChannel;
-use crate::utils::auth_token;
 use crate::comps::modal::{Modal, toggle_modal};
 use crate::views::home::HomeRoute;
 use crate::views::home::server::channel::edit_server::EditServerForm;
 use crate::views::home::server::channel::new_channel::NewChannelForm;
 use crate::contexts::member_context::{MemberDispatch, get_servers, TMemberContext};
 use crate::contexts::server_context::TServerContext;
+use crate::utils::api_requests::api_delete;
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
@@ -42,22 +42,9 @@ pub fn channel_menu(Props { is_owner }: &Props) -> Html {
             let nav = nav.clone();
 
             spawn_local(async move {
-                let request = Request::delete(
-                    &format!("http://localhost:8000/server/{}/leave",
-                            server_ctx.current_server.id
-                    ))
-                    .header("Authorization", &auth_token())
-                    .send()
-                    .await;
-                match request {
-                    Ok(response) => {
-                        if response.ok() {
-                            app_ctx.dispatch(MemberDispatch::UpdateServers(get_servers().await.unwrap()));
-                            nav.push(&HomeRoute::Me);
-                        } else { log::error!("Request failed with status: {}", response.status()); }
-                    }
-                    // Handle request failure
-                    Err(err) => { log::error!("Failed to send request: {:?}", err); }
+                if let Ok(_) = api_delete(format!("server/{}/leave", server_ctx.current_server.id)).await {
+                    app_ctx.dispatch(MemberDispatch::UpdateServers(get_servers().await.unwrap()));
+                    nav.push(&HomeRoute::Me);
                 }
             });
         })
@@ -74,22 +61,9 @@ pub fn channel_menu(Props { is_owner }: &Props) -> Html {
             let nav = nav.clone();
 
             spawn_local(async move {
-                let request = Request::delete(
-                    &format!("http://localhost:8000/server/{}",
-                             server_ctx.current_server.id
-                    ))
-                    .header("Authorization", &auth_token())
-                    .send()
-                    .await;
-                match request {
-                    Ok(response) => {
-                        if response.ok() {
-                            app_ctx.dispatch(MemberDispatch::UpdateServers(get_servers().await.unwrap()));
-                            nav.push(&HomeRoute::Me);
-                        } else { log::error!("Request failed with status: {}", response.status()); }
-                    }
-                    // Handle request failure
-                    Err(err) => { log::error!("Failed to send request: {:?}", err); }
+                if let Ok(_) = api_delete(format!("server/{}", server_ctx.current_server.id)).await {
+                    app_ctx.dispatch(MemberDispatch::UpdateServers(get_servers().await.unwrap()));
+                    nav.push(&HomeRoute::Me);
                 }
             });
         })

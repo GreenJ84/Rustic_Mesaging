@@ -2,10 +2,10 @@ use gloo::net::http::Request;
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
 use crate::models::friends::FullFriend;
-use crate::utils::auth_token;
 use crate::comps::icon::{get_random_svg, Icon};
 use crate::comps::modal::Modal;
 use crate::contexts::member_context::{MemberDispatch, get_friends, TMemberContext};
+use crate::utils::api_requests::api_delete;
 
 #[derive(Properties, PartialEq)]
 pub struct Props{
@@ -25,20 +25,10 @@ pub fn friend_menu_item(Props { friend }: &Props) -> Html {
             let friend = friend.clone();
 
             spawn_local(async move {
-                let request = Request::delete(
-                    &format!("http://localhost:8000/friend/{}",
-                             friend.member.id.to_string()
-                    ))
-                    .header("Authorization", &auth_token())
-                    .send()
-                    .await;
-                match request {
-                    Ok(response) => {
-                        if response.ok() {
-                            member_ctx.dispatch(MemberDispatch::UpdateFriends(get_friends().await.unwrap()));
-                        } else { log::error!("Request failed with status: {}", response.status()); }
-                    }
-                    Err(err) => { log::error!("Failed to send request: {:?}", err); }
+                if let Ok(_) = api_delete(format!("friend/{}",
+                     friend.member.id.to_string()
+                )).await {
+                    member_ctx.dispatch(MemberDispatch::UpdateFriends(get_friends().await.unwrap()));
                 }
             });
         })

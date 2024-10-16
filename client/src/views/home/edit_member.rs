@@ -36,7 +36,6 @@ pub fn edit_member(EditProps {
                             type="text"
                             id={first_label.clone().to_lowercase()}
                             name={first_label.clone().to_lowercase()}
-                            pattern="[a-zA-Z0-9]{3, 80}"
                             required=true
                         />
                     </label>
@@ -48,7 +47,6 @@ pub fn edit_member(EditProps {
                             type="text"
                             id={"current_password"}
                             name={"current_password"}
-                            pattern="[a-zA-Z0-9]{3, 80}"
                             required=true
                         />
                     </label>

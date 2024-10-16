@@ -1,8 +1,9 @@
+use std::any::TypeId;
 use gloo::net::http::{Method, Request, RequestBuilder, Response};
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use wasm_bindgen_futures::spawn_local;
-use crate::utils::auth_token;
+use crate::utils::get_auth_token;
 
 
 const API_URL: &str = "http://localhost:8000";
@@ -12,7 +13,7 @@ pub async fn api_head(extension: String) -> bool{
         &format!("{}/{}", API_URL, extension)
     )
     .method(Method::HEAD)
-    .header("Authorization", &auth_token())
+    .header("Authorization", &get_auth_token())
     .send()
     .await
     .is_ok()
@@ -29,7 +30,7 @@ pub async fn api_post<T: DeserializeOwned>(extension: String, data: Vec<(String,
         &format!("{}/{}", API_URL, extension)
     )
     .header("Content-Type", "application/x-www-form-urlencoded")
-    .header("Authorization", &auth_token())
+    .header("Authorization", &get_auth_token())
     .body(data.iter()
         .map(|(key, value)| format!("{}={}", key, urlencoding::encode(value)))
         .collect::<Vec<String>>()
@@ -63,7 +64,7 @@ pub async fn api_get<T: DeserializeOwned>(extension: String) -> Result<T, ()> {
         Request::get(
             &format!("{}/{}", API_URL, extension)
         )
-            .header("Authorization", &auth_token())
+            .header("Authorization", &get_auth_token())
             .send()
             .await;
 
@@ -92,7 +93,7 @@ pub async fn api_put<T: DeserializeOwned>(extension: String, data: Vec<(String, 
             &format!("{}/{}", API_URL, extension)
         )
         .header("Content-Type", "application/x-www-form-urlencoded")
-        .header("Authorization", &auth_token())
+        .header("Authorization", &get_auth_token())
         .body(data.iter()
             .map(|(key, value)| format!("{}={}", key, urlencoding::encode(value)))
             .collect::<Vec<String>>()
@@ -120,7 +121,7 @@ pub async fn api_delete(extension: String) -> Result<(), ()> {
     let request = Request::delete(
             &format!("{}/{}", API_URL, extension)
         )
-        .header("Authorization", &auth_token())
+        .header("Authorization", &get_auth_token())
         .send()
         .await;
 

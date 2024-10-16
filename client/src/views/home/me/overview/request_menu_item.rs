@@ -4,11 +4,11 @@ use yew::platform::spawn_local;
 use yew::prelude::*;
 use crate::models::friend_request::RequestDetailed;
 use crate::models::member::Member;
-use crate::utils::auth_token;
 use crate::comps::icon::{get_random_svg, Icon};
 use crate::comps::modal::Modal;
 use crate::views::home::me::overview::edit_friend_request::EditFriendRequest;
 use crate::contexts::member_context::{MemberDispatch, get_friends, get_requests, TMemberContext};
+use crate::utils::api_requests::api_delete;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Version {
@@ -46,27 +46,17 @@ pub fn request_menu_item(Props { request, version }: &Props) -> Html {
             let version = version.clone();
             let option = option.clone();
             spawn_local(async move {
-                let request = Request::delete(
-                    &format!("http://localhost:8000/request/{}/{}/{}",
-                             if is_sender {member_ctx.member.id} else {request.member.id},
-                             if is_sender {request.member.id} else {member_ctx.member.id},
-                            option.clone()
-                    ))
-                    .header("Authorization", &auth_token())
-                    .send()
-                    .await;
-                match request {
-                    Ok(response) => {
-                        if response.ok() {
-                            let requests = get_requests().await.unwrap();
-                            member_ctx.dispatch(MemberDispatch::UpdateRequests(requests));
-                            if option.eq("accept"){
-                                let friends = get_friends().await.unwrap();
-                                member_ctx.dispatch(MemberDispatch::UpdateFriends(friends));
-                            }
-                        } else { log::error!("Request failed with status: {}", response.status()); }
+                if let Ok(_) = api_delete(format!("request/{}/{}/{}",
+                    if is_sender {member_ctx.member.id} else {request.member.id},
+                    if is_sender {request.member.id} else {member_ctx.member.id},
+                    option.clone()
+                )).await {
+                    let requests = get_requests().await.unwrap();
+                    member_ctx.dispatch(MemberDispatch::UpdateRequests(requests));
+                    if option.eq("accept"){
+                        let friends = get_friends().await.unwrap();
+                        member_ctx.dispatch(MemberDispatch::UpdateFriends(friends));
                     }
-                    Err(err) => { log::error!("Failed to send request: {:?}", err); }
                 }
             });
         })

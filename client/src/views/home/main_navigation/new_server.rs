@@ -5,7 +5,6 @@ use yew::{Callback, function_component, Html, html, use_context, use_node_ref, u
 use yew_router::hooks::use_navigator;
 use crate::contexts::member_context::{MemberDispatch, get_servers, TMemberContext};
 use crate::models::server::{MultiServer, Server};
-use crate::utils::auth_token;
 use crate::comps::modal::{Modal, toggle_modal};
 use crate::utils::api_requests::{api_post, PostResponse};
 use crate::views::home::HomeRoute;
@@ -26,7 +25,6 @@ pub fn new_server_modal() -> Html {
 
         Callback::from(move |event: SubmitEvent| {
             event.prevent_default();
-            event.stop_propagation();
             log::info!("Starting");
 
             let app_ctx = app_ctx.clone();
@@ -47,8 +45,7 @@ pub fn new_server_modal() -> Html {
                     Ok(post_response) => {
                         if let PostResponse::NonResponse(server) = post_response{
                             app_ctx.dispatch(MemberDispatch::UpdateServers(get_servers().await.unwrap()));
-                            toggle_modal("new_server_modal_overlay");
-                            submit_nav.push(&HomeRoute::Server { server_id: server.id })
+                            submit_nav.push(&HomeRoute::Server { server_id: server.id });
                         }
                     }
                     Err(_) => { log::error!("Failed to parse response"); }

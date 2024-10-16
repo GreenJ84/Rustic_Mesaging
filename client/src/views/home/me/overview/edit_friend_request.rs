@@ -3,12 +3,12 @@ use yew::prelude::*;
 use yew_router::hooks::use_navigator;
 use crate::models::friend_request::RequestDetailed;
 use crate::models::server::Server;
-use crate::utils::auth_token;
 use crate::comps::icon::Icon;
 use crate::comps::modal::{Modal, toggle_modal};
 use crate::views::home::HomeRoute;
 use crate::views::home::me::overview::new_friend_request::NewFriendRequest;
 use crate::contexts::member_context::{MemberDispatch, get_requests, get_servers, TMemberContext};
+use crate::utils::api_requests::api_put;
 
 #[derive(Properties, PartialEq)]
 pub struct Props{
@@ -36,31 +36,14 @@ pub fn edit_friend_request(Props { request }: &Props) -> Html{
             let request = request.clone();
             let note = note_ref.cast::<web_sys::HtmlTextAreaElement>().unwrap().value();
             let mut form_data = vec![
-                ("sender_id", app_ctx.member.id.to_string()),
-                ("receiver_id", request.member.id.to_string()),
-                ("note", note.clone()),
+                (String::from("sender_id"), app_ctx.member.id.to_string()),
+                (String::from("receiver_id"), request.member.id.to_string()),
+                (String::from("note"), note.clone()),
             ];
             wasm_bindgen_futures::spawn_local(async move {
-                let request = Request::put("http://localhost:8000/request")
-                    .header("Content-Type", "application/x-www-form-urlencoded")
-                    .header("Authorization", &auth_token())
-                    .body(form_data.into_iter()
-                        .map(|(key, value)| format!("{}={}", key, urlencoding::encode(&value)))
-                        .collect::<Vec<String>>()
-                        .join("&")
-                    )
-                    .unwrap()
-                    .send()
-                    .await;
-
-                match request {
-                    Ok(response) => {
-                        if response.ok() {
-                            toggle_modal("edit_request_modal_overlay");
-                            app_ctx.dispatch(MemberDispatch::UpdateRequests(get_requests().await.unwrap()))
-                        } else { log::error!("Request failed with status: {}", response.status()); }
-                    }
-                    Err(err) => { log::error!("Failed to send request: {:?}", err); }
+                if let Ok(_) = api_put::<()>(String::from("request"), form_data).await {
+                    toggle_modal("edit_request_modal_overlay");
+                    app_ctx.dispatch(MemberDispatch::UpdateRequests(get_requests().await.unwrap()));
                 }
             });
         })
