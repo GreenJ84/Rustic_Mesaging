@@ -4,34 +4,40 @@ use rocket::response::status;
 use rocket::State;
 
 use crate::db::{DbPool, get_db_connection};
-use crate::models::message::{NewMessage, Message};
+use crate::models::message::{NewMessage, Message, ResponseMessage};
 use crate::routes::CustomResponse;
 use crate::models::authentication::JWT;
 use crate::service::{CrudOps, message_service::MessageService};
 use crate::service::member_chat_service::MemberChatService;
+use crate::service::member_service::MemberService;
 
 #[post("/", data = "<form>")]
 pub fn create(
     token: JWT,
     pool: &State<DbPool>,
     form: Form<Strict<NewMessage>>,
-) -> CustomResponse<Message> {
+) -> CustomResponse<ResponseMessage> {
     let mut conn = get_db_connection(pool)?;
 
     let input = form.into_inner().into_inner();
     // Make sure member is participant of chat where message will be displayed
     if !MemberChatService::is_participant(&mut conn, input.chat_id(), token.claims.member_id){
-        return Err::<status::Custom<Message>, status::Custom<String>>(status::Custom(Status::Unauthorized, String::from("Only chat participants can create messages within")))
+        return Err::<status::Custom<ResponseMessage>, status::Custom<String>>(status::Custom(Status::Unauthorized, String::from("Only chat participants can create messages within")))
     }
 
     match MessageService::create(&mut conn, input){
         Ok(message) => Ok(
             status::Custom(
                 Status::Ok,
-                message
+                ResponseMessage {
+                    id: message.id(),
+                    content: message.content().to_string(),
+                    sender: MemberService::read(&mut conn, token.claims.member_id).unwrap().into_short(),
+                    created_at: message.created_at()
+                }
             )),
         Err(e) =>
-            return Err::<status::Custom<Message>, status::Custom<String>>(
+            return Err::<status::Custom<ResponseMessage>, status::Custom<String>>(
                 status::Custom(
                     Status::InternalServerError,
                     format!("Message creation error: {}", e)
