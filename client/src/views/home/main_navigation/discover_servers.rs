@@ -6,7 +6,6 @@ use yew::{Callback, function_component, Html, html, Properties, use_context, use
 use yew_router::hooks::use_navigator;
 use crate::contexts::member_context::{MemberDispatch, get_servers, TMemberContext};
 use crate::models::server::{MultiServer, Server};
-use crate::utils::auth_token;
 use crate::comps::modal::Modal;
 use crate::models::server_membership::ServerMembership;
 use crate::utils::api_requests::{api_delete, api_get, api_post};
@@ -87,28 +86,16 @@ fn discover_server_item(ServerItemProps { server }: &ServerItemProps) -> Html {
                     if let Some(server_id) = element.get_attribute("data-server-id") {
                         let member = element.get_attribute("member");
                         spawn_local(async move {
-                            let request = RequestBuilder::new(
-                                &format!("http://localhost:8000/server/{}/{}",
-                                         server_id,
-                                         if member.is_none() { "join" } else { "leave" }
-                                ))
-                                .method(if member.is_none() {Method::POST} else {Method::DELETE})
-                                .header("Content-Type", "application/x-www-form-urlencoded")
-                                .header("Authorization", &auth_token())
-                                .build()
-                                .unwrap()
-                                .send()
-                                .await;
-                            match request {
-                                Ok(response) => {
-                                    // Check if the response is okay (2xx status)
-                                    if response.ok() {
-                                        is_member.set(!*is_member);
-                                        member_ctx.dispatch(MemberDispatch::UpdateServers(get_servers().await.unwrap()))
-                                    } else { log::error!("Request failed with status: {}", response.status()); }
+                            if member.is_none() {
+                                if let Ok(_) = api_post::<ServerMembership>(format!("server/{}/join",server_id), vec![], false).await {
+                                    is_member.set(!*is_member);
+                                    member_ctx.dispatch(MemberDispatch::UpdateServers(get_servers().await.unwrap()))
                                 }
-                                // Handle request failure
-                                Err(err) => { log::error!("Failed to send request: {:?}", err); }
+                            } else {
+                                if let Ok(_) = api_delete(format!("server/{}/leave", server_id)).await {
+                                    is_member.set(!*is_member);
+                                    member_ctx.dispatch(MemberDispatch::UpdateServers(get_servers().await.unwrap()))
+                                }
                             }
                         });
                     } else {

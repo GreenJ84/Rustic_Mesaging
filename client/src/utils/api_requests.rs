@@ -22,10 +22,11 @@ pub async fn api_head(extension: String) -> bool{
 #[derive(Debug)]
 pub enum PostResponse<T> {
     NonResponse(T),
-    Response(T, Response)
+    Response(T, Response),
+    OnlyResponse(Response)
 }
 
-pub async fn api_post<T: DeserializeOwned>(extension: String, data: Vec<(String, String)>, need_response: bool) -> Result<PostResponse<T>, ()> {
+pub async fn api_post<T: DeserializeOwned + 'static>(extension: String, data: Vec<(String, String)>, need_response: bool) -> Result<PostResponse<T>, ()> {
     let result = Request::post(
         &format!("{}/{}", API_URL, extension)
     )
@@ -43,6 +44,9 @@ pub async fn api_post<T: DeserializeOwned>(extension: String, data: Vec<(String,
     match result {
         Ok(response) => {
             if response.ok() {
+                if TypeId::of::<T>() == TypeId::of::<()>(){
+                    return Ok(PostResponse::OnlyResponse(response))
+                }
                 let entity = response.json::<T>().await
                     .map_err(|err| {
                         log::error!("Failed to parse response: {:?}", err);
