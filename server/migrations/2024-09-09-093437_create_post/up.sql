@@ -1,0 +1,9 @@
+CREATE TABLE post (
+    id SERIAL PRIMARY KEY,
+    content TEXT NOT NULL,
+    author_id INT DEFAULT 1 NOT NULL REFERENCES member(id) ON DELETE SET DEFAULT,
+    channel_id INT NOT NULL REFERENCES channel(id) ON DELETE CASCADE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX channel_post ON post(channel_id);

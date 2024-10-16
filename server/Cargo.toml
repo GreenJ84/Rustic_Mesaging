@@ -1,0 +1,32 @@
+[package]
+name = "server"
+version = "0.1.0"
+edition = "2021"
+authors = ["Jesse Greenough"]
+description = "Real-Time Chatting Application"
+
+[dependencies]
+# Server
+rocket = { version = "0.5.1", features = ["json", "serde_json"] }
+rocket_cors = "0.6.0"
+serde_json = "*"
+serde = { version = "*", features = ["derive"] }
+ws = { package = "rocket_ws", version = "0.1.1" }
+# Database connection
+r2d2 = "0.8"
+rocket_db_pools = { version = "0.2.0", features = ["diesel_postgres"] }
+diesel = { version = "2", features = ["postgres", "r2d2", "numeric", "chrono"]  }
+# Authentication
+jsonwebtoken = "9.3.0"
+argon2 = "0.5.3"
+# Utility
+chrono = { version = "*", features = ["serde"] }
+dotenv = "0.15.0"
+tokio = "*"
+log = "0.4.8"
+
+
+
+[[bin]]
+name = "server"
+path = "src/main.rs"

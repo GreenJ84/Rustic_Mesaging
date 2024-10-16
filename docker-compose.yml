@@ -1,0 +1,31 @@
+version: '3'
+services:
+  server:
+    build: ./server
+    ports:
+      - "8080:8080"
+  client:
+    build: ./client
+    ports:
+      - "3000:80"
+  yugabyte:
+    image: yugabytedb/yugabyte:2024.1.2.0-b77
+    container_name: yugabyte
+    ports:
+      - "7001:7000"     # YugabyteDB master web UI
+      - "9000:9000"     # YugabyteDB YSQL API
+      - "15433:15433"   # Postgres compatible port
+      - "5433:5433"     # YSQL client port
+      - "9042:9042"     # YCQL client port
+    command: [ "bin/yugabyted", "start", "--background=false" ]
+    restart: unless-stopped
+    volumes:
+      - data:/data # Use the local 'data' volume
+
+volumes:
+  data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data
