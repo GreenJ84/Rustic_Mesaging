@@ -1,6 +1,5 @@
 pub(crate) mod chat_room;
 pub(crate) mod overview;
-pub(crate) mod new_chat;
 pub(crate) mod chat_menu;
 
 use yew::{function_component, Html, html};
