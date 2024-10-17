@@ -6,8 +6,6 @@ use channel::welcome::ServerWelcome;
 
 pub(crate) mod channel_menu;
 pub(crate) mod channel;
-pub(crate) mod channel_menu_item;
-mod channel_menu_header;
 
 #[derive(Routable, Clone, PartialEq)]
 pub enum ServerRoute {

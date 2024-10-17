@@ -3,9 +3,12 @@ use yew::{function_component, Html, html, use_context};
 use crate::contexts::member_context::TMemberContext;
 use crate::models::channel::Channel;
 use crate::comps::member_bar::MemberBar;
-use crate::views::home::server::channel_menu_header::ChannelMenuHeader;
-use crate::views::home::server::channel_menu_item::ChannelMenuItem;
 use crate::contexts::server_context::TServerContext;
+use crate::views::home::server::channel_menu::channel_menu_item::ChannelMenuItem;
+use crate::views::home::server::channel_menu::channel_menu_header::ChannelMenuHeader;
+
+pub(crate) mod channel_menu_header;
+pub(crate) mod channel_menu_item;
 
 #[function_component(ChannelMenu)]
 pub fn channel_menu() -> Html {
