@@ -3,26 +3,37 @@ use yew::prelude::*;
 use yew_router::prelude::{Link, use_navigator};
 
 use crate::contexts::member_context::TMemberContext;
+use crate::contexts::server_context::{ServerDispatch, TServerContext};
+use crate::models::server::Server;
 use crate::views::{
     home::{
         HomeRoute,
         main_navigation::{
             discover_servers::DiscoverServersModal,
             new_server::NewServerForm,
-            server_menu_icon::ServerMenuIcon,
+            server_menu_item::ServerMenuItem,
         }
     }
 };
 
 #[function_component(ServerSidebar)]
 pub fn server_sidebar() -> Html {
-    let member_context = use_context::<TMemberContext>().unwrap();
+    let member_ctx = use_context::<TMemberContext>().unwrap();
+    let server_ctx = use_context::<TServerContext>().unwrap();
     let nav = use_navigator().unwrap();
 
     html! {
-        <nav id="sidebar-main">
+        <nav id="main-menu">
             <ul>
-                <li title="Direct Messages">
+                <li
+                    title="Direct Messages"
+                    onmousedown={Callback::from({
+                        let server_ctx = server_ctx.clone();
+                        move |_| {
+                            server_ctx.dispatch(ServerDispatch::UpdateServer(Server::default()));
+                        }
+                    })}
+                >
                     <Link<HomeRoute> to={HomeRoute::Me}>
                         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="var(--background-medium)" class="bi bi-asterisk" viewBox="0 0 16 16">
                           <path d="M8 0a1 1 0 0 1 1 1v5.268l4.562-2.634a1 1 0 1 1 1 1.732L10 8l4.562 2.634a1 1 0 1 1-1 1.732L9 9.732V15a1 1 0 1 1-2 0V9.732l-4.562 2.634a1 1 0 1 1-1-1.732L6 8 1.438 5.366a1 1 0 0 1 1-1.732L7 6.268V1a1 1 0 0 1 1-1"/>
@@ -30,10 +41,13 @@ pub fn server_sidebar() -> Html {
                     </Link<HomeRoute>>
                 </li>
                 <hr/>
-                {for member_context.servers.servers.clone().into_iter().map(|server| html!{
-                    <ServerMenuIcon server={server}/>
+                {for member_ctx.servers.servers.clone().into_iter().map(|server| html!{
+                    <ServerMenuItem
+                        server={server.clone()}
+                        selected={server_ctx.current_server.id.eq(&server.id)}
+                    />
                 })}
-                {if !member_context.servers.servers.is_empty()
+                {if !member_ctx.servers.servers.is_empty()
                      { html!{ <hr/> } } else { html! {} }
                 }
                 <li class="new_server" title="new_server">
