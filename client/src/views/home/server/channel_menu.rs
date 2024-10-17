@@ -37,7 +37,7 @@ pub fn channel_menu() -> Html {
 
             <ul class={if is_owner {"owner"} else {""}}>
                 {for server_ctx.channels.channels.clone().into_iter().map(|channel: Channel| html!{
-                   <ChannelMenuItem channel={channel.clone()}/>
+                   <ChannelMenuItem channel={channel.clone()} is_owner={is_owner} />
                 })}
             </ul>
 
