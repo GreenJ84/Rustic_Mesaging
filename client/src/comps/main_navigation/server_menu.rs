@@ -1,20 +1,15 @@
 use yew::{function_component, Html, html};
 use yew::prelude::*;
 use yew_router::prelude::{Link, use_navigator};
-
+use crate::comps::main_navigation::{
+    discover_servers::DiscoverServersModal,
+    new_server::NewServerForm,
+    server_menu_item::ServerMenuItem,
+};
 use crate::contexts::member_context::TMemberContext;
 use crate::contexts::server_context::{ServerDispatch, TServerContext};
 use crate::models::server::Server;
-use crate::views::{
-    home::{
-        HomeRoute,
-        main_navigation::{
-            discover_servers::DiscoverServersModal,
-            new_server::NewServerForm,
-            server_menu_item::ServerMenuItem,
-        }
-    }
-};
+use crate::views::home::HomeRoute;
 
 #[function_component(ServerSidebar)]
 pub fn server_sidebar() -> Html {
