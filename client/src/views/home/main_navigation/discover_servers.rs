@@ -4,6 +4,7 @@ use wasm_bindgen_futures::spawn_local;
 use web_sys::{Event, HtmlElement, MouseEvent, SubmitEvent};
 use yew::{Callback, function_component, Html, html, Properties, use_context, use_effect, use_effect_with, use_node_ref, use_state};
 use yew_router::hooks::use_navigator;
+use crate::comps::icon::get_random_svg;
 use crate::contexts::member_context::{MemberDispatch, get_servers, TMemberContext};
 use crate::models::server::{MultiServer, Server};
 use crate::comps::modal::Modal;
@@ -110,6 +111,8 @@ fn discover_server_item(ServerItemProps { server }: &ServerItemProps) -> Html {
 
     html!{
         <li>
+            <div></div>
+            <span>{get_random_svg(false, "icon", "35")}</span>
             <h3>{server.name.clone()}</h3>
             <p>{server.description.clone()}</p>
             {if *is_member{
