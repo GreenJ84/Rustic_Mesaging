@@ -45,8 +45,9 @@
         }
     }
     > .discover_servers {
-        position: fixed;
+        position: absolute;
         bottom: 15px;
+        width: 60%;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -69,13 +70,13 @@
         cursor: pointer;
     }
 }
-.server-menu-icon, .new_server {
+.server-menu-item, .new_server {
     position: relative;
     margin: 5px 0;
     width: 100%;
     list-style: none;
     > a, button{
-        width: 70%;
+        width: 60%;
         padding: 3px;
         background-color: var(--background-light);
         border-radius: 50%;
@@ -85,32 +86,31 @@
             left: 0;
             transform: translate(-60%, -50%);
             display: block;
-            width: 10px;
+            width: 5px;
             height: 10px;
             background-color: white;
-            border-radius: 50%;
+            border-radius: 10px;
         }
     }
     > button {
         color: var(--highlight-green);
     }
-    > a:hover, > button:hover{
-        background-color: var(--background-mild);
-        border-radius: 10px;
-        > span {
-            width: 15px;
-            height: 60%;
-        }
-    }
-    > button:hover {
+    > button.create_server:hover {
         cursor: pointer;
         color: var(--background-dark);
         background-color: var(--accent-green);
     }
 }
-#modal.discover_servers_modal{
-    width: 50vw;
-    height: 80dvh;
+.server-menu-item:hover, .server-menu-item.selected, .new_server:hover {
+    > a, > button{
+        background-color: var(--text-light);
+        border-radius: 10px;
+        > span {
+            width: 10px;
+            height: 50%;
+        }
+    }
+}
 .discover_servers_modal{
     width: 80vw;
     max-height: 80dvh;

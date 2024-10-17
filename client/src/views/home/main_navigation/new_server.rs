@@ -5,14 +5,16 @@ use yew::{Callback, function_component, Html, html, use_context, use_node_ref, u
 use yew_router::hooks::use_navigator;
 use crate::contexts::member_context::{MemberDispatch, get_servers, TMemberContext};
 use crate::models::server::{MultiServer, Server};
-use crate::comps::modal::{Modal, toggle_modal};
+use crate::comps::modal::{force_toggle, Modal, toggle_modal};
+use crate::contexts::server_context::{ServerDispatch, TServerContext};
 use crate::utils::api_requests::{api_post, PostResponse};
 use crate::views::home::HomeRoute;
 use crate::views::home::me::MeRoute;
 
 #[function_component(NewServerForm)]
 pub fn new_server_modal() -> Html {
-    let app_ctx = use_context::<TMemberContext>().unwrap();
+    let member_ctx = use_context::<TMemberContext>().unwrap();
+    let server_ctx = use_context::<TServerContext>().unwrap();
     let navigation = use_navigator().unwrap();
 
     let name_ref = use_node_ref();
@@ -25,9 +27,8 @@ pub fn new_server_modal() -> Html {
 
         Callback::from(move |event: SubmitEvent| {
             event.prevent_default();
-            log::info!("Starting");
-
-            let app_ctx = app_ctx.clone();
+            let member_ctx = member_ctx.clone();
+            let server_ctx = server_ctx.clone();
             let submit_nav = submit_nav.clone();
 
             let name = name_ref.cast::<web_sys::HtmlInputElement>().unwrap().value();
@@ -36,19 +37,16 @@ pub fn new_server_modal() -> Html {
                 ("name".to_string(), name.clone()),
                 ("description".to_string(), description.clone()),
                 ("icon".to_string(), String::new()),
-                ("owner_id".to_string(), app_ctx.member.id.clone().to_string())
+                ("owner_id".to_string(), member_ctx.member.id.clone().to_string())
             ];
             wasm_bindgen_futures::spawn_local(async move {
-                let request = api_post::<Server>(String::from("server"), form_data, false).await;
-                log::info!("{:?}", request);
-                match request {
-                    Ok(post_response) => {
-                        if let PostResponse::NonResponse(server) = post_response{
-                            app_ctx.dispatch(MemberDispatch::UpdateServers(get_servers().await.unwrap()));
-                            submit_nav.push(&HomeRoute::Server { server_id: server.id });
-                        }
+                if let Ok(request) = api_post::<Server>(String::from("server"), form_data, false).await {
+                    if let PostResponse::NonResponse(server) = request {
+                        force_toggle("modal_overlay");
+                        member_ctx.dispatch(MemberDispatch::UpdateServers(get_servers().await.unwrap()));
+                        server_ctx.dispatch(ServerDispatch::UpdateServer(server.clone()));
+                        submit_nav.push(&HomeRoute::Server { server_id: server.id });
                     }
-                    Err(_) => { log::error!("Failed to parse response"); }
                 }
             });
         })
@@ -70,7 +68,7 @@ pub fn new_server_modal() -> Html {
         >
             <>
                 <h2>{ "Create a New Server" }</h2>
-                <form onsubmit={on_submit} >
+                <form onsubmit={on_submit.clone()} >
                     <label for="name">
                         { "Name:" }
                         <input

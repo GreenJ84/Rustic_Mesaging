@@ -10,15 +10,16 @@ use crate::contexts::server_context::{ServerDispatch, TServerContext};
 #[derive(Properties, PartialEq)]
 pub struct Props {
     pub server: Server,
+    pub selected: bool
 }
-#[function_component(ServerMenuIcon)]
-pub fn server_menu_icon(Props { server }: &Props) -> Html{
+#[function_component(ServerMenuItem)]
+pub fn server_menu_item(Props { server, selected }: &Props) -> Html{
     let server_ctx = use_context::<TServerContext>().unwrap();
     let server = server.clone();
 
     html!{
         <li
-            class={classes!("server-menu-icon", "tooltip")}
+            class={format!("server-menu-item{}", if *selected {" selected"} else {""})}
             title={server.name.clone()}
             onmousedown={Callback::from({
                 let context = server_ctx.clone();
