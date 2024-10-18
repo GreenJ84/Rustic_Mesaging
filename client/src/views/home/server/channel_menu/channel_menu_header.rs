@@ -72,7 +72,9 @@ pub fn channel_menu(Props { is_owner }: &Props) -> Html {
     html! {
         <div style="position: relative;">
             <div id="server-header" onclick={toggle_options.clone()}>
-                {server_ctx.current_server.name.clone()}
+                <span title={server_ctx.current_server.name.clone()}>
+                    {server_ctx.current_server.name.clone()}
+                </span>
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-chevron-down" viewBox="0 0 16 16">
                 {
                     if *options_open{
@@ -90,7 +92,8 @@ pub fn channel_menu(Props { is_owner }: &Props) -> Html {
             {
                 if *options_open && *is_owner {
                     html!{
-                        <ul id="header_menu" style="all: unset; position: absolute; left: 50%; bottom: 0; transform: translate(-50%, calc(100% + 20px)); background-color: black; width: 90%; padding: 2%;">
+                        <ul id="header_menu">
+                            <span></span>
                             <li>
                                 <ChannelForm
                                     entity={None}
@@ -102,9 +105,17 @@ pub fn channel_menu(Props { is_owner }: &Props) -> Html {
                             <li>
                                 <EditServerForm callback={toggle_options}/>
                             </li>
-                            <li onclick={delete_server}>{"Delete Server"}</li>
+                            <li>
+                                <button onclick={delete_server}>
+                                    {"Delete Server"}
+                                </button>
+                            </li>
                             <hr/>
-                            <li onclick={leave_server}>{"Leave Server"}</li>
+                            <li>
+                                <button onclick={leave_server}>
+                                    {"Leave Server"}
+                                </button>
+                            </li>
                         </ul>
                                         }
                 } else {

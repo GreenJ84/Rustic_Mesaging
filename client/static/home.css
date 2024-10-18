@@ -477,54 +477,43 @@
 }
 
 /* Channel Menu*/
-.channels {
+#sidebar-sub.channels {
     padding: 0;
-    > div{
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
+    > div:first-of-type{
         margin: 0;
         width: 100%;
+        height: 50px;
         color: var(--text-lighter);
-        > #server-header{
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin: 0;
-            width: 100%;
-            height: 30px;
-            padding: 25px 10px;
-        }
+        box-sizing: border-box;
     }
-    >#browse-channel, >#add-channel{
+    > button.channel_form {
+        all: unset;
+        box-sizing: border-box;
+        border-radius: 0 0 10px 10px !important;
+    }
+    >#browse-channel, > button.channel_form{
         display: flex;
         align-items: center;
-        justify-content: space-between;
+        justify-content: flex-start;
+        gap: 20px;
         margin: 0;
-        width: 100%;
+        width: 85%;
         height: 30px;
         padding: 25px 10px;
         color: var(--text-lighter);
+        border-radius: 10px 10px 0 0;
     }
-    > #server-header:hover, #browse-channel:hover,  #add-channel:hover{
+    > #server-header:hover, #browse-channel:hover,  .channel_form:hover{
         background-color: var(--background-light);
         cursor: pointer;
     }
-    > hr:first-of-type {
+    > hr {
         margin: 0 0 10px 0;
-        width: 100%;
-        border: 1px solid var(--background-dark);
-    }
-    > #browse-channel, #add-channel{
-        justify-content: flex-start;
-        width: 85%;
-        gap: 20px;
-        border-radius: 10px 10px 0 0;
     }
     > hr:last-of-type{
-        margin: 0 0 10px 0;
-        width: 85%;
+        width: 90%;
         border: .8px solid var(--background-light);
+        margin-top: 5px;
     }
     > ul.owner{
         flex: 0 0 75.5dvh;
@@ -533,52 +522,89 @@
         flex: 0 0 81dvh;
         > .channel-item{
             position: relative;
-            display: flex;
-            align-items: center;
-            margin: 2px 0 0 10px;
-            width: 92%;
-            padding: 10px;
-            list-style: none;
-            border-radius: 10px;
-            > span {
-                position: absolute;
-                top: 50%;
-                left: -10px;
-                transform: translate(-60%, -50%);
-                display: block;
-                width: 5px;
-                height: 5px;
-                background-color: white;
-                border-radius: 50%;
-            }
-            > a {
-                position: relative;
-                display: flex;
-                flex-direction: row;
-                align-items: center;
-                justify-content: flex-start;
-                text-decoration: none;
-                width: 100%;
-                font-size: 1.2em;
-                color: var(--text-lighter);
-                > svg {
-                    margin-right: 10px;
-                }
+            > a > span {
+                width: 80%;
             }
         }
-        > .channel-item:hover {
-            background-color: var(--background-light);
-            > span {
+        > .channel-item:hover > span {
                 width: 10px;
                 height: 60%;
-            }
-            > a {
-                color: white;
-            }
+        }
+        > .channel-item.owner:hover > a > span {
+            width: 55%;
         }
     }
 }
+#server-header{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    padding: 0 15px;
+    border-right: 1px solid var(--background-mild);
+    font-size: 1.4em;
+    box-sizing: border-box;
+    > span {
+        max-width: 80%;
+        text-wrap: nowrap;
+        overflow-x: hidden;
+        overflow-wrap: anywhere;
+        text-overflow: ellipsis;
+    }
+}
+#server-header:hover {
+    background-color: var(--background-light);
+    > svg:hover{
+        cursor: pointer;
+        filter: drop-shadow(0 0 2px var(--text-lighter));
+    }
+}
+#header_menu {
+    all: unset;
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    transform: translate(-50%, calc(100% + 20px));
+    background-color: black;
+    width: 90%;
+    padding: 2%;
+    z-index: 15;
+    > span {
+        position: absolute;
+        top: 0;
+        transform: translateY(-100%);
+        right: 5%;
+        border-top: 20px solid transparent;
+        border-left: 10px solid transparent;
+        border-right: 10px solid transparent;
+        border-bottom: 20px solid black;
+        z-index: 10;
+    }
+    > li {
+        all: unset;
+        display: block;
+        margin: 0 auto;
+        width: auto;
+        height: 20px;
+        > button {
+            all: unset;
+            width: 100%;
+            height: 100%;
+        }
+        padding: 4px 8px;
+        font-size: 1.2em;
+        color: var(--text-light)
 
+    }
+    > li:hover {
+        background-color: var(--background-mild);
+        > button.channel_form:hover {
+            background-color: inherit;
+        }
+    }
+}
 
 
 /* Main Content*/
