@@ -10,7 +10,6 @@ use crate::models::post::Post;
 use crate::utils::api_requests::api_post;
 
 pub(crate) mod welcome;
-pub(crate) mod new_channel;
 pub(crate) mod edit_server;
 
 #[function_component(ChannelComp)]
