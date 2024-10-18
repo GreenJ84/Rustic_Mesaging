@@ -3,7 +3,7 @@ use yew::html::ChildrenProps;
 use std::rc::Rc;
 use gloo::net::http::Request;
 use serde::{Deserialize, Serialize};
-
+use wasm_bindgen_futures::spawn_local;
 use crate::models::{
     chat::{Chat, MultiChatPreview},
     member::Member,
@@ -32,13 +32,18 @@ impl Reducible for ChatContext {
         let new_context = match action {
             ChatDispatch::UpdatePreviews(previews) => Self {
                 previews,
-                current_chat: self.current_chat.clone(),
-                thread: self.thread.clone()
-            },
-            ChatDispatch::UpdateCurrentChat(chat) => Self {
-                previews: self.previews.clone(),
-                current_chat: chat,
+                current_chat: Chat::default(),
                 thread: MessageThread::default()
+            },
+            ChatDispatch::UpdateCurrentChat(chat) => {
+                if self.current_chat.eq(&chat){
+                    return self;
+                }
+                Self {
+                    previews: self.previews.clone(),
+                    current_chat: chat,
+                    thread: MessageThread::default(),
+                }
             },
             ChatDispatch::UpdateCurrentThread(new_thread) => Self {
                 previews: self.previews.clone(),
@@ -60,12 +65,24 @@ pub fn chat_provider(props: &ChildrenProps) -> Html {
 
     {
         let context = context.clone();
+        use_effect_with((), move |_| {
+            let context = context.clone();
+            spawn_local(async move {
+                if let Ok(previews) = get_chat_previews().await {
+                    context.dispatch(ChatDispatch::UpdatePreviews(previews));
+                }
+            });
+        });
+    }
+
+    {
+        let context = context.clone();
         use_effect_with(context.current_chat.clone(), move |_| {
             if context.current_chat.clone().eq(&Chat::default()){
                 return;
             }
             let context = context.clone();
-            wasm_bindgen_futures::spawn_local(async move {
+            spawn_local(async move {
                 if let Ok(thread) = get_message_thread(context.current_chat.id).await {
                     context.dispatch(ChatDispatch::UpdateCurrentThread(thread));
                 }
@@ -78,6 +95,10 @@ pub fn chat_provider(props: &ChildrenProps) -> Html {
             {props.children.clone()}
         </ContextProvider<TChatContext>>
     }
+}
+
+pub async fn get_chat_previews() -> Result<MultiChatPreview, ()> {
+    api_get::<MultiChatPreview>(String::from("member/chats")).await
 }
 
 pub async fn get_message_thread(chat_id: i32) -> Result<MessageThread, ()> {
