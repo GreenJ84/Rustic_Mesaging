@@ -49,7 +49,9 @@ pub fn chat_menu_icon(Props { chat }: &Props) -> Html {
     });
 
     html! {
-        <li class={"sub-menu-item chat-item"}
+        <li class={format!("sub-menu-item chat-item{}",
+            if chat_ctx.current_chat.eq(&chat) {" active"} else {""}
+        )}
             title={chat.name.clone()}
             onmousedown={Callback::from({
                 let context = chat_ctx.clone();

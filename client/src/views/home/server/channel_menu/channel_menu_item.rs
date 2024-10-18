@@ -50,7 +50,10 @@ pub fn channel_menu_item(Props { channel, is_owner }: &Props) -> Html{
 
     html!{
         <li
-            class={format!("sub-menu-item channel-item{}", if *is_owner {" owner"} else {""})}
+            class={format!("sub-menu-item channel-item{}{}",
+                if *is_owner {" owner"} else {""},
+                if server_ctx.current_channel.eq(&channel) {" active"} else {""}
+            )}
             title={channel.name.clone()}
             onmousedown={Callback::from({
                 let context = server_ctx.clone();
