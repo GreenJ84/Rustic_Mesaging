@@ -1,11 +1,14 @@
 pub(crate) mod chat_menu_items;
 pub(crate) mod chat_form;
+pub(crate) mod search;
+pub(crate) mod search_item;
 
 use yew::prelude::*;
 use yew_router::components::Link;
 use wasm_bindgen_futures::spawn_local;
 use chat_form::ChatForm;
 use crate::comps::member_bar::MemberBar;
+use crate::comps::modal::Modal;
 use crate::models::chat::MultiChatPreview;
 use crate::contexts::{
     chat_context::{ChatDispatch, TChatContext},
@@ -16,6 +19,7 @@ use crate::views::home::me::{
     chat_menu::chat_menu_items::ChatMenuItem,
     MeRoute,
 };
+use crate::views::home::me::chat_menu::search::SearchModal;
 
 #[function_component(ChatMenu)]
 pub fn chat_menu() -> Html {
@@ -24,7 +28,7 @@ pub fn chat_menu() -> Html {
 
     html! {
         <div id="sidebar-sub" class="chat-menu">
-            <input type={"search"} placeholder={"Find or start a conversation"}/>
+            <SearchModal />
             <hr/>
             <ul>
                 <li title="Friends" class={"chat-menu-category"}>

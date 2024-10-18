@@ -137,11 +137,29 @@ pub fn chat_form(Props { entity, button_icon }: &Props) -> Html {
         })
     };
 
+    let reset = {
+        let entity = entity.clone();
+        let name = name.clone();
+        let selected_friends = selected_friends.clone();
+        Callback::from(move |x: ()| {
+            let entity = entity.clone();
+
+            if let Some(chat) = entity {
+
+                name.set(chat.1.clone());
+            } else {
+                name.set(String::new());
+            }
+            selected_friends.set(Vec::<FullFriend>::new());
+        })
+    };
+
     html! {
         <Modal
             modal_class={"chat_modal"}
             button_class={"chat"}
             button_icon={button_icon}
+            reset_state={reset}
         >
             <>
                 {
@@ -159,7 +177,6 @@ pub fn chat_form(Props { entity, button_icon }: &Props) -> Html {
                 <form onsubmit={on_submit}>
                     <label>
                         {"Chat Name"}
-                        {entity.clone().unwrap_or((-1, String::from("Why"))).1.clone()}
                         <input
                             type="text"
                             onchange={on_change}
@@ -190,7 +207,13 @@ pub fn chat_form(Props { entity, button_icon }: &Props) -> Html {
                                                     })
                                                 }
                                             >
-                                                 {get_random_svg(true, "friend-item", "30")}
+
+
+
+
+
+                                                {get_random_svg(true, "friend-item", "30")}
+                                                <span>{friend.member.username.clone()}</span>
                                             </div>
                                         }})
                                }
