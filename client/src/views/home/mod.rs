@@ -1,28 +1,23 @@
 use yew::prelude::*;
-use yew_router::{BrowserRouter, Routable, Switch, components::Redirect};
-use main_navigation::server_menu::ServerSidebar;
+use yew_router::{BrowserRouter, components::Redirect, Routable, Switch};
+use crate::comps::main_navigation::server_menu::ServerSidebar;
 use crate::contexts::{
-    member_context::TMemberContext,
     chat_context::ChatProvider,
+    member_context::TMemberContext,
     server_context::ServerProvider,
 };
 use crate::views::{
-    landing::LandingRoute,
     home::{
-        me::{
-            Me,
-        },
-        server::{
-            ServerComp,
-        }
+        me::Me,
+        server::ServerComp
     },
+    landing::LandingRoute,
 };
 use crate::views::home::profile::Profile;
 
 pub(crate) mod me;
 pub(crate) mod server;
 pub(crate) mod profile;
-pub(crate) mod main_navigation;
 pub(crate) mod edit_member;
 
 #[derive(Clone, Routable, PartialEq)]

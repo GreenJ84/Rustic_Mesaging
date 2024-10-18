@@ -51,7 +51,7 @@ pub fn edit_member(EditProps {
                         />
                     </label>
                     <br/>
-                    <button type="submit" style="margin-top: 10px;">{ "Create" }</button>
+                    <button type="submit" style="margin-top: 10px;">{ "Save" }</button>
                 </form>
             </>
         </Modal>

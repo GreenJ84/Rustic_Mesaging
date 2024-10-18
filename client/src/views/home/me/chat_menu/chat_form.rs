@@ -176,7 +176,7 @@ pub fn chat_form(Props { entity, button_icon }: &Props) -> Html {
                 }
                 <form onsubmit={on_submit}>
                     <label>
-                        {"Chat Name"}
+                        {"Chat Name:"}
                         <input
                             type="text"
                             onchange={on_change}
