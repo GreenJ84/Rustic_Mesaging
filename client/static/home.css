@@ -208,6 +208,11 @@
     height: 100dvh;
     background-color: var(--background-mild);
     z-index: 0;
+    hr {
+        margin: 10px 0;
+        width: 100%;
+        border: 1px solid var(--background-dark);
+    }
     > ul {
         margin: 0;
         padding: 0;
@@ -217,6 +222,64 @@
         scroll-behavior: smooth;
         scrollbar-track-color: transparent;
         scrollbar-color: transparent transparent;
+        > .sub-menu-item{
+            margin: 3px auto;
+            width: 92%;
+            padding: 4px 6px;
+            list-style: none;
+            border-radius: 6px;
+            > a {
+                position: relative;
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                justify-content: flex-start;
+                text-decoration: none;
+                width: 100%;
+                font-size: 1.1em;
+                letter-spacing: 1.2px;
+                color: var(--text-light);
+                > svg {
+                    margin-right: 10px;
+                }
+                > span {
+                    overflow-x: clip;
+                    width: 75%;
+                    text-wrap: nowrap;
+                    text-overflow: ellipsis;
+                }
+                > div.item-options {
+                    all: unset;
+                    display: none;
+                    position: absolute;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    right: 2px;
+                    width: 30%;
+                    > button {
+                        all: unset;
+                    }
+                }
+            }
+        }
+        > .sub-menu-item:hover{
+            background-color: var(--background-light);
+            > a {
+                color: white;
+                > div.item-options {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-evenly;
+                    color: var(--text-light);
+                    > button:hover{
+                        color: var(--text-lighter);
+                        > svg {
+                            filter: drop-shadow(0 0 2px var(--text-lighter));
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 .member-bar {
@@ -230,15 +293,21 @@
     padding: 3px;
     width: 100%;
     height: 60px;
+    padding: 2px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: space-evenly;
     color: var(--text-lighter);
     background-color: var(--background-medium);
     > div:not(.member-action-icon) {
         display: flex;
         align-items: center;
-        justify-content: space-between;
-        padding: 5px 2px;
+        justify-content: space-around;
+        height: 50px;
+        padding: 2px 6px;
         > .member-icon {
-            margin-right: 15px;
+            margin-right: 5px;
             padding: 5px;
             background-color: var(--background-dark);
             border-radius: 50%;
@@ -246,7 +315,6 @@
         > div {
             display: flex;
             flex-direction: column;
-            margin-right: 30px;
             > span:first-child{
                 color: white;
                 font-weight: bolder;
@@ -267,32 +335,30 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        margin-left: 5px;
-        padding: 5px;
+        margin-left: 2px;
+        padding: 8px;
         border-radius: 5px;
     }
     > .member-action-icon:hover {
         background-color: var(--background-light);
+        cursor: pointer;
     }
 }
 
-/* Message Sub Menu*/
-.chat-menu{
+/* Chat Menu*/
+#sidebar-sub.chat-menu{
     padding: 10px 0 0;
-    > input {
+    > button {
         all: unset;
-        color: var(--background-light);
+        color: var(--text-light);
         background-color: var(--background-dark);
         width: 90%;
+        height: 50px;
         flex: 0 0 30px;
         padding: 2px 5px;
         border: none;
         border-radius: 5px;
-    }
-    hr {
-        margin: 10px 0;
-        width: 100%;
-        border: 1px solid var(--background-dark);
+        box-sizing: border-box;
     }
     > ul {
         flex: 0 0 68dvh;
@@ -327,6 +393,7 @@
             justify-content: space-between;
             margin: 10px 0 0;
             width: 90%;
+            padding-left: 15px;
             color: #c8c8c8;
             > svg {
                 color: white;
@@ -337,64 +404,17 @@
             color: white;
             cursor:default;
         }
-        > .chat-item{
-            margin: 3px auto;
-            width: 92%;
-            padding: 4px 6px;
-            list-style: none;
-            border-radius: 6px;
-            > a {
-                position: relative;
-                display: flex;
-                flex-direction: row;
-                align-items: center;
-                justify-content: flex-start;
-                text-decoration: none;
-                width: 100%;
-                font-size: 1.1em;
-                letter-spacing: 1.2px;
-                color: var(--text-light);
-                > .member-icon {
-                    margin-right: 10px;
-                    background-color: var(--background-dark);
-                    padding: 2px;
-                    border-radius: 50%;
-                }
-                > span {
-                    overflow-x: clip;
-                    width: 60%;
-                    text-wrap: nowrap;
-                    text-overflow: ellipsis;
-                }
-                > button {
-                    all: unset;
-                    display: none;
-                    position: absolute;
-                    top: 50%;
-                    transform: translateY(-50%);
-                    right: 8px;
-                }
-            }
+        > .chat-item .member-icon {
+            background-color: var(--background-dark);
+            padding: 2px;
+            border-radius: 50%;
         }
-        > .chat-item:hover {
-            background-color: var(--background-light);
-            > a {
-                color: white;
-                > button {
-                    display: block;
-                    color: var(--text-light);
-                }
-                > button:hover{
-                    color: var(--text-lighter);
-                    > svg {
-                        filter: drop-shadow(0 0 2px var(--text-lighter));
-                    }
-                }
-            }
+        > .chat-item:hover > a  > span {
+            width: 45%;
         }
     }
 }
-.new_chat_modal {
+.chat_modal {
     > p {
         text-align: center;
         color: var(--text-light)
