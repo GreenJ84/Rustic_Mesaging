@@ -54,7 +54,7 @@ pub fn modal(Props {
             is_modal_open.set(!*is_modal_open);
             toggle_modal("modal_overlay");
             if let Some(callback) = reset_state {
-                callback.emit(());
+                if *is_modal_open { callback.emit(()); }
             }
         })
     };
