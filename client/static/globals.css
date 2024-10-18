@@ -104,3 +104,7 @@ main {
 #modal_overlay.closed{
     display: none;
 }
+
+.disabled {
+    cursor: not-allowed !important;
+}
