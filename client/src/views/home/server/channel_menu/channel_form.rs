@@ -81,7 +81,7 @@ pub fn channel_form(Props { entity, button_icon, callback }: &Props) -> Html {
             if new {
                 spawn_local(async move {
                     if let Ok(post_response) = api_post::<Channel>(
-                        format!("channel/{}", entity.unwrap().0),
+                        String::from("channel"),
                         form_data,
                         false
                     ).await{
@@ -89,9 +89,11 @@ pub fn channel_form(Props { entity, button_icon, callback }: &Props) -> Html {
                             if let Ok(channels) = get_server_channels(server_ctx.current_server.id).await {
                                 server_ctx.dispatch(ServerDispatch::UpdateServerChannels(channels));
                             }
-                            force_toggle("modal_overlay");
-                            callback.unwrap().emit(MouseEvent::new("submit").unwrap());
                             server_ctx.dispatch(ServerDispatch::UpdateChannel(channel.clone()));
+                            force_toggle("modal_overlay");
+                            if let Some(func) = callback {
+                                func.emit(MouseEvent::new("submit").unwrap());
+                            }
                         }
                     }
                 });
@@ -127,7 +129,9 @@ pub fn channel_form(Props { entity, button_icon, callback }: &Props) -> Html {
                 name.set(chat.1.clone());
             } else {
                 name.set(String::new());
-                callback.unwrap().emit(MouseEvent::new("click").unwrap())
+                if let Some(func) = callback{
+                    func.emit(MouseEvent::new("click").unwrap())
+                }
             }
         })
     };
@@ -154,6 +158,7 @@ pub fn channel_form(Props { entity, button_icon, callback }: &Props) -> Html {
                             type="text"
                             id="name"
                             name="name"
+                            onchange={on_change}
                             value={(*name).clone()}
                             required=true
                         />
