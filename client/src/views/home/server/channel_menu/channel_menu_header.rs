@@ -7,10 +7,10 @@ use crate::models::channel::NewChannel;
 use crate::comps::modal::{Modal, toggle_modal};
 use crate::views::home::HomeRoute;
 use crate::views::home::server::channel::edit_server::EditServerForm;
-use crate::views::home::server::channel::new_channel::NewChannelForm;
 use crate::contexts::member_context::{MemberDispatch, get_servers, TMemberContext};
 use crate::contexts::server_context::TServerContext;
 use crate::utils::api_requests::api_delete;
+use crate::views::home::server::channel_menu::channel_form::ChannelForm;
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
@@ -88,24 +88,22 @@ pub fn channel_menu(Props { is_owner }: &Props) -> Html {
                 </svg>
             </div>
             {
-                if *options_open{
+                if *options_open && *is_owner {
                     html!{
                         <ul id="header_menu" style="all: unset; position: absolute; left: 50%; bottom: 0; transform: translate(-50%, calc(100% + 20px)); background-color: black; width: 90%; padding: 2%;">
-                            {
-                                if *is_owner {
-                                    html!{<>
-                                        <li>
-                                            <NewChannelForm />
-                                        </li>
-                                        <hr/>
-                                        <li>
-                                            <EditServerForm callback={toggle_options}/>
-                                        </li>
-                                        <li onclick={delete_server}>{"Delete Server"}</li>
-                                        <hr/>
-                                    </>}
-                                } else {html!{}}
-                            }
+                            <li>
+                                <ChannelForm
+                                    entity={None}
+                                    button_icon={html!("Create Channel")}
+                                    callback={toggle_options.clone()}
+                                />
+                            </li>
+                            <hr/>
+                            <li>
+                                <EditServerForm callback={toggle_options}/>
+                            </li>
+                            <li onclick={delete_server}>{"Delete Server"}</li>
+                            <hr/>
                             <li onclick={leave_server}>{"Leave Server"}</li>
                         </ul>
                                         }
