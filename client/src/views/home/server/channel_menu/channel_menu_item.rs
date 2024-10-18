@@ -68,34 +68,34 @@ pub fn channel_menu_item(Props { channel, is_owner }: &Props) -> Html{
                 <span>{channel.name.clone()}</span>
                 {if *is_owner {html!{
                     <div class="item-options">
-                    <ChannelForm
-                        entity={(channel.id.clone(), channel.name.clone())}
-                        button_icon={html!(
-                            <Icon
-                                class_name="icon"
-                                size="24"
-                                avatar={ html!{
-                                    <>
-                                        <g id="Layer_13" data-name="Layer 13" stroke="transparent" fill="currentColor">
-                                            <path d="m16 30a14 14 0 1 1 14-14 14 14 0 0 1 -14 14zm0-26a12 12 0 1 0 12 12 12 12 0 0 0 -12-12zm0 17.05a2 2 0 1 0 2 2 2 2 0 0 0 -2-2zm0-7a2 2 0 1 0 2 2 2 2 0 0 0 -2-1.95zm0-7.05a2 2 0 1 0 2 2 2 2 0 0 0 -2-2z"/>
-                                        </g>
-                                    </>
-                                }}
-                                color={"black"}
-                                ratio={"0 0 32 32"}
-                            />
-                        )}
-                        callback={Option::<Callback<MouseEvent>>::None}
-                    />
-                    <button
-                        class="item-delete"
-                        onclick={delete_channel}
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x-lg" viewBox="0 0 16 16">
-                            <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z"/>
-                        </svg>
-                    </button>
-                </div>
+                        <ChannelForm
+                            entity={(channel.id.clone(), channel.name.clone())}
+                            button_icon={html!(
+                                <Icon
+                                    class_name="icon"
+                                    size="24"
+                                    avatar={ html!{
+                                        <>
+                                            <g id="Layer_13" data-name="Layer 13" stroke="transparent" fill="currentColor">
+                                                <path d="m16 30a14 14 0 1 1 14-14 14 14 0 0 1 -14 14zm0-26a12 12 0 1 0 12 12 12 12 0 0 0 -12-12zm0 17.05a2 2 0 1 0 2 2 2 2 0 0 0 -2-2zm0-7a2 2 0 1 0 2 2 2 2 0 0 0 -2-1.95zm0-7.05a2 2 0 1 0 2 2 2 2 0 0 0 -2-2z"/>
+                                            </g>
+                                        </>
+                                    }}
+                                    color={"black"}
+                                    ratio={"0 0 32 32"}
+                                />
+                            )}
+                            callback={Option::<Callback<MouseEvent>>::None}
+                        />
+                        <button
+                            class="item-delete"
+                            onclick={delete_channel}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x-lg" viewBox="0 0 16 16">
+                                <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z"/>
+                            </svg>
+                        </button>
+                    </div>
                 }} else {html!{}}}
             </Link<ServerRoute>>
         </li>

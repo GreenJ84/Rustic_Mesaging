@@ -64,6 +64,7 @@ pub fn search_modal() -> Html{
                 placeholder={"Where would you like to go?"}
                 onkeyup={on_keyup}
                 autofocus={true}
+                autocomplete={"off"}
             />
             <div>
                 {

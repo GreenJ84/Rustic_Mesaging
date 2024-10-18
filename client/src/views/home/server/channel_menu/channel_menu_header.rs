@@ -90,34 +90,42 @@ pub fn channel_menu(Props { is_owner }: &Props) -> Html {
                 </svg>
             </div>
             {
-                if *options_open && *is_owner {
+                if *options_open {
                     html!{
                         <ul id="header_menu">
                             <span></span>
-                            <li>
-                                <ChannelForm
-                                    entity={None}
-                                    button_icon={html!("Create Channel")}
-                                    callback={toggle_options.clone()}
-                                />
-                            </li>
-                            <hr/>
-                            <li>
-                                <EditServerForm callback={toggle_options}/>
-                            </li>
-                            <li>
-                                <button onclick={delete_server}>
-                                    {"Delete Server"}
-                                </button>
-                            </li>
-                            <hr/>
+                            {
+                                if *is_owner {
+                                    html!{<>
+                                        <li>
+                                            <ChannelForm
+                                                entity={None}
+                                                button_icon={html!("Create Channel")}
+                                                callback={toggle_options.clone()}
+                                            />
+                                        </li>
+                                        <hr/>
+                                        <li>
+                                            <EditServerForm callback={toggle_options}/>
+                                        </li>
+                                        <li>
+                                            <button onclick={delete_server}>
+                                                {"Delete Server"}
+                                            </button>
+                                        </li>
+                                        <hr/>
+                                    </>}
+                                } else {
+                                    html!{}
+                                }
+                            }
                             <li>
                                 <button onclick={leave_server}>
                                     {"Leave Server"}
                                 </button>
                             </li>
                         </ul>
-                                        }
+                    }
                 } else {
                     html!{}
                 }
