@@ -99,5 +99,19 @@ impl MemberShort {
 
 #[derive(Deserialize, Debug)]
 pub struct MultiMember {
-    pub(crate) members: Vec<Member>,
+    pub(crate) members: Vec<MemberShort>,
+}
+impl MultiMember {
+    pub fn new(
+        members: Vec<MemberShort>
+    ) -> Self {
+        Self {
+            members
+        }
+    }
+    pub fn default() -> Self {
+        Self::new(
+            (1..15).into_iter().map(|_| { MemberShort::default() }).collect()
+        )
+    }
 }
