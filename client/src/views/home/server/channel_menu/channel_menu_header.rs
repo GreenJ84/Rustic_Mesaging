@@ -3,10 +3,10 @@ use wasm_bindgen_futures::spawn_local;
 use web_sys::MouseEvent;
 use yew::{Callback, CallbackRef, function_component, Html, html, Properties, use_context, use_state};
 use yew_router::hooks::use_navigator;
+use crate::comps::main_navigation::server_form::ServerForm;
 use crate::models::channel::NewChannel;
 use crate::comps::modal::{Modal, toggle_modal};
 use crate::views::home::HomeRoute;
-use crate::views::home::server::channel::edit_server::EditServerForm;
 use crate::contexts::member_context::{MemberDispatch, get_servers, TMemberContext};
 use crate::contexts::server_context::TServerContext;
 use crate::utils::api_requests::api_delete;
@@ -106,7 +106,11 @@ pub fn channel_menu(Props { is_owner }: &Props) -> Html {
                                         </li>
                                         <hr/>
                                         <li>
-                                            <EditServerForm callback={toggle_options}/>
+                                            <ServerForm
+                                                new={false}
+                                                button_icon={html!("Edit Server")}
+                                                callback={toggle_options}
+                                            />
                                         </li>
                                         <li>
                                             <button onclick={delete_server}>

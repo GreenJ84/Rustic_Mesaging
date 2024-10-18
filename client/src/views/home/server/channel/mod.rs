@@ -1,7 +1,6 @@
-use gloo::net::http::Request;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
-use web_sys::{HtmlTextAreaElement, InputEvent, KeyboardEvent, ScrollBehavior};
+use web_sys::{HtmlTextAreaElement, InputEvent, KeyboardEvent};
 use yew::{Callback, function_component, Html, html, use_context, use_effect_with, use_node_ref};
 use crate::comps::icon::get_random_svg;
 use crate::contexts::server_context::{get_channel_thread, ServerDispatch, TServerContext};
@@ -10,7 +9,6 @@ use crate::models::post::Post;
 use crate::utils::api_requests::api_post;
 
 pub(crate) mod welcome;
-pub(crate) mod edit_server;
 
 #[function_component(ChannelComp)]
 pub fn channel() -> Html {
