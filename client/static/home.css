@@ -665,74 +665,44 @@
 
 /* Main Content*/
 #main-content {
+    position: relative;
+    max-height: 100dvh;
     flex: 0 1 72.5vw;
     color: var(--text-lighter);
     background-color: var(--background-light);
     z-index: 0;
-}
-
-/* ME */
-.chat-room {
-    position: relative;
-    z-index: 10;
-    #chat-header {
+    .header {
         display: flex;
         align-items: center;
-        justify-content: flex-start;
+        justify-content: space-evenly;
         width: 100%;
         height: 50px;
         padding-left: 10px;
-        > svg {
-            margin-right: 25px;
-        }
-        > span {
-            font-size: 1.3em;
-        }
     }
-    hr {
+    > hr {
         margin: 0;
         width: 100%;
         border: 1px solid var(--background-dark);
     }
-    #message-thread {
-        height: 88dvh;
-        padding: 15px;
+    .thread {
         overflow-y: scroll;
         scroll-behavior: smooth;
         scrollbar-track-color: transparent;
         scrollbar-color: transparent transparent;
-        > svg {
-            transform: scale(2) translate(30%, 30%);
-            margin-bottom: 6%;
-        }
-        > h1 {
-            margin: 10px 0 10px 20px;
-            font-size: 2.4em;
-            letter-spacing: 2px;
-            font-weight: bolder;
-        }
-        > h2 {
-            margin: 10px 0 10px 20px;
-            letter-spacing: 1.5px;
-        }
-        > p{
-            margin-left: 20px;
-            letter-spacing: 1.5px;
-        }
-        > hr {
-            margin-bottom: 20px;
-            width: 100%;
-            border: .5px solid var(--text-light);
-        }
+        padding: 40px;
+        height: 83dvh;
+        max-height: 83dvh;
         > div {
+            position: relative;
             display: flex;
             align-items: flex-start;
             justify-content: flex-start;
+            margin: 3px 0;
             > svg {
                 margin: 15px;
             }
             > div {
-                margin-top: 5px;
+                width: 100%;
                 > p:first-child {
                     display: flex;
                     gap: 30px;
@@ -740,18 +710,71 @@
                     font-size: 1.1em;
                     font-weight: bolder;
                     > span {
+                        display: none;
                         color: var(--text-dark);
                         font-size: 0.7em;
                         font-weight: lighter;
                     }
                 }
+                > textarea {
+                    all: unset;
+                    display: block;
+                    width: 80%;
+                    padding: 4px;
+                    text-wrap: wrap;
+                    word-break: break-all;
+                    resize: none;
+                    background-color: var(--background-light);
+                    border: 1px solid black;
+                    overflow: hidden;
+                }
+                > button {
+                    position: relative;
+                    left: 40%;
+                    margin: 5px 10px;
+                    padding: 2px 4px;
+                    background-color: transparent;
+                    border: 1px solid black;
+                    border-radius: 5px;
+                }
+                > button.cancel {
+                    color: red;
+                    border-color: red;
+                }
+                > button.cancel:hover {
+                    color: var(--background-dark);
+                    border-color: var(--background-dark);
+                    background-color: red;
+                }
+                > button.save {
+                    color: green;
+                    border-color: green;
+                }
+                > button.save:hover {
+                    color: var(--background-dark);
+                    border-color: var(--background-dark);
+                    background-color: green;
+                }
+            }
+            > button.toggle {
+                all: unset;
+                display: none;
+                position: absolute;
+                right: 3%;
+                top: 10%;
             }
         }
-        > div.other{
-            flex-direction: row-reverse;
+        > div:hover, > div.active {
+            background-color: var(--background-mild);
+            > div > p:first-child > span {
+                display: inline-block;
+            }
+            > button.toggle {
+                display: block;
+            }
         }
     }
-    #message-input{
+    .input {
         position: absolute;
         left: 50%;
         bottom: 10px;
@@ -793,6 +816,43 @@
     }
 }
 
+/* ME */
+.chat-room {
+    #chat-header {
+        justify-content: flex-start;
+        > svg {
+            margin-right: 25px;
+        }
+        > span {
+            font-size: 1.3em;
+        }
+    }
+    #message-thread {
+        > svg {
+            transform: scale(2) translate(30%, 30%);
+            margin-bottom: 6%;
+        }
+        > h1 {
+            margin: 10px 0 10px 20px;
+            font-size: 2.4em;
+            letter-spacing: 2px;
+            font-weight: bolder;
+        }
+        > h2 {
+            margin: 10px 0 10px 20px;
+            letter-spacing: 1.5px;
+        }
+        > p{
+            margin-left: 20px;
+            letter-spacing: 1.5px;
+        }
+        > hr {
+            margin-bottom: 20px;
+            width: 100%;
+            border: .5px solid var(--text-light);
+        }
+    }
+}
 .overview{
     z-index: 0;
     > #overview-header{
@@ -985,16 +1045,7 @@
 }
 
 .server-channel {
-    position: relative;
-    max-height: 100dvh;
     > #channel-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-evenly;
-        width: 100%;
-        height: 50px;
-        padding-left: 10px;
-
         > input {
             all: unset;
             color: var(--background-light);
@@ -1004,7 +1055,6 @@
             border: none;
             border-radius: 5px;
         }
-
         > svg {
             padding: 4px;
             border-radius: 4px;
@@ -1012,83 +1062,6 @@
 
         > svg:hover {
             background-color: var(--background-medium);
-        }
-    }
-    > hr {
-        margin: 0;
-        width: 100%;
-        border: 1px solid var(--background-dark);
-    }
-    > #channel_chat_room {
-        overflow-y: scroll;
-        scroll-behavior: smooth;
-        scrollbar-track-color: transparent;
-        scrollbar-color: transparent transparent;
-        padding: 40px;
-        height: 90dvh;
-        max-height: 90dvh;
-        > div {
-            display: flex;
-            align-items: flex-start;
-            justify-content: flex-start;
-            margin: 3px 0;
-            > svg {
-                margin: 15px;
-            }
-            > div > p:first-child {
-                display: flex;
-                gap: 30px;
-                color: var(--text-lighter);
-                font-size: 1.1em;
-                font-weight: bolder;
-
-                > span {
-                    color: var(--text-dark);
-                    font-size: 0.7em;
-                    font-weight: lighter;
-                }
-            }
-        }
-        > div:hover {
-            background-color: var(--background-mild);
-        }
-    }
-    #channel-input{
-        position: absolute;
-        left: 50%;
-        bottom: 10px;
-        transform: translateX(-50%);
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-evenly;
-        gap: 10px;
-        width: 90%;
-        min-height: 50px;
-        padding: 15px;
-        background-color: var(--background-medium);
-        border-radius: 10px;
-        > svg {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        > svg:hover {
-            cursor: pointer;
-        }
-        > textarea {
-            all: unset;
-            width: 80%;
-            padding: 4px;
-            background-color: inherit;
-            text-wrap: wrap;
-            word-break: break-all;
-            resize: none;
-            border: none;
-            overflow: hidden;
-        }
-        > textarea:active{
-            border: none;
-            box-shadow: none;
         }
     }
 }
