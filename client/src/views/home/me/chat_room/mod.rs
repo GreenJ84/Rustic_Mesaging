@@ -56,9 +56,9 @@ pub fn direct_message(Props { chat_id }: &Props) -> Html {
             spawn_local(async move {
                 if let Ok(post_response) = api_post::<Message>(String::from("message"), form_data, false).await {
                     message.set_value("");
-                    chat_ctx.dispatch(ChatDispatch::UpdateCurrentThread(
-                        get_message_thread(chat_ctx.current_chat.id).await.unwrap()
-                    ));
+                    if let Ok(thread) = get_message_thread(chat_ctx.current_chat.id).await {
+                        chat_ctx.dispatch(ChatDispatch::UpdateCurrentThread(thread.clone()));
+                    }
                 }
             });
         })

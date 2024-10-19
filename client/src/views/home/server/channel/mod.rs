@@ -1,6 +1,6 @@
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
-use web_sys::{HtmlTextAreaElement, InputEvent, KeyboardEvent};
+use web_sys::{HtmlTextAreaElement, InputEvent, KeyboardEvent, SubmitEvent};
 use yew::{Callback, function_component, Html, html, use_context, use_effect_with, use_node_ref};
 use crate::comps::icon::get_random_svg;
 use crate::contexts::server_context::{get_channel_thread, ServerDispatch, TServerContext};
@@ -20,8 +20,7 @@ pub fn channel() -> Html {
     let channel_ref = use_node_ref();
     {
         let channel_ref = channel_ref.clone();
-        let posts = server_ctx.current_thread.posts.clone();
-        use_effect_with(posts, move |_| {
+        use_effect_with(server_ctx.current_thread.clone(), move |_| {
             if let Some(channel_el) = channel_ref.cast::<web_sys::Element>() {
                 channel_el.set_scroll_top(channel_el.scroll_height());
             }
@@ -35,22 +34,24 @@ pub fn channel() -> Html {
         let member_ctx = member_ctx.clone();
         let server_ctx = server_ctx.clone();
 
-        move || {
+        Callback::from(move |e: SubmitEvent| {
             let member_ctx = member_ctx.clone();
             let server_ctx = server_ctx.clone();
-            let message: HtmlTextAreaElement = textarea_ref.cast::<HtmlTextAreaElement>().unwrap();
+            let post: HtmlTextAreaElement = textarea_ref.cast::<HtmlTextAreaElement>().unwrap();
             let mut form_data = vec![
-                (String::from("content"), message.value().clone()),
+                (String::from("content"), post.value().clone()),
                 (String::from("author_id"), member_ctx.member.id.to_string()),
                 (String::from("channel_id"), server_ctx.current_channel.id.to_string()),
             ];
             spawn_local(async move {
                 if let Ok(_) = api_post::<Post>(String::from("post"), form_data,false).await{
-                    message.set_value("");
-                    server_ctx.dispatch(ServerDispatch::UpdateChannelThread(get_channel_thread(server_ctx.current_channel.id).await.unwrap()));
+                    post.set_value("");
+                    if let Ok(thread) = get_channel_thread(server_ctx.current_channel.id).await {
+                        server_ctx.dispatch(ServerDispatch::UpdateChannelThread(thread));
+                    }
                 }
             });
-        }
+        })
     };
 
     html! {
