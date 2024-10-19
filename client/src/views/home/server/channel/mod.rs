@@ -54,8 +54,8 @@ pub fn channel() -> Html {
     };
 
     html! {
-        <div id="main-content" class="server-channel">
-            <div id="channel-header">
+        <main id="main-content" class="server-channel">
+            <div id="channel-header"  class="header">
                 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-hash" viewBox="0 0 16 16">
                     <path d="M8.39 12.648a1 1 0 0 0-.015.18c0 .305.21.508.5.508.266 0 .492-.172.555-.477l.554-2.703h1.204c.421 0 .617-.234.617-.547 0-.312-.188-.53-.617-.53h-.985l.516-2.524h1.265c.43 0 .618-.227.618-.547 0-.313-.188-.524-.618-.524h-1.046l.476-2.304a1 1 0 0 0 .016-.164.51.51 0 0 0-.516-.516.54.54 0 0 0-.539.43l-.523 2.554H7.617l.477-2.304c.008-.04.015-.118.015-.164a.51.51 0 0 0-.523-.516.54.54 0 0 0-.531.43L6.53 5.484H5.414c-.43 0-.617.22-.617.532s.187.539.617.539h.906l-.515 2.523H4.609c-.421 0-.609.219-.609.531s.188.547.61.547h.976l-.516 2.492c-.008.04-.015.125-.015.18 0 .305.21.508.5.508.265 0 .492-.172.554-.477l.555-2.703h2.242zm-1-6.109h2.266l-.515 2.563H6.859l.532-2.563z"/>
                 </svg>
@@ -78,7 +78,7 @@ pub fn channel() -> Html {
                 </svg>
             </div>
             <hr/>
-            <section id="channel_chat_room" ref={channel_ref}>
+            <section id="post_thread" class="thread" ref={channel_ref}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" fill="currentColor" class="bi bi-hash" viewBox="0 0 16 16">
                     <path d="M8.39 12.648a1 1 0 0 0-.015.18c0 .305.21.508.5.508.266 0 .492-.172.555-.477l.554-2.703h1.204c.421 0 .617-.234.617-.547 0-.312-.188-.53-.617-.53h-.985l.516-2.524h1.265c.43 0 .618-.227.618-.547 0-.313-.188-.524-.618-.524h-1.046l.476-2.304a1 1 0 0 0 .016-.164.51.51 0 0 0-.516-.516.54.54 0 0 0-.539.43l-.523 2.554H7.617l.477-2.304c.008-.04.015-.118.015-.164a.51.51 0 0 0-.523-.516.54.54 0 0 0-.531.43L6.53 5.484H5.414c-.43 0-.617.22-.617.532s.187.539.617.539h.906l-.515 2.523H4.609c-.421 0-.609.219-.609.531s.188.547.61.547h.976l-.516 2.492c-.008.04-.015.125-.015.18 0 .305.21.508.5.508.265 0 .492-.172.554-.477l.555-2.703h2.242zm-1-6.109h2.266l-.515 2.563H6.859l.532-2.563z"/>
                 </svg>
@@ -95,7 +95,7 @@ pub fn channel() -> Html {
                     />
                 })}
             </section>
-            <div id="channel-input">
+            <div id="channel-input" class="input">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-plus-circle-fill" viewBox="0 0 16 16">
                     <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M8.5 4.5a.5.5 0 0 0-1 0v3h-3a.5.5 0 0 0 0 1h3v3a.5.5 0 0 0 1 0v-3h3a.5.5 0 0 0 0-1h-3z"/>
                 </svg>
@@ -111,18 +111,14 @@ pub fn channel() -> Html {
                         let target = e.target().unwrap();
                         let textarea: HtmlTextAreaElement = target.dyn_into::<HtmlTextAreaElement>().unwrap();
 
-                        // Reset the height to auto to allow shrinking
                         textarea.style().set_property("height", "auto").unwrap();
 
-                        // Set the height to the scrollHeight so it expands as needed
                         let scroll_height = textarea.scroll_height();
                         textarea.style().set_property("height", &format!("{}px", scroll_height)).unwrap();
                     })}
                     onkeydown={Callback::from(move |e: KeyboardEvent| {
-                        // Check if the "Enter" key is pressed
                         if e.key() == "Enter" && !e.shift_key() {
-                            e.prevent_default(); // Prevent the default behavior (new line)
-                            on_submit();
+                             on_submit.emit(SubmitEvent::new("submit").unwrap());
                         }
                     })}
                 >
@@ -134,6 +130,6 @@ pub fn channel() -> Html {
                     <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16M7 6.5C7 7.328 6.552 8 6 8s-1-.672-1-1.5S5.448 5 6 5s1 .672 1 1.5M4.285 9.567a.5.5 0 0 1 .683.183A3.5 3.5 0 0 0 8 11.5a3.5 3.5 0 0 0 3.032-1.75.5.5 0 1 1 .866.5A4.5 4.5 0 0 1 8 12.5a4.5 4.5 0 0 1-3.898-2.25.5.5 0 0 1 .183-.683M10 8c-.552 0-1-.672-1-1.5S9.448 5 10 5s1 .672 1 1.5S10.552 8 10 8"/>
                 </svg>
             </div>
-        </div>
+        </main>
     }
 }
