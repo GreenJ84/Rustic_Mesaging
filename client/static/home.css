@@ -262,7 +262,8 @@
                 }
             }
         }
-        > .sub-menu-item:hover{
+        > .sub-menu-item:hover,
+        > .sub-menu-item.active {
             background-color: var(--background-light);
             > a {
                 color: white;
@@ -375,7 +376,8 @@
                 }
             }
         }
-        > li.chat-menu-category:hover {
+        > li.chat-menu-category:hover,
+        > li.chat-menu-category.active{
             color: white;
             background-color: var(--background-light);
             border-radius: 5px;
@@ -404,7 +406,8 @@
             padding: 2px;
             border-radius: 50%;
         }
-        > .chat-item:hover > a  > span {
+        > .chat-item:hover > a  > span,
+        > .chat-item.active > a  > span{
             width: 45%;
         }
     }
@@ -582,7 +585,8 @@
                 width: 10px;
                 height: 60%;
         }
-        > .channel-item.owner:hover > a > span {
+        > .channel-item.owner:hover > a > span,
+        > .channel-item.active > a  > span{
             width: 55%;
         }
     }
