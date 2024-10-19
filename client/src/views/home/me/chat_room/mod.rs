@@ -1,3 +1,5 @@
+mod message_item;
+
 use std::fmt::Debug;
 use std::ops::Deref;
 use gloo::net::http::Request;
@@ -13,6 +15,7 @@ use crate::comps::modal::toggle_modal;
 use crate::views::home::HomeRoute;
 use crate::contexts::chat_context::{ChatContext, ChatDispatch, get_message_thread, TChatContext};
 use crate::utils::api_requests::api_post;
+use crate::views::home::me::chat_room::message_item::MessageItem;
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
@@ -76,13 +79,9 @@ pub fn direct_message(Props { chat_id }: &Props) -> Html {
                 <hr/>
                 {
                     for chat_ctx.thread.thread.clone().into_iter().rev().map(|message| html!{
-                        <div class={if member_ctx.member.id.eq(&message.sender.id) {"self"} else {"other"}}>
-                            {get_random_svg(true, "user-icon", "20")}
-                            <div>
-                                <p>{&message.sender.username}<span>{&message.created_at()}</span></p>
-                                <p>{&message.content}</p>
-                            </div>
-                        </div>
+                        <MessageItem
+                            message={message.clone()}
+                        />
                     })
                 }
             </section>
