@@ -7,15 +7,17 @@ use crate::contexts::server_context::{get_channel_thread, ServerDispatch, TServe
 use crate::contexts::member_context::TMemberContext;
 use crate::models::post::Post;
 use crate::utils::api_requests::api_post;
+use crate::views::home::server::channel::post_item::PostItem;
 
 pub(crate) mod welcome;
+mod post_item;
 
 #[function_component(ChannelComp)]
 pub fn channel() -> Html {
     let member_ctx = use_context::<TMemberContext>().unwrap();
     let server_ctx = use_context::<TServerContext>().unwrap();
-    let channel_ref = use_node_ref();
 
+    let channel_ref = use_node_ref();
     {
         let channel_ref = channel_ref.clone();
         let posts = server_ctx.current_thread.posts.clone();
@@ -88,13 +90,9 @@ pub fn channel() -> Html {
                 </p>
                 <hr/>
                 {for server_ctx.current_thread.posts.clone().into_iter().rev().map(|post| html!{
-                    <div>
-                        {get_random_svg(true, "user-icon", "16")}
-                        <div>
-                            <p>{post.author.username.clone()}<span>{post.created_at()}</span></p>
-                            <p>{&post.content}</p>
-                        </div>
-                    </div>
+                    <PostItem
+                        post={post.clone()}
+                    />
                 })}
             </section>
             <div id="channel-input">
