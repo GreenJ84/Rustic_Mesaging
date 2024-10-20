@@ -17,7 +17,7 @@ pub struct Post{
     author_id: i32,
     channel_id: i32,
     #[serde(serialize_with ="serialize_naive_date_time", deserialize_with = "deserialize_naive_date_time")]
-    created_at: chrono::NaiveDateTime,
+    created_at: NaiveDateTime,
 }
 
 impl Post {

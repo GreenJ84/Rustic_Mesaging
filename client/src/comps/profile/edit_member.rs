@@ -33,7 +33,7 @@ pub fn edit_member(EditProps {
                         { format!("{}:", first_label.clone()) }
                         <input
                             ref={first_node_ref}
-                            type="text"
+                            type={if first_label.eq("Password") {"password"} else {"text"}}
                             id={first_label.clone().to_lowercase()}
                             name={first_label.clone().to_lowercase()}
                             required=true
@@ -44,7 +44,7 @@ pub fn edit_member(EditProps {
                         { "Confirm current password" }
                         <input
                             ref={second_node_ref}
-                            type="text"
+                            type="password"
                             id={"current_password"}
                             name={"current_password"}
                             required=true

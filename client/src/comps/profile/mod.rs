@@ -10,7 +10,7 @@ use crate::AppRoute;
 use crate::models::member::Member;
 use crate::models::server::Server;
 use crate::comps::icon::get_random_svg;
-use crate::comps::modal::{Modal, toggle_modal};
+use crate::comps::modal::{force_toggle, Modal, toggle_modal};
 use crate::comps::profile::edit_member::EditMemberModal;
 use crate::views::home::HomeRoute;
 use crate::contexts::member_context::{MemberDispatch, get_friends, get_requests, get_servers, TMemberContext};
@@ -68,6 +68,7 @@ pub fn profile() -> Html {
         spawn_local(async move {
             if let Ok(member) = api_put::<Member>(format!("member{}", if is_password {"/password"} else {""}), data).await {
                 member_ctx.dispatch(MemberDispatch::UpdateMember(member));
+                force_toggle("modal_overlay");
             }
         });
     };
