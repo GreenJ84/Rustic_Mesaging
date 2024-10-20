@@ -23,7 +23,7 @@ pub fn edit_member(EditProps {
             modal_class={"edit_member_modal"}
             button_class={"edit_member"}
             button_icon={html!(
-                {"Edit"}
+                { if first_label.eq("Password") {"Change Password"} else {"Edit"}}
             )}
         >
             <>

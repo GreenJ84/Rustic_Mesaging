@@ -1,6 +1,7 @@
 use yew::prelude::*;
 use yew_router::{BrowserRouter, components::Redirect, Routable, Switch};
 use crate::comps::main_navigation::server_menu::ServerSidebar;
+use crate::comps::profile::Profile;
 use crate::contexts::{
     chat_context::ChatProvider,
     member_context::TMemberContext,
@@ -13,12 +14,9 @@ use crate::views::{
     },
     landing::LandingRoute,
 };
-use crate::views::home::profile::Profile;
 
 pub(crate) mod me;
 pub(crate) mod server;
-pub(crate) mod profile;
-pub(crate) mod edit_member;
 
 #[derive(Clone, Routable, PartialEq)]
 pub enum HomeRoute {
