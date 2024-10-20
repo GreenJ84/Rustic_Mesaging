@@ -1,12 +1,12 @@
 :root {
-    --background-dark: #1e1f22;
-    --background-medium: #232428;
-    --background-mild: #2b2d31;
-    --background-light: #42444a;
+    --background-dark: rgba(30, 31, 34, 1);;
+    --background-medium: rgba(35, 36, 40, 1);;
+    --background-mild: rgba(43, 45, 49, 1);;
+    --background-light: rgba(49, 51, 56, 1);
 
     --text-light: #919191;
     --text-lighter: #c8c8c8;
-    --text-dark: #777676;
+    --text-dark: #5c5c5c;
     --text-darker: #1f2023;
 
     --accent-green: #0bbd12;
