@@ -921,51 +921,238 @@
     background-color: #1e1e1e;
     color: #d4d4d4;
     > .profile-navigation {
-
+        box-sizing: content-box;
+        flex: 0 0 200px;
+        height: 94dvh;
+        padding: 6dvh 10px 0;
+        padding-left: max(15px, calc((100vw - 1040px)/2));
+        background-color: var(--background-mild);
+        overflow-y: scroll;
+        scrollbar-width: thin;
+        scrollbar-track-color: var(--background-mild);
+        scrollbar-color: var(--background-dark) var(--background-dark);
+        > div {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            height: 40px;
+            padding: 5px 8px;
+            background-color: var(--background-dark);
+            color: var(--text-lighter);
+            border-radius: 5px;
+            > input {
+                all: unset;
+                background-color: inherit;
+                color: inherit;
+            }
+        }
+        > h4 {
+            margin: 5px 0 8PX;
+            padding: 1px 8px;
+            color: var(--text-light);
+            font-size: 0.8em;
+        }
+        > ul {
+            all: unset;
+            > li {
+                list-style: none;
+                margin: 1px 0;
+                width: 100%;
+                height: 32px;
+                padding: 8px 10px;
+                color: var(--text-lighter);
+                font-size: 1.1em;
+                border-radius: 5px;
+            }
+            > li:hover {
+                background-color: var(--background-light);
+                cursor: pointer;
+            }
+            > li.active {
+                background-color: var(--text-dark);
+            }
+        }
+        > hr {
+            margin: 15px 0;
+            width: 90%;
+            height: 1px;
+            border: 1px solid var(--background-light)
+        }
+        > ul#social {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 2px;
+            margin-bottom: 20px;
+            > li {
+                padding: 5px;
+                width: auto;
+                height: auto;
+                > a{
+                    all: unset;
+                }
+            }
+        }
     }
     .profile-details {
-        > .profile-header {
-            padding-bottom: 20px;
-            border-bottom: 1px solid #333;
-            > img {
-                width: 120px;
-                height: 120px;
-                border-radius: 50%;
-                margin-bottom: 15px;
-            }
-            > h1 {
-                font-size: 2em;
-                color: #4caf50; /* Accent color */
-                margin: 0;
-            }
-            > p {
-                font-size: 1em;
-                color: #bbb;
-            }
-        }
-        padding: 20px 0;
-        > h2 {
+        position: relative;
+        flex: 1 0 835px;
+        height: 100dvh;
+        padding: 60px 150px 40px 35px;
+        background-color: var(--background-light);
+        overflow-y: scroll;
+        > h1 {
             font-size: 1.5em;
-            margin-bottom: 10px;
-            color: #4caf50;
         }
-    }
-    .profile-actions {
-        display: flex;
-        justify-content: space-around;
-        margin-top: 20px;
-    }
-   > button {
-        background-color: #333;
-        color: #d4d4d4;
-        border: none;
-        border-radius: 4px;
-        padding: 10px 20px;
-        cursor: pointer;
-        transition: background-color 0.3s;
-    }
-   > button:hover {
-        background-color: #4caf50;
+        > button.return {
+            all: unset;
+            position: absolute;
+            top: 90px;
+            right: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            padding: 10px;
+            border: 2px solid var(--text-light);
+            border-radius: 50%;
+        }
+        > button.return:hover {
+            color: white;
+            background-color: var(--text-light);
+            border-color: white;
+        }
+        > .profile-info-container {
+            position: relative;
+            background-color: var(--background-dark);
+            border-radius: 15px;
+            padding-bottom: 15px;
+            > div.banner {
+                margin-bottom: 80px;
+                height: 150px;
+                background-color: #dfd4e2;
+                border-radius: 15px 15px 0 0;
+            }
+            > svg {
+                position: absolute;
+                top: 150px;
+                left: 40px;
+                transform: translateY(-35%);
+                width: 90px;
+                height: 90px;
+                padding: 5px;
+                background-color: inherit;
+                border-radius: 50%;
+            }
+            > h2 {
+                position: absolute;
+                top: 150px;
+                left: 150px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                > svg {
+                    margin-left: 15px;
+                    padding: 5px;
+                    color: var(--text-light);
+                    border-radius: 50%;
+                }
+                > svg:hover {
+                    cursor: pointer;
+                    background-color: var(--background-light);
+                }
+            }
+            > div.info {
+                margin: 0 auto;
+                width: 95%;
+                padding: 2px 15px;
+                background-color: var(--background-light);
+                > div {
+                    position: relative;
+                    width: 100%;
+                    margin: 0;
+                    > h3 {
+                        color: var(--text-light);
+                        font-size: 0.8em;
+                        margin-bottom: 8px;
+                        text-transform: uppercase;
+                    }
+                    > p {
+                        margin-top: 8px;
+                        color: white;
+                        font-size: 1.2em;
+                    }
+                    > button {
+                        all: unset;
+                        position: absolute;
+                        top: 50%;
+                        right: 20px;
+                        transform: translateY(-50%);
+                        padding: 6px 12px;
+                        color: white;
+                        background-color: var(--text-dark);
+                        border-radius: 4px;
+                    }
+                    > button:hover {
+                        cursor: pointer;
+                        background-color: var(--text-light);
+                    }
+                }
+            }
+        }
+        > h2 {
+            font-size: 1.4em;
+            color: white;
+        }
+        > h4 {
+            margin-bottom: 0;
+            font-size: 0.8em;
+            text-transform: uppercase;
+        }
+        > p {
+            margin-top: 8px;
+        }
+        > button {
+            all: unset;
+            margin: 6px 0 15px;
+            height: 25px;
+            padding: 5px 15px;
+            color: white;
+            background-color: #5864f2;
+            border-radius: 5px;
+        }
+        > button:hover{
+            cursor: pointer;
+            background-color: #464fbd;
+        }
+        > button {
+            all: unset;
+            margin: 6px 0 15px;
+            height: 25px;
+            padding: 5px 15px;
+            color: white;
+            background-color: #5864f2;
+            border-radius: 5px;
+        }
+        > button:hover{
+            cursor: pointer;
+            background-color: #464fbd;
+        }
+        > button.disable-account{
+            background-color: #d1373c;
+            margin-right: 15px;
+        }
+        > button.disable-account:hover{
+            background-color: #9b2929;
+        }
+        > button.delete-account {
+            border: 1px solid #d1373c;
+            background-color: transparent;
+        }
+        > button.delete-account:hover {
+            background-color: #d1373c;
+        }
     }
 }
 
