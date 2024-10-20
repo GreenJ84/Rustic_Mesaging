@@ -52,11 +52,11 @@ pub fn edit_friend_request(Props { request }: &Props) -> Html{
     html! {
         <Modal
             modal_class="edit_request_modal"
-            button_class="edit_request"
+            button_class="edit_request edit"
             button_icon={html!{
                 <Icon
                     class_name="icon"
-                    size="30"
+                    size="20"
                     avatar={ html!{
                         <>
                             <g id="Layer_13" data-name="Layer 13">
@@ -64,7 +64,7 @@ pub fn edit_friend_request(Props { request }: &Props) -> Html{
                             </g>
                         </>
                     }}
-                    color={"black"}
+                    color={"currentColor"}
                     ratio={"0 0 32 32"}
                 />
             }}
@@ -72,15 +72,15 @@ pub fn edit_friend_request(Props { request }: &Props) -> Html{
             <>
                 <h2>{ "Edit Request Note" }</h2>
                 <form onsubmit={on_submit} >
-                    <div for="name">
+                    <label for="name">
                         <textarea
                             ref={note_ref}
                             id="note"
                             name="note"
                         >
                         </textarea>
-                        <button type="submit">{ "Save" }</button>
-                    </div>
+                    </label>
+                    <button type="submit">{ "Save" }</button>
                 </form>
             </>
         </Modal>

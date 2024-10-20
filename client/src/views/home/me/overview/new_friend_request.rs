@@ -1,7 +1,8 @@
 use gloo::net::http::Request;
-use web_sys::HtmlElement;
+use web_sys::{HtmlElement, HtmlInputElement};
 use yew::prelude::*;
 use yew_router::hooks::use_navigator;
+use crate::comps::main_navigation::discover_servers::DiscoverServersModal;
 use crate::models::member::{Member, MemberShort};
 use crate::models::server::Server;
 use crate::comps::modal::toggle_modal;
@@ -17,24 +18,37 @@ pub fn new_friend_request() -> Html {
     let receiver = use_state(|| MemberShort::default());
     let is_modal_open = use_state(|| false);
 
-    let username_ref = use_node_ref();
+    let username_state = use_state(|| String::new());
     let note_ref = use_node_ref();
+
+    let on_change = {
+        let username_state = username_state.clone();
+        Callback::from(move |event: Event| {
+            if let Some(input) = event.target_dyn_into::<HtmlInputElement>() {
+                username_state.set(input.value());
+            }
+        })
+    };
 
     let on_search_submit = {
         let app_ctx = app_ctx.clone();
         let is_modal_open = is_modal_open.clone();
         let receiver = receiver.clone();
-        let username_ref = username_ref.clone();
+        let username_state = username_state.clone();
 
         Callback::from(move |event: SubmitEvent| {
             event.prevent_default();
+            let username = username_state.clone();
+            if (*username_state).is_empty() {
+                return;
+            }
             let app_ctx = app_ctx.clone();
             let is_modal_open = is_modal_open.clone();
             let receiver = receiver.clone();
-            let username = username_ref.cast::<web_sys::HtmlInputElement>().unwrap().value();
+
 
             wasm_bindgen_futures::spawn_local(async move {
-                if let Ok(member) = api_get::<MemberShort>(format!("member/{}", username)).await {
+                if let Ok(member) = api_get::<MemberShort>(format!("member/{}", (*username))).await {
                     receiver.set(member);
                     toggle_modal("modal_overlay");
                     is_modal_open.set(!*is_modal_open);
@@ -93,7 +107,7 @@ pub fn new_friend_request() -> Html {
 
 
     html! {
-        <>
+        <section>
             {
                 if *is_modal_open {
                     html!{<ModalPortal onclick={toggle_modal.clone()}>
@@ -105,15 +119,15 @@ pub fn new_friend_request() -> Html {
                             </button>
                             <h2>{ "Add a Note" }</h2>
                             <form onsubmit={on_send}>
-                                <div for="name">
+                                <label for="note">
                                     <textarea
                                         ref={note_ref}
                                         id="note"
                                         name="note"
                                     >
                                     </textarea>
-                                    <button type="submit">{ "Send" }</button>
-                                </div>
+                                </label>
+                                <button type="submit">{ "Send" }</button>
                             </form>
                         </div>
                     </ModalPortal>}
@@ -123,33 +137,37 @@ pub fn new_friend_request() -> Html {
             <h2>{ "Add Friend" }</h2>
             <p>{"Add a friend using their RTC Username"}</p>
             <form onsubmit={on_search_submit} >
-                <div for="name">
+                <label for="name">
                     <input
-                        ref={username_ref}
+                        onchange={on_change}
                         type="text"
                         id="name"
                         name="name"
+                        placeholder="Add friends by their username."
+                        autocomplete="off"
                         required=true
                     />
-                    <button type="submit" style="margin-top: 10px;">{ "Create" }</button>
-                </div>
+                </label>
+                <button type="submit" disabled={(*username_state).is_empty()}>{ "Send Friend Request" }</button>
             </form>
             <hr/>
             <h3>{"Other Places to make friends"}</h3>
-            <button>
-                <svg fill="currentColor" enable-background="new 0 0 512 512" viewBox="0 0 512 512" width="32" height="32" xmlns="http://www.w3.org/2000/svg">
-                    <g><g>
-                        <path d="m255.5 226.2c-16.9 0-30 13.1-29.9 29.8.3 16.8 13.9 30.2 30.7 30.3 16.2.1 29.3-13 29.4-29.2 0-.2 0-.4 0-.6.2-16.6-13-30.2-29.6-30.4-.2.1-.4.1-.6.1z"/>
-                        <path d="m256 0c-141.4 0-256 114.6-256 256s114.6 256 256 256 256-114.6 256-256-114.6-256-256-256zm135.6 144.5c-21.8 56.1-43.9 112-65.8 168-2.2 6.1-6.9 10.8-12.9 13.1-56.1 22-112.3 44.1-168.4 66.2-1.9.7-3.8 1.2-5.7 1.6-15 .1-23.4-12.8-18.3-26 11-28.5 22.3-56.9 33.5-85.3 10.8-27.4 21.5-54.7 32.2-82.2 2.5-6.5 6.6-11.1 13.1-13.6 55.8-21.8 111.6-43.7 167.4-65.7 12.1-4.8 23.3 0 26 11.6.7 4.1.4 8.4-1.1 12.3z"/>
-                    </g></g>
-                </svg>
-                <span>{"Explore Discoverable Servers"}</span>
-                <svg id="svg10654" viewBox="0 0 6.3499999 6.3500002" width="32" height="32" xmlns="http://www.w3.org/2000/svg">
-                    <g id="layer1" transform="translate(0 -290.65)">
-                        <path id="path9429" d="m2.2580394 291.96502a.26460982.26460982 0 0 0 -.1741496.46871l1.6190225 1.38699-1.6190225 1.38648a.26460982.26460982 0 1 0 .3436483.40049l1.8536335-1.58595a.26460982.26460982 0 0 0 0-.40256l-1.8536335-1.5875a.26460982.26460982 0 0 0 -.1694987-.0667z" font-variant-ligatures="normal" font-variant-position="normal" font-variant-caps="normal" font-variant-numeric="normal" font-variant-alternates="normal" font-feature-settings="normal" text-indent="0" text-align="start" text-decoration-line="none" text-decoration-style="solid" text-decoration-color="rgb(0,0,0)" text-transform="none" text-orientation="mixed" white-space="normal" shape-padding="0" isolation="auto" mix-blend-mode="normal" solid-color="rgb(0,0,0)" solid-opacity="1" vector-effect="none"/>
-                    </g>
-                </svg>
-            </button>
-        </>
+            <DiscoverServersModal
+                switch_icon={html!(<>
+                    <svg fill="currentColor" enable-background="new 0 0 512 512" viewBox="0 0 512 512" width="45" height="45" xmlns="http://www.w3.org/2000/svg">
+                        <g><g>
+                            <path d="m255.5 226.2c-16.9 0-30 13.1-29.9 29.8.3 16.8 13.9 30.2 30.7 30.3 16.2.1 29.3-13 29.4-29.2 0-.2 0-.4 0-.6.2-16.6-13-30.2-29.6-30.4-.2.1-.4.1-.6.1z"/>
+                            <path d="m256 0c-141.4 0-256 114.6-256 256s114.6 256 256 256 256-114.6 256-256-114.6-256-256-256zm135.6 144.5c-21.8 56.1-43.9 112-65.8 168-2.2 6.1-6.9 10.8-12.9 13.1-56.1 22-112.3 44.1-168.4 66.2-1.9.7-3.8 1.2-5.7 1.6-15 .1-23.4-12.8-18.3-26 11-28.5 22.3-56.9 33.5-85.3 10.8-27.4 21.5-54.7 32.2-82.2 2.5-6.5 6.6-11.1 13.1-13.6 55.8-21.8 111.6-43.7 167.4-65.7 12.1-4.8 23.3 0 26 11.6.7 4.1.4 8.4-1.1 12.3z"/>
+                        </g></g>
+                    </svg>
+                    <span>{"Explore Discoverable Servers"}</span>
+                    <svg fill="currentColor" viewBox="0 0 6.3499999 6.3500002" width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+                        <g id="layer1" transform="translate(0 -290.65)">
+                            <path id="path9429" d="m2.2580394 291.96502a.26460982.26460982 0 0 0 -.1741496.46871l1.6190225 1.38699-1.6190225 1.38648a.26460982.26460982 0 1 0 .3436483.40049l1.8536335-1.58595a.26460982.26460982 0 0 0 0-.40256l-1.8536335-1.5875a.26460982.26460982 0 0 0 -.1694987-.0667z" font-variant-ligatures="normal" font-variant-position="normal" font-variant-caps="normal" font-variant-numeric="normal" font-variant-alternates="normal" font-feature-settings="normal" text-indent="0" text-align="start" text-decoration-line="none" text-decoration-style="solid" text-decoration-color="rgb(0,0,0)" text-transform="none" text-orientation="mixed" white-space="normal" shape-padding="0" isolation="auto" mix-blend-mode="normal" solid-color="rgb(0,0,0)" solid-opacity="1" vector-effect="none"/>
+                        </g>
+                    </svg>
+                </>)}
+            />
+        </section>
     }
 }
