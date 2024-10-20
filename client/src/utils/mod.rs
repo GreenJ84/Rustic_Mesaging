@@ -1,3 +1,4 @@
+use chrono::NaiveDateTime;
 use wasm_bindgen::JsValue;
 use web_sys::Storage;
 
@@ -21,4 +22,8 @@ pub fn get_auth_token() -> String {
 pub fn set_auth_token(token: String) -> Result<(), JsValue>{
     get_local_storage()
         .set_item("jwt_token", &token)
+}
+
+pub fn format_date(datetime: &NaiveDateTime) -> String{
+    return datetime.format("%m-%d-%Y %H:%M:%S").to_string();
 }
