@@ -29,6 +29,9 @@ impl Reducible for ServerContext {
     fn reduce(self: Rc<Self>, action: Self::Action) -> Rc<Self> {
         let new_context = match action {
             ServerDispatch::UpdateServer(server) => {
+                if self.current_server.eq(&server) {
+                    return self;
+                }
                 Self{
                     current_server: server,
                     channels: MultiChannel::default(),
@@ -45,15 +48,18 @@ impl Reducible for ServerContext {
                 }
             },
             ServerDispatch::UpdateChannel(channel) => {
+                if self.current_channel.eq(&channel) {
+                    return self;
+                }
                 Self{
                     current_server: self.current_server.clone(),
                     channels: self.channels.clone(),
                     current_channel: channel,
-                    current_thread: self.current_thread.clone()
+                    current_thread: MultiPost::default()
                 }
             },
             ServerDispatch::UpdateChannelThread(posts) => {
-                Self{
+                Self {
                     current_server: self.current_server.clone(),
                     channels: self.channels.clone(),
                     current_channel: self.current_channel.clone(),
@@ -61,7 +67,7 @@ impl Reducible for ServerContext {
                 }
             }
         };
-        Rc::new(new_context)
+        new_context.into()
     }
 }
 
@@ -92,8 +98,7 @@ pub fn server_provider(props: &ChildrenProps) -> Html {
 
     {
         let context = context.clone();
-        let channel_id = context.current_channel.id;
-        use_effect_with(channel_id, move |_| {
+        use_effect_with(context.current_channel.clone(), move |_| {
             if context.current_channel.clone() == Channel::default() {
                 return;
             }
