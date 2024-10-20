@@ -50,7 +50,7 @@ pub fn get(
     token: JWT,
     pool: &State<DbPool>,
     message_id: i32
-) -> CustomResponse<Message>{
+) -> CustomResponse<ResponseMessage>{
     let mut conn = get_db_connection(pool)?;
 
     // Get message details
@@ -60,17 +60,22 @@ pub fn get(
 
     // Make sure member is participant of chat where message displays
     if !MemberChatService::is_participant(&mut conn, message.chat_id(), token.claims.member_id){
-        return Err::<status::Custom<Message>, status::Custom<String>>(status::Custom(Status::Unauthorized, String::from("Only chat participants can view messages within")))
+        return Err::<status::Custom<ResponseMessage>, status::Custom<String>>(status::Custom(Status::Unauthorized, String::from("Only chat participants can view messages within")))
     }
 
     match MessageService::read(&mut conn, message_id){
         Ok(message) => Ok(
             status::Custom(
                 Status::Ok,
-                message
+                ResponseMessage {
+                    id: message.id(),
+                    content: message.content().to_string(),
+                    sender: MemberService::read(&mut conn, token.claims.member_id).unwrap().into_short(),
+                    created_at: message.created_at()
+                }
             )),
         Err(e) =>
-            return Err::<status::Custom<Message>, status::Custom<String>>(
+            return Err::<status::Custom<ResponseMessage>, status::Custom<String>>(
                 status::Custom(
                     Status::NotFound,
                     format!("Message lookup error: {}", e)
@@ -84,7 +89,7 @@ pub fn update(
     pool: &State<DbPool>,
     form: Form<Lenient<NewMessage>>,
     message_id: i32
-) -> CustomResponse<Message> {
+) -> CustomResponse<ResponseMessage> {
     let mut conn = get_db_connection(pool)?;
 
     let message = MessageService::read(&mut conn, message_id).map_err(|_|
@@ -92,7 +97,7 @@ pub fn update(
     )?;
     // Make sure only sender can update their messages
     if !token.claims.member_id == message.sender_id(){
-        return Err::<status::Custom<Message>, status::Custom<String>>(status::Custom(Status::Unauthorized, String::from("Only message sender can update content")))
+        return Err::<status::Custom<ResponseMessage>, status::Custom<String>>(status::Custom(Status::Unauthorized, String::from("Only message sender can update content")))
     }
 
     let input = form.into_inner().into_inner();
@@ -100,10 +105,15 @@ pub fn update(
         Ok(message) => Ok(
             status::Custom(
                 Status::Ok,
-                message
+                ResponseMessage {
+                    id: message.id(),
+                    content: message.content().to_string(),
+                    sender: MemberService::read(&mut conn, token.claims.member_id).unwrap().into_short(),
+                    created_at: message.created_at()
+                }
             )),
         Err(e) =>
-            return Err::<status::Custom<Message>, status::Custom<String>>(
+            return Err::<status::Custom<ResponseMessage>, status::Custom<String>>(
                 status::Custom(
                     Status::InternalServerError,
                     format!("Message update error: {}", e)
