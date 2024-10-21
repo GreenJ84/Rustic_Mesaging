@@ -2172,6 +2172,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
+ "urlencoding",
 ]
 
 [[package]]
@@ -2337,6 +2338,10 @@ dependencies = [
  "rustix",
  "windows-sys 0.59.0",
 ]
+
+[[package]]
+name = "testing_startup"
+version = "0.1.0"
 
 [[package]]
 name = "thiserror"
