@@ -21,13 +21,17 @@ pub fn register_modal() -> Html {
     let navigation = use_navigator().unwrap();
 
     let username_ref = use_node_ref();
+    let username_error = use_state(|| false);
     let password_ref = use_node_ref();
+    let password_error = use_state(|| false);
     let confirm_pass_ref = use_node_ref();
     let email_ref = use_node_ref();
 
     let on_submit = {
         let username_ref = username_ref.clone();
+        let username_error = username_error.clone();
         let password_ref = password_ref.clone();
+        let password_error = password_error.clone();
         let confirm_pass_ref = confirm_pass_ref.clone();
         let email_ref = email_ref.clone();
 
@@ -37,7 +41,9 @@ pub fn register_modal() -> Html {
             let navigation = navigation.clone();
 
             let username = username_ref.cast::<web_sys::HtmlInputElement>().unwrap().value();
+            let username_error = username_error.clone();
             let password = password_ref.cast::<web_sys::HtmlInputElement>().unwrap().value();
+            let password_error = password_error.clone();
             let confirm_pass = confirm_pass_ref.cast::<web_sys::HtmlInputElement>().unwrap().value();
             let email = email_ref.cast::<web_sys::HtmlInputElement>().unwrap().value();
             let mut form_data = vec![
@@ -66,6 +72,12 @@ pub fn register_modal() -> Html {
                             } else {
                                 log::error!("Authorization header not found in response");
                             }
+                        } else if let PostResponse::OnlyResponse(response) = post_response{
+                            if response.status() == 409 {
+                                password_error.set(true);
+                            } else if response.status() == 400 {
+                                username_error.set(true);
+                            }
                         }
                     },
                     Err(_) => { log::error!("Registration request failed"); }
@@ -91,6 +103,11 @@ pub fn register_modal() -> Html {
                     <label for="username">
                         { "Username:" }
                         <input ref={username_ref} type="text" id="username" name="username" required=true />
+                        {
+                            if (*username_error) {html!{
+                                <span>{"Username already exists"}</span>
+                            }} else {html!{}}
+                        }
                     </label>
                     <br/>
                     <label for="password">
@@ -101,6 +118,11 @@ pub fn register_modal() -> Html {
                     <label for="confirm_password">
                         { "Confirm Password:" }
                         <input ref={confirm_pass_ref} type="password" id="confirm_password" name="confirm_password" required=true />
+                        {
+                            if (*password_error) {html!{
+                                <span>{"Username and/or Password are incorrect."}</span>
+                            }} else {html!{}}
+                        }
                     </label>
                     <br/>
                     <label for="email">

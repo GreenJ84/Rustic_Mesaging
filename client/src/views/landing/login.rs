@@ -20,16 +20,22 @@ pub fn login_modal() -> Html {
     let navigation = use_navigator().unwrap();
 
     let username_ref = use_node_ref();
+    let username_error = use_state(|| false);
+    let password_error = use_state(|| false);
     let password_ref = use_node_ref();
 
     let on_submit = {
         let username_ref = username_ref.clone();
+        let username_error = username_error.clone();
         let password_ref = password_ref.clone();
+        let password_error = password_error.clone();
 
         Callback::from(move |event: SubmitEvent| {
             event.prevent_default();
             let member_ctx = member_ctx.clone();
             let navigation = navigation.clone();
+            let username_error = username_error.clone();
+            let password_error = password_error.clone();
 
             let username = username_ref.cast::<web_sys::HtmlInputElement>().unwrap().value();
             let password = password_ref.cast::<web_sys::HtmlInputElement>().unwrap().value();
@@ -56,6 +62,12 @@ pub fn login_modal() -> Html {
                             } else {
                                 log::error!("Authorization header not found in response");
                             }
+                        } else if let PostResponse::OnlyResponse(response) = post_response{
+                            if response.status() == 404 {
+                                username_error.set(true);
+                            } else if response.status() == 401 {
+                                password_error.set(true);
+                            }
                         }
                     },
                     Err(_) => { log::error!("Login request failed"); }
@@ -80,11 +92,21 @@ pub fn login_modal() -> Html {
                     <label for="username">
                         { "Username:" }
                         <input ref={username_ref} type="text" id="username" name="username" required=true />
+                        {
+                            if (*username_error) {html!{
+                                <span>{"Username not found"}</span>
+                            }} else {html!{}}
+                        }
                     </label>
                     <br/>
                     <label for="password">
                         { "Password:" }
                         <input ref={password_ref} type="password" id="password" name="password" required=true />
+                        {
+                            if (*password_error) {html!{
+                                <span>{"Password is incorrect"}</span>
+                            }} else {html!{}}
+                        }
                     </label>
                     <br/>
                     <button type="submit" style="margin-top: 10px;">{ "Login" }</button>
