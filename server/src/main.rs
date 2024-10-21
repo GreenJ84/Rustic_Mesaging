@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 #[macro_use]
 extern crate rocket;
 extern crate diesel;
@@ -9,6 +11,7 @@ mod db;
 mod schema;
 mod routes;
 mod service;
+#[cfg(test)] mod tests;
 
 use std::collections::HashSet;
 use std::str::FromStr;
@@ -23,7 +26,6 @@ fn rocket() -> _ {
     let db_pool = establish_db_connection();
     let web_socket_manager = Arc::new(WebSocketManager::new());
 
-    println!("{}", models::authentication::Register::hash_password("password123"));
     let cors = CorsOptions::default()
         .allowed_origins(AllowedOrigins::all()) // Allow all origins
         .allowed_methods(vec!["Head", "Get", "Post", "Put", "Delete"]
