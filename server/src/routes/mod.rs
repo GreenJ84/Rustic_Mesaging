@@ -12,5 +12,6 @@ pub(crate) mod chat_routes;
 pub(crate) mod member_chat_routes;
 pub(crate) mod friend_routes;
 pub(crate) mod friend_request_routes;
+pub(crate) mod report_routes;
 
 pub(crate) type CustomResponse<T> = Result<status::Custom<T>, status::Custom<String>>;

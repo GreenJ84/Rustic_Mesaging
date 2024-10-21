@@ -10,6 +10,7 @@ pub(crate) mod chat_service;
 pub(crate) mod member_chat_service;
 pub(crate) mod friend_service;
 pub(crate) mod friend_request_service;
+pub(crate) mod report_service;
 
 pub trait CrudOps<N, T> {
     fn create(conn: &mut DbConn, entity: N) -> Result<T, diesel::result::Error>;

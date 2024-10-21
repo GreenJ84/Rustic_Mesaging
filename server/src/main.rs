@@ -57,7 +57,7 @@ fn rocket() -> _ {
             auth_route::update_password, // PUT '/password' { Register }
             member_routes::delete, // DELETE '/member'
             member_routes::get_by_username, // GET '/member/<username>'
-                member_routes::search_members, // GET '/member/search?<search_term>'
+            member_routes::search_members, // GET '/member/search?<search_term>'
             member_routes::get_all_member_chats, // GET '/member/chats'
             member_routes::get_all_member_servers, // GET '/member/servers'
             member_routes::get_all_friends, // GET '/member/friends'
@@ -71,7 +71,7 @@ fn rocket() -> _ {
 
             chat_routes::create, // POST '/chat'  { NewChatWithMembers }
             chat_routes::get, // GET '/chat/<chat_id>'
-                chat_routes::update, // PUT '/chat/<chat_id>' { NewChat }
+            chat_routes::update, // PUT '/chat/<chat_id>' { NewChat }
             chat_routes::delete, // DELETE '/chat/<chat_id>'
                 chat_routes::get_chat_members, // GET '/chat/<chat_id>/members'
             chat_routes::get_chat_thread, // GET '/chat/<chat_id>/thread'
@@ -79,7 +79,7 @@ fn rocket() -> _ {
         .mount("/message", routes![
             message_routes::create, // POST '/message' { NewMessage }
             message_routes::get, // GET '/message/<message_id>'
-                    message_routes::update, // PUT '/message/<message_id>' { NewMessage }
+            message_routes::update, // PUT '/message/<message_id>' { NewMessage }
             message_routes::delete, // DELETE '/message/<message_id>'
             web_sockets::ws_direct, //  '/message'
         ])
@@ -104,26 +104,33 @@ fn rocket() -> _ {
 
             server_routes::create, // POST '/server' { NewServer } //
             server_routes::get, // GET '/server/<server_id>'
-                    server_routes::update, // PUT '/server/<server_id>' { NewServer }
-                    server_routes::delete, // DELETE '/server/<server_id>'
-                    server_routes::search_servers, // GET '/server/search?<search_term>
+            server_routes::update, // PUT '/server/<server_id>' { NewServer }
+            server_routes::delete, // DELETE '/server/<server_id>'
+            server_routes::search_servers, // GET '/server/search?<search_term>
             server_routes::get_all_servers, // GET '/server/all'
-                    server_routes::get_server_members, // GET '/server/<server_id>/members'
+                server_routes::get_server_members, // GET '/server/<server_id>/members'
             server_routes::get_server_channels, // GET '/server/<server_id>/channels'
         ])
         .mount("/channel", routes![
-                    channel_routes::create, // POST '/channel' { NewChannel }
+            channel_routes::create, // POST '/channel' { NewChannel }
             channel_routes::get, // GET '/channel/<channel_id>'
-                    channel_routes::update, // PUT '/channel' { NewChannel }
-                    channel_routes::delete, // DELETE '/channel/<channel_id>'
+            channel_routes::update, // PUT '/channel' { NewChannel }
+            channel_routes::delete, // DELETE '/channel/<channel_id>'
             channel_routes::get_channel_posts, // GET '/channel/<channel_id>/posts'
             web_sockets::channel_websocket, //  '/channel'
         ])
         .mount("/post", routes![
-                    post_routes::create, // POST '/post' { NewPost }
+            post_routes::create, // POST '/post' { NewPost }
             post_routes::get, // GET '/post/<post_id>'
-                    post_routes::update, // PUT '/post/<post_id>' { NewPost }
+            post_routes::update, // PUT '/post/<post_id>' { NewPost }
             post_routes::delete, // DELETE '/post/<post_id>'
+        ])
+        .mount("/reports", routes![
+            report_routes::member_activity_report,
+            report_routes::server_membership_report
+        ])
+        .register("/", catchers![
+            auth_route::unauthorized_catcher
         ])
 
 }

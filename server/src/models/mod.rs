@@ -10,3 +10,4 @@ pub(crate) mod friend;
 pub(crate) mod friend_request;
 pub(crate) mod member_chat;
 pub(crate) mod authentication;
+pub(crate) mod report;
