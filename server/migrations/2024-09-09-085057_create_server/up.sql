@@ -1,6 +1,6 @@
 CREATE TABLE server (
     id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
+    name TEXT NOT NULL UNIQUE,
     description TEXT NOT NULL,
     icon TEXT,
     owner_id INT NOT NULL REFERENCES member(id) ON DELETE CASCADE,
