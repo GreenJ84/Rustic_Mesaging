@@ -1,8 +1,8 @@
 [workspace]
 members = [
     "server",
-    "client"
     "client",
+    "app_startup",
     "testing_startup"
 ]
 resolver = "2"
