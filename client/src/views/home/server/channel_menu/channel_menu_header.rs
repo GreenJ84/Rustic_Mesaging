@@ -9,8 +9,10 @@ use crate::comps::modal::{Modal, toggle_modal};
 use crate::views::home::HomeRoute;
 use crate::contexts::member_context::{MemberDispatch, get_servers, TMemberContext};
 use crate::contexts::server_context::TServerContext;
+use crate::models::report::ServerMemberReportItem;
 use crate::utils::api_requests::api_delete;
 use crate::views::home::server::channel_menu::channel_form::ChannelForm;
+use crate::views::home::server::channel_menu::server_membership_report::ServerMembershipReport;
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
@@ -94,6 +96,9 @@ pub fn channel_menu(Props { is_owner }: &Props) -> Html {
                     html!{
                         <ul id="header_menu">
                             <span></span>
+                            <li>
+                                <ServerMembershipReport />
+                            </li>
                             {
                                 if *is_owner {
                                     html!{<>

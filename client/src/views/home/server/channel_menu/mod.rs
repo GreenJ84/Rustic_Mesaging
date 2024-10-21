@@ -14,6 +14,7 @@ use crate::views::home::server::ServerRoute;
 pub(crate) mod channel_menu_header;
 pub(crate) mod channel_menu_item;
 pub(crate) mod channel_form;
+mod server_membership_report;
 
 #[function_component(ChannelMenu)]
 pub fn channel_menu() -> Html {
