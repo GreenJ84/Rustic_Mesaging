@@ -1,4 +1,5 @@
 pub(crate) mod edit_member;
+mod member_activity_report;
 
 use gloo::net::http::Request;
 use web_sys::{MouseEvent, SubmitEvent, window};
@@ -12,6 +13,7 @@ use crate::models::server::Server;
 use crate::comps::icon::get_random_svg;
 use crate::comps::modal::{force_toggle, Modal, toggle_modal};
 use crate::comps::profile::edit_member::EditMemberModal;
+use crate::comps::profile::member_activity_report::MemberActivityReport;
 use crate::views::home::HomeRoute;
 use crate::contexts::member_context::{MemberDispatch, get_friends, get_requests, get_servers, TMemberContext};
 use crate::utils::api_requests::{api_delete, api_put};
@@ -173,6 +175,7 @@ pub fn profile() -> Html {
                 <hr/>
                 <h4>{"ACTIVITY SETTINGS"}</h4>
                 <ul>
+                    <li><MemberActivityReport /></li>
                     <li title="Activity Privacy">{"Activity Privacy"}</li>
                 </ul>
                 <hr/>

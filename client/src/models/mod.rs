@@ -10,6 +10,7 @@ pub(crate) mod server_membership;
 pub(crate) mod friends;
 pub(crate) mod friend_request;
 pub(crate) mod chat;
+pub(crate) mod report;
 
 pub fn serialize_naive_date_time<S>(dt: &NaiveDateTime, serializer: S) -> Result<S::Ok, S::Error>
 where
