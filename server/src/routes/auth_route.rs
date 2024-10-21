@@ -10,11 +10,6 @@ use crate::models::member::MemberSafe;
 use crate::service::CrudOps;
 
 
-#[catch(401)]
-pub fn unauthorized_catcher(req: &Request) -> String {
-    String::from("Unauthorized: Error validating member authentication")
-}
-
 #[post("/register", data = "<form>")]
 pub fn register(
     pool: &State<DbPool>,

@@ -130,7 +130,10 @@ fn rocket() -> _ {
             report_routes::server_membership_report
         ])
         .register("/", catchers![
-            auth_route::unauthorized_catcher
+            catchers::unauthorized_catcher,
+            catchers::conflict_catcher,
+            catchers::not_found,
+            catchers::internal_error
         ])
 
 }
