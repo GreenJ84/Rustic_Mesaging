@@ -1,6 +1,6 @@
 use rocket::form::{Form, Strict};
 use rocket::http::Status;
-use rocket::{State};
+use rocket::{Request, State};
 use rocket::response::status;
 use crate::db::{DbPool, get_db_connection};
 use crate::routes::CustomResponse;
@@ -8,6 +8,12 @@ use crate::service::member_service::MemberService;
 use crate::models::authentication::*;
 use crate::models::member::MemberSafe;
 use crate::service::CrudOps;
+
+
+#[catch(401)]
+pub fn unauthorized_catcher(req: &Request) -> String {
+    String::from("Unauthorized: Error validating member authentication")
+}
 
 #[post("/register", data = "<form>")]
 pub fn register(
