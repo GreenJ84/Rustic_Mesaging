@@ -1,11 +1,12 @@
 use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use chrono::NaiveDateTime;
-use diesel::{Identifiable, Insertable, Queryable, Selectable};
+use diesel::{Identifiable, Insertable, Queryable, QueryableByName, Selectable};
 use rocket::http::Status;
 use rocket::Response;
 use rocket::serde::json::Json;
 use rocket::response::Responder;
 use serde::{Deserialize, Serialize};
+use diesel::sql_types::{Text, Timestamp, Integer, Nullable, Bool};
 
 use crate::schema::member;
 
@@ -101,13 +102,19 @@ impl Member {
 }
 
 // API Response Types
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, QueryableByName, Deserialize, Debug, Clone)]
 pub struct MemberSafe {
+    #[diesel(sql_type = Integer)]
     id: i32,
+    #[diesel(sql_type = Text)]
     username: String,
+    #[diesel(sql_type = Text)]
     email: String,
+    #[diesel(sql_type = Nullable<Text>)]
     avatar: Option<String>,
+    #[diesel(sql_type = Bool)]
     is_admin: bool,
+    #[diesel(sql_type = Timestamp)]
     created_at: NaiveDateTime,
 }
 impl<'r> Responder<'r, 'r> for MemberSafe {
