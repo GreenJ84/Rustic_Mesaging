@@ -57,7 +57,10 @@ pub async fn api_post<T: DeserializeOwned + 'static>(extension: String, data: Ve
                 } else {
                     Ok(PostResponse::NonResponse(entity))
                 }
-            } else { log::error!("Request failed with status: {}", response.status()); Err(()) }
+            } else {
+                log::error!("Request failed with status: {}", response.status());
+                Ok(PostResponse::OnlyResponse(response))
+            }
         }
         Err(err) => { log::error!("Failed to send request: {:?}", err); Err(()) }
     }
