@@ -127,7 +127,9 @@ fn rocket() -> _ {
         ])
         .mount("/reports", routes![
             report_routes::member_activity_report,
-            report_routes::server_membership_report
+            report_routes::download_member_activity_report,
+            report_routes::server_membership_report,
+            report_routes::download_server_membership_report
         ])
         .register("/", catchers![
             catchers::unauthorized_catcher,
