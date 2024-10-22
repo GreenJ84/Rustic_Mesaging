@@ -16,7 +16,7 @@ pub fn report_table() -> Html {
     {
         let report_data = report_data.clone();
         let server_ctx = server_ctx.clone();
-        use_effect_with((), move |_| {
+        use_effect_with(server_ctx.current_server.clone(), move |_| {
             let server_ctx = server_ctx.clone();
 
             wasm_bindgen_futures::spawn_local(async move {
