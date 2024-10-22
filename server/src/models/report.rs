@@ -28,9 +28,10 @@ pub(crate) struct ActivityReportItem {
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub(crate) struct ServerMemberReportItem {
     #[diesel(embed)]
-    member: MemberSafe,
+    #[serde(flatten)]
+    pub(crate) member: MemberSafe,
     #[sql_type = "Timestamp"]
-    timestamp: NaiveDateTime,
+    pub(crate) timestamp: NaiveDateTime,
 }
 
 #[derive(Serialize)]

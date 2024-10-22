@@ -105,7 +105,7 @@ impl Member {
 #[derive(Serialize, QueryableByName, Deserialize, Debug, Clone)]
 pub struct MemberSafe {
     #[diesel(sql_type = Integer)]
-    id: i32,
+    pub(crate) id: i32,
     #[diesel(sql_type = Text)]
     username: String,
     #[diesel(sql_type = Text)]
@@ -116,6 +116,13 @@ pub struct MemberSafe {
     is_admin: bool,
     #[diesel(sql_type = Timestamp)]
     created_at: NaiveDateTime,
+}impl MemberSafe {
+    pub fn id(&self) -> i32 { self.id }
+    pub fn username(&self) -> &str { &self.username }
+    pub fn email(&self) -> &str { &self.email }
+    pub fn avatar(&self) -> &Option<String> { &self.avatar }
+    pub fn is_admin(&self) -> bool { self.is_admin }
+    pub fn created_at(&self) -> NaiveDateTime { self.created_at }
 }
 impl<'r> Responder<'r, 'r> for MemberSafe {
     fn respond_to(self, req: &'r rocket::Request<'_>) -> rocket::response::Result<'r> {
