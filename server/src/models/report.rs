@@ -28,7 +28,6 @@ pub(crate) struct ActivityReportItem {
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub(crate) struct ServerMemberReportItem {
     #[diesel(embed)]
-    #[serde(flatten)]
     pub(crate) member: MemberSafe,
     #[sql_type = "Timestamp"]
     pub(crate) timestamp: NaiveDateTime,
