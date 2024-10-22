@@ -66,7 +66,7 @@ pub fn direct_message(Props { chat_id }: &Props) -> Html {
 
     html! {
         <main id="main-content" class="chat-room">
-            <div id="chat_room-header" class="header">
+            <div id="chat-room-header" class="header">
                 {get_random_svg(true, "user-icon", "20")}
                 <span>{&chat_ctx.current_chat.name}</span>
             </div>

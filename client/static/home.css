@@ -820,7 +820,8 @@
 
 /* ME */
 .chat-room {
-    #chat-header {
+    #chat-room-header {
+        align-items: center;
         justify-content: flex-start;
         > svg {
             margin-right: 25px;
