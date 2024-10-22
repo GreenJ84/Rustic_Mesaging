@@ -1,9 +1,10 @@
 use gloo::net::http::Request;
 use yew::prelude::*;
 use serde::Deserialize;
+use crate::comps::csv_download::DownloadCsvButton;
 use crate::comps::modal::Modal;
 use crate::models::report::ActivityReportItem;
-use crate::utils::api_requests::api_get;
+use crate::utils::api_requests::{api_get, API_URL};
 use crate::utils::format_date;
 
 #[function_component(MemberActivityReport)]
@@ -27,13 +28,8 @@ pub fn report_table() -> Html {
             modal_class="member_activity_modal"
             button_class="member_activity report"
             button_icon={html!{"Activity Report"}}
-            reset_state={
-                let report_data = report_data.clone();
-                Callback::from(move |_|{
-                    report_data.set(Vec::new());
-                })
-            }
         >
+            <DownloadCsvButton url_extension={String::from("reports/member/csv")}/>
             <table>
                 <thead>
                     <tr>

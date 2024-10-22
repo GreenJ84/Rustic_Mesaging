@@ -14,3 +14,9 @@ pub(crate) struct ServerMemberReportItem {
     pub member: Member,
     pub(crate) timestamp: NaiveDateTime,
 }
+
+#[derive(Deserialize, Debug)]
+pub struct CsvDownload {
+    filename: String,
+    pub(crate) content: String,
+}

@@ -6,7 +6,7 @@ use wasm_bindgen_futures::spawn_local;
 use crate::utils::get_auth_token;
 
 
-const API_URL: &str = "http://localhost:8000";
+pub const API_URL: &str = "http://localhost:8000";
 
 pub async fn api_head(extension: String) -> bool{
     RequestBuilder::new(

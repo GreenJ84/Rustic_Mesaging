@@ -1,6 +1,7 @@
 use gloo::net::http::Request;
 use yew::prelude::*;
 use serde::Deserialize;
+use crate::comps::csv_download::DownloadCsvButton;
 use crate::comps::modal::Modal;
 use crate::contexts::server_context::TServerContext;
 use crate::models::report::ServerMemberReportItem;
@@ -32,13 +33,10 @@ pub fn report_table() -> Html {
             modal_class="server_membership_modal"
             button_class="server_membership report"
             button_icon={html!{"Membership Report"}}
-            reset_state={
-                let report_data = report_data.clone();
-                Callback::from(move |_|{
-                    report_data.set(Vec::new());
-                })
-            }
         >
+            <DownloadCsvButton
+                url_extension={format!("reports/server/{}/csv", server_ctx.current_server.id)}
+            />
             <table>
                 <thead>
                     <tr>
