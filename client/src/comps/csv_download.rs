@@ -3,7 +3,7 @@ use wasm_bindgen::JsCast;
 use web_sys::window;
 use yew::prelude::*;
 use crate::models::report::CsvDownload;
-use crate::utils::api_requests::{api_get, API_URL};
+use crate::utils::api_requests::{api_get, api_url};
 use crate::utils::get_auth_token;
 
 #[derive(Properties, PartialEq)]
@@ -19,7 +19,7 @@ pub fn download_csv_button(Props {url_extension}: &Props) -> Html {
         wasm_bindgen_futures::spawn_local(async move {
             let url_extension = url_extension.clone();
             let result = Request::get(
-                &format!("{}/{}", API_URL, url_extension)
+                &format!("{}/{}", api_url(), url_extension)
             )
                 .header("Authorization", &get_auth_token())
                 .send()

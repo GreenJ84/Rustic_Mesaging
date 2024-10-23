@@ -1,4 +1,5 @@
 use std::any::TypeId;
+use std::sync::LazyLock;
 use gloo::net::http::{Method, Request, RequestBuilder, Response};
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
@@ -6,11 +7,15 @@ use wasm_bindgen_futures::spawn_local;
 use crate::utils::get_auth_token;
 
 
-pub const API_URL: &str = "http://localhost:8000";
+pub fn api_url() -> String {
+    option_env!("SERVER_URL")
+        .unwrap_or("http://localhost:8000")
+        .to_string()
+}
 
 pub async fn api_head(extension: String) -> bool{
     RequestBuilder::new(
-        &format!("{}/{}", API_URL, extension)
+        &format!("{}/{}", api_url(), extension)
     )
     .method(Method::HEAD)
     .header("Authorization", &get_auth_token())
@@ -28,7 +33,7 @@ pub enum PostResponse<T> {
 
 pub async fn api_post<T: DeserializeOwned + 'static>(extension: String, data: Vec<(String, String)>, need_response: bool) -> Result<PostResponse<T>, ()> {
     let result = Request::post(
-        &format!("{}/{}", API_URL, extension)
+        &format!("{}/{}", api_url(), extension)
     )
     .header("Content-Type", "application/x-www-form-urlencoded")
     .header("Authorization", &get_auth_token())
@@ -69,7 +74,7 @@ pub async fn api_post<T: DeserializeOwned + 'static>(extension: String, data: Ve
 pub async fn api_get<T: DeserializeOwned>(extension: String) -> Result<T, ()> {
     let result =
         Request::get(
-            &format!("{}/{}", API_URL, extension)
+            &format!("{}/{}", api_url(), extension)
         )
             .header("Authorization", &get_auth_token())
             .send()
@@ -97,7 +102,7 @@ pub async fn api_get<T: DeserializeOwned>(extension: String) -> Result<T, ()> {
 
 pub async fn api_put<T: DeserializeOwned>(extension: String, data: Vec<(String, String)>) -> Result<T, ()> {
     let result = Request::put(
-            &format!("{}/{}", API_URL, extension)
+            &format!("{}/{}", api_url(), extension)
         )
         .header("Content-Type", "application/x-www-form-urlencoded")
         .header("Authorization", &get_auth_token())
@@ -126,7 +131,7 @@ pub async fn api_put<T: DeserializeOwned>(extension: String, data: Vec<(String, 
 
 pub async fn api_delete(extension: String) -> Result<(), ()> {
     let request = Request::delete(
-            &format!("{}/{}", API_URL, extension)
+            &format!("{}/{}", api_url(), extension)
         )
         .header("Authorization", &get_auth_token())
         .send()

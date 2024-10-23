@@ -4,7 +4,7 @@ use serde::Deserialize;
 use crate::comps::csv_download::DownloadCsvButton;
 use crate::comps::modal::Modal;
 use crate::models::report::ActivityReportItem;
-use crate::utils::api_requests::{api_get, API_URL};
+use crate::utils::api_requests::{api_get};
 use crate::utils::format_date;
 
 #[function_component(MemberActivityReport)]

@@ -9,6 +9,8 @@ pub(crate) mod comps;
 #[macro_use]
 extern crate chrono;
 
+use std::env;
+use dotenv::dotenv;
 use yew::prelude::*;
 use yew_router::prelude::*;
 use crate::contexts::member_context::MemberContextProvider;
@@ -71,6 +73,7 @@ fn app() -> Html {
 }
 
 fn main() {
+    dotenv().ok();
     wasm_logger::init(wasm_logger::Config::default());
     yew::Renderer::<Main>::new().render();
 }
