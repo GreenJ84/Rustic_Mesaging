@@ -3,11 +3,12 @@ LABEL authors="jessegreenough"
 WORKDIR ./
 
 COPY . .
+
 RUN rustup target add wasm32-unknown-unknown
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
     cargo install --locked trunk
-RUN trunk build --release
+RUN SERVER_URL=http://localhost:3000/api trunk build --release
 
 
 FROM nginx:alpine
