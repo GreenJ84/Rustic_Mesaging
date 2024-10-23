@@ -14,7 +14,6 @@ serde = { version = "*", features = ["derive"] }
 ws = { package = "rocket_ws", version = "0.1.1" }
 # Database connection
 r2d2 = "0.8"
-rocket_db_pools = { version = "0.2.0", features = ["diesel_postgres"] }
 diesel = { version = "2", features = ["postgres", "r2d2", "numeric", "chrono"]  }
 # Authentication
 jsonwebtoken = "9.3.0"
