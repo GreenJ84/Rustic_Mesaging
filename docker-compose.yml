@@ -9,11 +9,6 @@ services:
       - "15433:15433"   # Postgres compatible port
       - "5433:5433"     # YSQL client port
       - "9042:9042"     # YCQL client port
-#    healthcheck:
-#      test: [ "CMD-SHELL", "pg_isready -h localhost -p 5433" ]
-#      interval: 10s
-#      timeout: 5s
-#      retries: 5
     command: [ "bin/yugabyted", "start", "--background=false" ]
     restart: unless-stopped
     volumes:
