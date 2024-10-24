@@ -1,7 +1,6 @@
 use web_sys::MouseEvent;
 use yew::{Callback, function_component, Html, html, use_context};
 use yew_router::prelude::Link;
-use crate::comps::icon::get_random_svg;
 use crate::contexts::member_context::TMemberContext;
 use crate::models::channel::Channel;
 use crate::comps::member_bar::MemberBar;

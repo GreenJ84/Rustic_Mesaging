@@ -2,7 +2,7 @@ use yew::prelude::*;
 use web_sys::HtmlTextAreaElement;
 use wasm_bindgen::JsCast;
 use yew::platform::spawn_local;
-use crate::comps::icon::{get_random_svg, Icon};
+use crate::comps::icon::Icon;
 use crate::contexts::member_context::TMemberContext;
 use crate::contexts::server_context::{get_channel_thread, ServerDispatch, TServerContext};
 use crate::models::post::{Post, PostDetail};
@@ -124,7 +124,7 @@ pub fn post_item(Props { post }: &Props) -> Html {
                     if (*editing) { " active" } else { " why" }
                 )}
             >
-                {get_random_svg(true, "user-icon", "20")}
+                {post.author.clone().avatar("user-icon", "20")}
                 <div>
                     <p>{&post.author.username}<span>{&post.created_at()}</span></p>
                     {

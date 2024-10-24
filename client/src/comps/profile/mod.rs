@@ -10,7 +10,6 @@ use yew_router::navigator::Navigator;
 use crate::AppRoute;
 use crate::models::member::Member;
 use crate::models::server::Server;
-use crate::comps::icon::get_random_svg;
 use crate::comps::modal::{force_toggle, Modal, toggle_modal};
 use crate::comps::profile::edit_member::EditMemberModal;
 use crate::comps::profile::member_activity_report::MemberActivityReport;
@@ -250,7 +249,7 @@ pub fn profile() -> Html {
                 <h1>{"My Account"}</h1>
                 <div class="profile-info-container">
                     <div class="banner"></div>
-                    {get_random_svg(true, "profile-avatar", "60")}
+                    {member_ctx.member.clone().avatar("profile-avatar", "60")}
                     <h2>
                         {member_ctx.member.username.clone()}
                         <svg width="28" height="28" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" fill="currentColor">

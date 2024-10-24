@@ -2,7 +2,7 @@ use yew::prelude::*;
 use web_sys::HtmlTextAreaElement;
 use wasm_bindgen::JsCast;
 use yew::platform::spawn_local;
-use crate::comps::icon::{get_random_svg, Icon};
+use crate::comps::icon::Icon;
 use crate::contexts::chat_context::{ChatDispatch, get_message_thread, TChatContext};
 use crate::contexts::member_context::TMemberContext;
 use crate::contexts::server_context::TServerContext;
@@ -125,7 +125,7 @@ pub fn message_item(Props { message }: &Props) -> Html {
                     if (*editing) { " active" } else { " why" }
                 )}
             >
-                {get_random_svg(true, "user-icon", "20")}
+                {message.sender.clone().avatar("user-icon", "20")}
                 <div>
                     <p>{&message.sender.username}<span>{&message.created_at()}</span></p>
                     {

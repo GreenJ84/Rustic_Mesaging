@@ -1,5 +1,4 @@
 use yew::prelude::*;
-use crate::comps::icon::get_random_svg;
 use crate::comps::modal::toggle_modal;
 
 use crate::contexts::member_context::TMemberContext;
@@ -18,7 +17,7 @@ pub fn member_bar() -> Html {
         <>
             <div class={"member-bar"}>
                 <div onclick={onclick.clone()}>
-                    {get_random_svg(true, "member-icon", "40")}
+                    {member_context.member.clone().avatar("member-icon", "40")}
                     <div>
                         <span>{&member_context.member.username}</span>
                         <span>{"Online"}</span>

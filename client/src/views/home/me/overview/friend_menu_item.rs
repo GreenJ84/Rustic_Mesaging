@@ -1,8 +1,8 @@
 use gloo::net::http::Request;
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
+use crate::comps::icon::Icon;
 use crate::models::friends::FullFriend;
-use crate::comps::icon::{get_random_svg, Icon};
 use crate::comps::modal::Modal;
 use crate::contexts::member_context::{MemberDispatch, get_friends, TMemberContext};
 use crate::utils::api_requests::api_delete;
@@ -37,7 +37,7 @@ pub fn friend_menu_item(Props { friend }: &Props) -> Html {
 
     html!{
         <li class="overview_menu_item">
-            {get_random_svg(true, "", "40")}
+            {friend.member.clone().avatar("", "40")}
             <div>
                 <h4>{&friend.member.username} <span>{&friend.member.username}</span></h4>
                 <p class="created">{"Friends since: "}{format_date(&friend.created_at)}</p>

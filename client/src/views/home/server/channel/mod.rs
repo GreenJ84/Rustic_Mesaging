@@ -2,7 +2,6 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
 use web_sys::{HtmlTextAreaElement, InputEvent, KeyboardEvent, SubmitEvent};
 use yew::{Callback, function_component, Html, html, use_context, use_effect_with, use_node_ref};
-use crate::comps::icon::get_random_svg;
 use crate::contexts::server_context::{get_channel_thread, ServerDispatch, TServerContext};
 use crate::contexts::member_context::TMemberContext;
 use crate::models::post::Post;

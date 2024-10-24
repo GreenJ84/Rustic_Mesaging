@@ -2,7 +2,6 @@ use rand::prelude::IndexedRandom;
 use yew::prelude::*;
 use yew::{function_component, Html, html};
 use yew_router::components::Link;
-use crate::comps::icon::get_random_svg;
 use crate::models::server::Server;
 use crate::views::home::HomeRoute;
 use crate::contexts::server_context::{ServerDispatch, TServerContext};
@@ -32,7 +31,7 @@ pub fn server_menu_item(Props { server, selected }: &Props) -> Html{
             <Link<HomeRoute> to={HomeRoute::Server {server_id: server.id}}>
                 <span></span>
                 {
-                    html!{ get_random_svg(false, "server-icon", "20") }
+                    html!{ server.clone().icon("server-icon", "20") }
                 }
             </Link<HomeRoute>>
         </li>

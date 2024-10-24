@@ -79,7 +79,8 @@ pub fn search_modal() -> Html{
                                         html!{
                                             <SearchItem
                                                 name={member.username.clone()}
-                                                second={member.username}
+                                                second={member.username.clone()}
+                                                icon={member.clone().avatar("search_icon", "16")}
                                             />
                                         }
                                     })
@@ -100,8 +101,9 @@ pub fn search_modal() -> Html{
                                     for (*server_state).servers.clone().into_iter().map(|server|{
                                         html!{
                                             <SearchItem
-                                                name={server.name}
+                                                name={server.name.clone()}
                                                 second={server.created_at.format("%Y-%m-%d %H:%M:%S").to_string()}
+                                                icon={server.clone().icon("search_icon", "16")}
                                             />
                                         }
                                     })

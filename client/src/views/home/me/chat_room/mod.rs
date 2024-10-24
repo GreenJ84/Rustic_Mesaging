@@ -64,15 +64,17 @@ pub fn direct_message(Props { chat_id }: &Props) -> Html {
         })
     };
 
+    let icon = get_random_svg(false, "user-icon", "20");
+
     html! {
         <main id="main-content" class="chat-room">
             <div id="chat-room-header" class="header">
-                {get_random_svg(true, "user-icon", "20")}
+                {icon.clone()}
                 <span>{&chat_ctx.current_chat.name}</span>
             </div>
             <hr/>
             <section id="message-thread" class="thread" ref={chat_ref}>
-                {get_random_svg(true, "user-icon", "20")}
+                {icon.clone()}
                 <h1>{&chat_ctx.current_chat.name}</h1>
                 <h2>{chat_ctx.current_chat.created_at.format("%Y-%m-%d %H:%M:%S").to_string()}</h2>
                 <p>{format!("This is the beginning of the message history for {}", &chat_ctx.current_chat.name)}</p>

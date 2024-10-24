@@ -8,7 +8,6 @@ use crate::models::chat::Chat;
 use crate::contexts::member_context::TMemberContext;
 use crate::models::friends::FullFriend;
 use crate::models::server::Server;
-use crate::comps::icon::get_random_svg;
 use crate::comps::modal::{force_toggle, Modal};
 use crate::views::home::HomeRoute;
 use crate::contexts::chat_context::{ChatDispatch, get_chat_previews, TChatContext};
@@ -212,7 +211,7 @@ pub fn chat_form(Props { entity, button_icon }: &Props) -> Html {
 
 
 
-                                                {get_random_svg(true, "friend-item", "30")}
+                                                {friend.member.clone().avatar("friend-item", "30")}
                                                 <span>{friend.member.username.clone()}</span>
                                             </div>
                                         }})

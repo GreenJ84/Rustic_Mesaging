@@ -1,5 +1,7 @@
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
+use yew::Html;
+use crate::comps::icon::{member_avatars, server_icons};
 use crate::models::{serialize_naive_date_time, deserialize_naive_date_time};
 
 
@@ -48,6 +50,15 @@ impl Server {
             NaiveDateTime::default()
         )
 
+    }
+    pub fn icon(self, class_name: &str, size: &str) -> Html{
+        match self.icon {
+            Some(option) => {
+                let parts: Vec<&str> = option.split(':').collect();
+                server_icons(&class_name, &size, parts[1]).get(parts[0]).unwrap().to_owned()
+            }
+            None => { server_icons(&class_name, &size, "var(--accent-green)").get("default").unwrap().to_owned() }
+        }
     }
 }
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]

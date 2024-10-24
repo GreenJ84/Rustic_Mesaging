@@ -2,6 +2,8 @@
 use std::borrow::Borrow;
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
+use yew::{Html, html};
+use crate::comps::icon::member_avatars;
 use crate::models::{serialize_naive_date_time, deserialize_naive_date_time};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
@@ -68,6 +70,15 @@ impl Member {
             NaiveDateTime::default()
         )
     }
+
+    pub fn avatar(self, class_name: &str, size: &str) -> Html{
+        match self.avatar {
+            Some(option) => {
+                member_avatars(&class_name, &size).get(&option).unwrap().to_owned()
+            }
+            None => { member_avatars(&class_name, &size).get("default").unwrap().to_owned() }
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -94,6 +105,14 @@ impl MemberShort {
             "guest".to_string(),
             None,
         )
+    }
+    pub fn avatar(self, class_name: &str, size: &str) -> Html{
+        match self.avatar {
+            Some(option) => {
+                member_avatars(&class_name, &size).get(&option).unwrap().to_owned()
+            }
+            None => { member_avatars(&class_name, &size).get("default").unwrap().to_owned() }
+        }
     }
 }
 

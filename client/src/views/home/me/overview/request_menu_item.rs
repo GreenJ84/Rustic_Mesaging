@@ -2,9 +2,9 @@ use chrono::NaiveDateTime;
 use gloo::net::http::Request;
 use yew::platform::spawn_local;
 use yew::prelude::*;
+use crate::comps::icon::Icon;
 use crate::models::friend_request::RequestDetailed;
 use crate::models::member::Member;
-use crate::comps::icon::{get_random_svg, Icon};
 use crate::comps::modal::Modal;
 use crate::views::home::me::overview::edit_friend_request::EditFriendRequest;
 use crate::contexts::member_context::{MemberDispatch, get_friends, get_requests, TMemberContext};
@@ -68,9 +68,10 @@ pub fn request_menu_item(Props { request, version }: &Props) -> Html {
 
     let request_type = if let Version::Pending = version { "Outgoing" } else { "Incoming" };
     let is_outgoing = version.eq(&Version::Pending);
+
     html!{
         <li class={format!("overview_menu_item {}", version.value())} >
-            {get_random_svg(true, "friend-icon", "30")}
+            {request.member.clone().avatar("friend-icon", "30")}
             <div>
                 <h4>{&request.member.username} <span>{&request.member.username}</span></h4>
                 <p>
