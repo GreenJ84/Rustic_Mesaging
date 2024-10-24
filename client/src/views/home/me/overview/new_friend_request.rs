@@ -19,11 +19,17 @@ pub fn new_friend_request() -> Html {
     let is_modal_open = use_state(|| false);
 
     let username_state = use_state(|| String::new());
+    let username_error = use_state(|| false);
     let note_ref = use_node_ref();
 
     let on_change = {
         let username_state = username_state.clone();
-        Callback::from(move |event: Event| {
+        let username_error = username_error.clone();
+
+        Callback::from(move |event: InputEvent| {
+            if *username_error {
+                username_error.set(false);
+            }
             if let Some(input) = event.target_dyn_into::<HtmlInputElement>() {
                 username_state.set(input.value());
             }
@@ -35,10 +41,12 @@ pub fn new_friend_request() -> Html {
         let is_modal_open = is_modal_open.clone();
         let receiver = receiver.clone();
         let username_state = username_state.clone();
+        let username_error = username_error.clone();
 
         Callback::from(move |event: SubmitEvent| {
             event.prevent_default();
             let username = username_state.clone();
+            let username_error = username_error.clone();
             if (*username_state).is_empty() {
                 return;
             }
@@ -52,6 +60,8 @@ pub fn new_friend_request() -> Html {
                     receiver.set(member);
                     toggle_modal("modal_overlay");
                     is_modal_open.set(!*is_modal_open);
+                } else  {
+                    username_error.set(true);
                 }
             });
         })
@@ -139,7 +149,7 @@ pub fn new_friend_request() -> Html {
             <form onsubmit={on_search_submit} >
                 <label for="name">
                     <input
-                        onchange={on_change}
+                        oninput={on_change}
                         type="text"
                         id="name"
                         name="name"
@@ -149,6 +159,7 @@ pub fn new_friend_request() -> Html {
                     />
                 </label>
                 <button type="submit" disabled={(*username_state).is_empty()}>{ "Send Friend Request" }</button>
+                { if *username_error { html!{ <span>{"Username not found."}</span> } } else { html!{} }}
             </form>
             <hr/>
             <h3>{"Other Places to make friends"}</h3>

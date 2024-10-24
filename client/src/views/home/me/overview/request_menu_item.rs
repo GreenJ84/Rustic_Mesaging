@@ -79,7 +79,7 @@ pub fn request_menu_item(Props { request, version }: &Props) -> Html {
                     <span>{"Sent: "}{format_date(&request.created_at)}</span>
                 </p>
                 {
-                    if is_outgoing && request.note.is_some() {
+                    if request.note.is_some() {
                             html!{ <p class="note">{"Note: "}{&request.note.clone().unwrap()}</p> }
                         } else { html!{} }
                 }

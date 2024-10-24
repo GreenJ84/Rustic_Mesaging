@@ -2,6 +2,15 @@ use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use crate::models::member::Member;
 
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct FriendRequest{
+    pub(crate) sender_id: i32,
+    pub(crate) receiver_id: i32,
+    pub(crate) note: Option<String>,
+    pub(crate) created_at: NaiveDateTime,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct RequestDetailed {
     pub(crate) member: Member,

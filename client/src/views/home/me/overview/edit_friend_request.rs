@@ -1,10 +1,10 @@
 use gloo::net::http::Request;
 use yew::prelude::*;
 use yew_router::hooks::use_navigator;
-use crate::models::friend_request::RequestDetailed;
+use crate::models::friend_request::{FriendRequest, RequestDetailed};
 use crate::models::server::Server;
 use crate::comps::icon::Icon;
-use crate::comps::modal::{Modal, toggle_modal};
+use crate::comps::modal::{force_toggle, Modal};
 use crate::views::home::HomeRoute;
 use crate::views::home::me::overview::new_friend_request::NewFriendRequest;
 use crate::contexts::member_context::{MemberDispatch, get_requests, get_servers, TMemberContext};
@@ -41,8 +41,8 @@ pub fn edit_friend_request(Props { request }: &Props) -> Html{
                 (String::from("note"), note.clone()),
             ];
             wasm_bindgen_futures::spawn_local(async move {
-                if let Ok(_) = api_put::<()>(String::from("request"), form_data).await {
-                    toggle_modal("edit_request_modal_overlay");
+                if let Ok(_) = api_put::<FriendRequest>(String::from("request"), form_data).await {
+                    force_toggle("modal_overlay");
                     app_ctx.dispatch(MemberDispatch::UpdateRequests(get_requests().await.unwrap()));
                 }
             });
