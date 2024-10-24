@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::models::member::{Member, MemberShort};
 use crate::models::{serialize_naive_date_time, deserialize_naive_date_time};
 use crate::models::chat::Chat;
+use crate::models::friend_request::RequestDetailed;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct NewMessage{
@@ -51,7 +52,7 @@ pub struct MessageThread {
 impl MessageThread{
     pub fn default() -> Self {
         Self {
-            thread: (1..20).map(|_| Message::default()).collect::<Vec<Message>>(),
+            thread: Vec::<Message>::new(),
         }
     }
 }

@@ -1,5 +1,6 @@
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
+use crate::models::channel::Channel;
 use crate::models::member::Member;
 
 
@@ -35,14 +36,9 @@ pub struct MultiFriendRequest {
 }
 impl MultiFriendRequest{
 pub fn default() -> Self{
-    fn reqs() -> Vec<RequestDetailed> {
-        (1..15).into_iter()
-            .map(|_| RequestDetailed::default())
-            .collect()
-    }
     Self {
-        incoming: reqs().clone(),
-        outgoing: reqs(),
+        incoming: Vec::<RequestDetailed>::new(),
+        outgoing: Vec::<RequestDetailed>::new(),
     }
 }
 }

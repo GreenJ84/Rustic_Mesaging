@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use yew::Html;
 use crate::comps::icon::{member_avatars, server_icons};
 use crate::models::{serialize_naive_date_time, deserialize_naive_date_time};
-
+use crate::models::friend_request::RequestDetailed;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct NewServer{
@@ -74,11 +74,8 @@ impl MultiServer {
         }
     }
     pub fn default() -> Self {
-        let servers = (1..25).map(|_| {
-            Server::default()
-        }).collect::<Vec<Server>>();
         Self::new(
-            servers
+            Vec::<Server>::new()
         )
 
     }

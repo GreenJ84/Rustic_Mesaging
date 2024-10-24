@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use yew::{Html, html};
 use crate::comps::icon::member_avatars;
 use crate::models::{serialize_naive_date_time, deserialize_naive_date_time};
+use crate::models::friend_request::RequestDetailed;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct UpdateMember {
@@ -130,7 +131,7 @@ impl MultiMember {
     }
     pub fn default() -> Self {
         Self::new(
-            (1..15).into_iter().map(|_| { MemberShort::default() }).collect()
+            Vec::<MemberShort>::new()
         )
     }
 }

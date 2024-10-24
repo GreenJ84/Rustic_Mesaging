@@ -1,6 +1,7 @@
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use crate::models::{serialize_naive_date_time, deserialize_naive_date_time};
+use crate::models::friend_request::RequestDetailed;
 use crate::models::member::MemberShort;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -84,7 +85,7 @@ impl MultiPost {
     }
     pub fn default() -> Self {
         Self::new(
-            (1..20).map(|_| PostDetail::default()).collect()
+            Vec::<PostDetail>::new()
         )
 
     }

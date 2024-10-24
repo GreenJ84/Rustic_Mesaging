@@ -56,7 +56,7 @@ impl MultiChannel {
     }
     pub fn default() -> Self {
         Self::new(
-            (1..20).map(|_| Channel::default()).collect()
+            Vec::<Channel>::new()
         )
 
     }

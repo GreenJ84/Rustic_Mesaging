@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use yew_router::Routable;
+use crate::models::channel::Channel;
 use crate::models::member::Member;
 use crate::models::message::{Message, MessageThread};
 
@@ -26,7 +27,7 @@ pub struct MultiChatPreview {
 impl MultiChatPreview{
     pub fn default() -> Self {
         Self {
-            chat_previews: (1..20).map(|_| Chat::default()).collect::<Vec<Chat>>(),
+            chat_previews: Vec::<Chat>::new(),
         }
     }
 }
