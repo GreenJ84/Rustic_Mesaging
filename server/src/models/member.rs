@@ -7,7 +7,7 @@ use rocket::serde::json::Json;
 use rocket::response::Responder;
 use serde::{Deserialize, Serialize};
 use diesel::sql_types::{Text, Timestamp, Integer, Nullable, Bool};
-
+use rand::seq::{IteratorRandom};
 use crate::schema::member;
 
 #[derive(Insertable, Serialize, Deserialize, Debug, FromForm)]
@@ -28,11 +28,33 @@ impl NewMember {
     pub fn set_admin(&mut self) { self.is_admin = true; }
 
     pub fn new(username: String, password: String, email: String) -> Self {
+        let avatar = vec![
+            "mouse",
+            "panda",
+            "bear",
+            "bunny",
+            "dog",
+            "gorilla",
+            "koala",
+            "robot",
+            "astronaut",
+            "cat",
+            "eagle",
+            "pikachu",
+            "default"
+        ]
+            .into_iter()
+            .map(|i| i.to_string())
+            // .collect::<Vec<String>>()
+            .choose(&mut rand::thread_rng())
+            .unwrap_or(String::from("default"))
+            .to_owned();
+
         Self {
             username,
             password,
             email,
-            avatar: None,
+            avatar: Some(avatar),
             is_admin: false,
         }
     }

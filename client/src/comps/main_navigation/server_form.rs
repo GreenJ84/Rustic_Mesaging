@@ -73,18 +73,19 @@ pub fn server_form(Props {new, button_icon, callback}: &Props) -> Html {
             let description = description.clone();
             let callback = callback.clone();
 
-            let icon = server_icons("", "", "")
+            let icon = match server_icons("", "", "")
                 .keys()
                 .map(|i| i.to_owned())
                 .collect::<Vec<String>>()
-                .choose(&mut rand::thread_rng())
-                .unwrap_or(&format!("default:{}", random_color()))
-                .to_owned();
+                .choose(&mut rand::thread_rng()){
+                    Some(icon) => {format!("{}:{}", icon, random_color())}
+                    None => {format!("default:{}", random_color())}
+                };
 
             let mut form_data = vec![
                 ("name".to_string(), (*name).clone()),
                 ("description".to_string(), (*description).clone()),
-                ("icon".to_string(), icon.to_owned()),
+                ("icon".to_string(), icon),
                 ("owner_id".to_string(), member_ctx.member.id.clone().to_string())
             ];
             if new {

@@ -2105,6 +2105,7 @@ dependencies = [
  "jsonwebtoken",
  "log",
  "r2d2",
+ "rand 0.8.5",
  "rocket",
  "rocket_cors",
  "rocket_ws",
