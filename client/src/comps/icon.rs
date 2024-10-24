@@ -153,15 +153,14 @@ pub fn server_icons(class_name: &str, size: &str, color: &str) -> HashMap<String
         .collect::<HashMap<String, Html>>()
 }
 
-pub fn get_all_svg(member: bool, class_name: &str, size: &str) -> HashMap<String, Html> {
-    let color = {
-        let colors = vec![
-            "limegreen", "yellow", "lightblue", "purple", "green", "white", "red",
-        ];
-        let mut rng = rand::thread_rng();
-        colors.choose(&mut rng).cloned().unwrap_or(colors[0])
-    };
+pub fn random_color() -> &'static str {
+    let colors = vec![
+        "limegreen", "yellow", "lightblue", "purple", "green", "white", "red",
+    ];
     let mut rng = rand::thread_rng();
+    colors.choose(&mut rng).cloned().unwrap_or(colors[0])
+}
+pub fn get_all_svg(member: bool, class_name: &str, size: &str) -> HashMap<String, Html> {
     match member {
         true => {
             member_avatars(class_name, size)
@@ -173,14 +172,6 @@ pub fn get_all_svg(member: bool, class_name: &str, size: &str) -> HashMap<String
 }
 
 pub fn get_random_svg(member: bool, class_name: &str, size: &str) -> Html {
-    let color = {
-        let colors = vec![
-            "limegreen", "yellow", "lightblue", "purple", "green", "white", "red",
-        ];
-        let mut rng = rand::thread_rng();
-        colors.choose(&mut rng).cloned().unwrap_or(colors[0])
-    };
-    let mut rng = rand::thread_rng();
     match member {
         true => {
             member_avatars(class_name, size)
@@ -189,7 +180,7 @@ pub fn get_random_svg(member: bool, class_name: &str, size: &str) -> Html {
                 .to_owned()
         },
         false => {
-            server_icons(class_name, size, color)
+            server_icons(class_name, size, random_color())
                 .get("default")
                 .unwrap()
                 .to_owned()

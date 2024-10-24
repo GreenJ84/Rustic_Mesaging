@@ -1,9 +1,11 @@
 use gloo::net::http::Request;
+use rand::seq::IndexedRandom;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
 use web_sys::{Event, HtmlElement, HtmlInputElement, HtmlTextAreaElement, MouseEvent, SubmitEvent, window};
 use yew::{Callback, function_component, Html, html, Properties, TargetCast, use_context, use_node_ref, use_state};
 use yew_router::hooks::use_navigator;
+use crate::comps::icon::{random_color, server_icons};
 use crate::contexts::member_context::{MemberDispatch, get_servers, TMemberContext};
 use crate::models::server::{MultiServer, Server};
 use crate::comps::modal::{force_toggle, Modal, toggle_modal};
@@ -71,10 +73,18 @@ pub fn server_form(Props {new, button_icon, callback}: &Props) -> Html {
             let description = description.clone();
             let callback = callback.clone();
 
+            let icon = server_icons("", "", "")
+                .keys()
+                .map(|i| i.to_owned())
+                .collect::<Vec<String>>()
+                .choose(&mut rand::thread_rng())
+                .unwrap_or(&format!("default:{}", random_color()))
+                .to_owned();
+
             let mut form_data = vec![
                 ("name".to_string(), (*name).clone()),
                 ("description".to_string(), (*description).clone()),
-                ("icon".to_string(), String::new()),
+                ("icon".to_string(), icon.to_owned()),
                 ("owner_id".to_string(), member_ctx.member.id.clone().to_string())
             ];
             if new {
