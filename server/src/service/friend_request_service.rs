@@ -31,7 +31,7 @@ impl FriendRequestService {
                 )?;
                 Ok(RequestResolve::Resolved(friend))
             }, // Trigger returned NULL, friendship was resolved
-            Err(e) => Err(e),  // Some other database error
+            Err(e) => Err(e),
         }
     }
 

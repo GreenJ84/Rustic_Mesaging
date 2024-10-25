@@ -1,3 +1,4 @@
+use diesel::result::{DatabaseErrorKind, Error};
 use rocket::http::Status;
 use rocket::response::status;
 use rocket::State;
@@ -32,6 +33,28 @@ pub fn create_request(
             Status::Ok,
             Resolved(friend)
         )),
+        Err(Error::DatabaseError(DatabaseErrorKind::UniqueViolation, _)) => return Err::<status::Custom<RequestResolve>, status::Custom<String>>(
+            status::Custom(
+                Status::Conflict,
+                "Friend Request already made".to_string()
+        )),
+        Err(Error::DatabaseError(error, info)) => {
+            if let Some(detail) = info.details() {
+                if detail.eq("Members are already friends") {
+                    return Err::<status::Custom<RequestResolve>, status::Custom<String>>(
+                        status::Custom(
+                            Status::FailedDependency,
+                            "Members are already friends".to_string()
+                        ))
+                }
+            }
+            println!("Cant process message");
+            return Err::<status::Custom<RequestResolve>, status::Custom<String>>(
+                status::Custom(
+                    Status::InternalServerError,
+                    "Friendship creation error".to_string()
+                ))
+        },
         Err(e) =>
             return Err::<status::Custom<RequestResolve>, status::Custom<String>>(
                 status::Custom(
