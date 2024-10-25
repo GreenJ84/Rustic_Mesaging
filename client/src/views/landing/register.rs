@@ -22,17 +22,24 @@ pub fn register_modal() -> Html {
 
     let username_ref = use_node_ref();
     let username_error = use_state(|| false);
+
     let password_ref = use_node_ref();
     let password_error = use_state(|| false);
+
     let confirm_pass_ref = use_node_ref();
+    let confirm_error = use_state(|| false);
+
     let email_ref = use_node_ref();
 
     let on_submit = {
         let username_ref = username_ref.clone();
         let username_error = username_error.clone();
+
         let password_ref = password_ref.clone();
-        let password_error = password_error.clone();
+
         let confirm_pass_ref = confirm_pass_ref.clone();
+        let confirm_error = confirm_error.clone();
+
         let email_ref = email_ref.clone();
 
         Callback::from(move |event: SubmitEvent| {
@@ -42,9 +49,15 @@ pub fn register_modal() -> Html {
 
             let username = username_ref.cast::<web_sys::HtmlInputElement>().unwrap().value();
             let username_error = username_error.clone();
+
             let password = password_ref.cast::<web_sys::HtmlInputElement>().unwrap().value();
-            let password_error = password_error.clone();
+
             let confirm_pass = confirm_pass_ref.cast::<web_sys::HtmlInputElement>().unwrap().value();
+            if confirm_pass.ne(&password){
+                confirm_error.set(true);
+                return;
+            }
+
             let email = email_ref.cast::<web_sys::HtmlInputElement>().unwrap().value();
             let mut form_data = vec![
                 ("username".to_string(), username.clone()),
@@ -73,10 +86,15 @@ pub fn register_modal() -> Html {
                                 log::error!("Authorization header not found in response");
                             }
                         } else if let PostResponse::OnlyResponse(response) = post_response{
-                            if response.status() == 409 {
-                                password_error.set(true);
-                            } else if response.status() == 400 {
-                                username_error.set(true);
+                            match response.status() {
+                                409 => {
+                                    username_error.set(true);
+                                },
+                                400 => {
+                                },
+                                _ => {
+                                    log::error!("Unexpected request response");
+                                }
                             }
                         }
                     },
@@ -112,15 +130,40 @@ pub fn register_modal() -> Html {
                     <br/>
                     <label for="password">
                         { "Password:" }
-                        <input ref={password_ref} type="password" id="password" name="password" required=true />
+                        <input
+                            ref={password_ref}
+                            type="password"
+                            id="password"
+                            name="password"
+                            required=true
+                        />
+                        {
+                            if (*password_error) {html!{
+                                <span>{"Username and/or Password are incorrect."}</span>
+                            }}  else {html!{}}
+                        }
                     </label>
                     <br/>
                     <label for="confirm_password">
                         { "Confirm Password:" }
-                        <input ref={confirm_pass_ref} type="password" id="confirm_password" name="confirm_password" required=true />
+                        <input
+                            ref={confirm_pass_ref}
+                            type="password"
+                            id="confirm_password"
+                            name="confirm_password"
+                            required=true
+                            oninput={{
+                                let confirm_error = confirm_error.clone();
+                                Callback::from(move |_event: InputEvent| {
+                                    if *confirm_error {
+                                        confirm_error.set(false);
+                                    }
+                                })}
+                            }
+                        />
                         {
-                            if (*password_error) {html!{
-                                <span>{"Username and/or Password are incorrect."}</span>
+                           if (*confirm_error) {html!{
+                                <span>{"Does not match password"}</span>
                             }} else {html!{}}
                         }
                     </label>
