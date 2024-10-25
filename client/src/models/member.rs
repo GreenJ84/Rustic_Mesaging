@@ -117,7 +117,7 @@ impl MemberShort {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, PartialEq)]
 pub struct MultiMember {
     pub(crate) members: Vec<MemberShort>,
 }

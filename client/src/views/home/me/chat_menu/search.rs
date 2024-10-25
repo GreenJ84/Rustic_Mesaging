@@ -26,6 +26,11 @@ pub fn search_modal() -> Html{
 
             if let Some(input) = event.target_dyn_into::<HtmlInputElement>() {
                 let search_term = input.value();
+                if search_term.is_empty() || search_term.eq("") {
+                    member_state.set(MultiMember::default());
+                    server_state.set(MultiServer::default());
+                    return;
+                }
                 spawn_local(async move {
                     if let Ok(members) = api_get::<MultiMember>(format!("/member/search?search_term={}", &search_term)).await {
                         member_state.set(members);
@@ -91,7 +96,7 @@ pub fn search_modal() -> Html{
                     }
                 }
                 {
-                    if (*member_state).members.clone().is_empty() {
+                    if (*server_state).servers.clone().is_empty() {
                         html!{}
                     } else {
                         html!{<>
