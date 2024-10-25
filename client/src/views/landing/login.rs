@@ -91,7 +91,21 @@ pub fn login_modal() -> Html {
                 <form onsubmit={on_submit}>
                     <label for="username">
                         { "Username:" }
-                        <input ref={username_ref} type="text" id="username" name="username" required=true />
+                        <input
+                            ref={username_ref}
+                            type="text"
+                            id="username"
+                            name="username"
+                            required=true
+                            oninput={{
+                                let username_error = username_error.clone();
+                                Callback::from(move |_event: InputEvent| {
+                                    if *username_error {
+                                        username_error.set(false);
+                                    }
+                                })}
+                            }
+                        />
                         {
                             if (*username_error) {html!{
                                 <span>{"Username not found"}</span>
@@ -101,7 +115,21 @@ pub fn login_modal() -> Html {
                     <br/>
                     <label for="password">
                         { "Password:" }
-                        <input ref={password_ref} type="password" id="password" name="password" required=true />
+                        <input
+                            ref={password_ref}
+                            type="password"
+                            id="password"
+                            name="password"
+                            required=true
+                            oninput={{
+                                let password_error = password_error.clone();
+                                Callback::from(move |_event: InputEvent| {
+                                    if *password_error {
+                                        password_error.set(false);
+                                    }
+                                })}
+                            }
+                        />
                         {
                             if (*password_error) {html!{
                                 <span>{"Password is incorrect"}</span>
