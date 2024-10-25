@@ -3,16 +3,22 @@ use web_sys::{HtmlElement, HtmlInputElement};
 use yew::prelude::*;
 use yew_router::hooks::use_navigator;
 use crate::comps::main_navigation::discover_servers::DiscoverServersModal;
+use crate::comps::modal::toggle_modal;
 use crate::models::member::{Member, MemberShort};
 use crate::models::server::Server;
-use crate::comps::modal::toggle_modal;
 use crate::comps::modal_portal::ModalPortal;
 use crate::views::home::HomeRoute;
 use crate::contexts::member_context::{MemberDispatch, get_friends, get_requests, get_servers, TMemberContext};
+use crate::models::friend_request::FriendRequest;
 use crate::utils::api_requests::{api_get, api_post, PostResponse};
 
+#[derive(Properties, PartialEq)]
+pub struct Props {
+    pub(crate) submit_callback: Callback<String>
+}
+
 #[function_component(NewFriendRequest)]
-pub fn new_friend_request() -> Html {
+pub fn new_friend_request(Props { submit_callback }: &Props) -> Html {
     let app_ctx = use_context::<TMemberContext>().unwrap();
     let navigation = use_navigator().unwrap();
     let receiver = use_state(|| MemberShort::default());
@@ -20,6 +26,8 @@ pub fn new_friend_request() -> Html {
 
     let username_state = use_state(|| String::new());
     let username_error = use_state(|| false);
+    let already_friends = use_state(|| false);
+    let already_requested = use_state(|| false);
     let note_ref = use_node_ref();
 
     let on_change = {
@@ -36,31 +44,47 @@ pub fn new_friend_request() -> Html {
         })
     };
 
+    let _toggle_modal = {
+        let is_modal_open = is_modal_open.clone();
+        let already_friends = already_friends.clone();
+        let already_requested = already_requested.clone();
+        Callback::from(move |_event: MouseEvent| {
+            toggle_modal("modal_overlay");
+            is_modal_open.set(!*is_modal_open);
+            if *already_friends {
+                already_friends.set(false);
+            }
+            if *already_requested {
+                already_requested.set(false);
+            }
+        })
+    };
+
     let on_search_submit = {
         let app_ctx = app_ctx.clone();
-        let is_modal_open = is_modal_open.clone();
+        let _toggle_modal = _toggle_modal.clone();
         let receiver = receiver.clone();
         let username_state = username_state.clone();
         let username_error = username_error.clone();
 
         Callback::from(move |event: SubmitEvent| {
             event.prevent_default();
+            event.stop_propagation();
             let username = username_state.clone();
             let username_error = username_error.clone();
             if (*username_state).is_empty() {
                 return;
             }
             let app_ctx = app_ctx.clone();
-            let is_modal_open = is_modal_open.clone();
+            let _toggle_modal = _toggle_modal.clone();
             let receiver = receiver.clone();
 
 
             wasm_bindgen_futures::spawn_local(async move {
                 if let Ok(member) = api_get::<MemberShort>(format!("member/{}", (*username))).await {
                     receiver.set(member);
-                    toggle_modal("modal_overlay");
-                    is_modal_open.set(!*is_modal_open);
-                } else  {
+                    _toggle_modal.emit(MouseEvent::new("click").unwrap());
+                } else {
                     username_error.set(true);
                 }
             });
@@ -69,49 +93,54 @@ pub fn new_friend_request() -> Html {
 
     let on_send = {
         let app_ctx = app_ctx.clone();
-        let submit_nav = navigation.clone();
+        let _toggle_modal = _toggle_modal.clone();
+        let submit_callback = submit_callback.clone();
         let receiver = receiver.clone();
         let note_ref = note_ref.clone();
+        let already_friends = already_friends.clone();
+        let already_requested = already_requested.clone();
+
 
         Callback::from(move |event: SubmitEvent| {
             event.prevent_default();
+            event.stop_propagation();
             let app_ctx = app_ctx.clone();
-            let submit_nav = submit_nav.clone();
+            let _toggle_modal = _toggle_modal.clone();
+            let submit_callback = submit_callback.clone();
             let receiver = receiver.clone();
             let note = note_ref.cast::<web_sys::HtmlTextAreaElement>().unwrap().value();
+            let already_friends = already_friends.clone();
+            let already_requested = already_requested.clone();
             let mut form_data = vec![
                 (String::from("sender_id"), app_ctx.member.id.to_string()),
                 (String::from("receiver_id"), receiver.id.to_string()),
                 (String::from("note"), note.clone()),
             ];
             wasm_bindgen_futures::spawn_local(async move {
-                if let Ok(res) = api_post::<()>(String::from("request"), form_data, true).await {
-                    if let PostResponse::Response(_, response) = res {
+                if let Ok(res) = api_post::<FriendRequest>(String::from("request"), form_data, false).await {
+                    if let PostResponse::NonResponse(request) = res {
+                        app_ctx.dispatch(MemberDispatch::UpdateRequests(get_requests().await.unwrap()));
+                        _toggle_modal.emit(MouseEvent::new("click").unwrap());
+                        submit_callback.emit(String::from("pending"));
+                    } else if let PostResponse::OnlyResponse(response) = res {
                         match response.status(){
-                            201 => {
-                                toggle_modal("modal_overlay");
-                                app_ctx.dispatch(MemberDispatch::UpdateRequests(get_requests().await.unwrap()));
-                            },
                             200 => {
                                 toggle_modal("modal_overlay");
                                 app_ctx.dispatch(MemberDispatch::UpdateRequests(get_requests().await.unwrap()));
                                 app_ctx.dispatch(MemberDispatch::UpdateFriends(get_friends().await.unwrap()));
+                                submit_callback.emit(String::from("all"));
                             },
-                            _ => {
-                                log::error!("Failed to process response");
-                            }
+                            409 => {
+                                already_requested.set(true);
+                            },
+                            424 => {
+                                already_friends.set(true);
+                            },
+                            _ => {}
                         }
                     }
                 }
             });
-        })
-    };
-
-    let toggle_modal = {
-        let is_modal_open = is_modal_open.clone();
-        Callback::from(move |event: MouseEvent| {
-            toggle_modal("modal_overlay");
-            is_modal_open.set(!*is_modal_open);
         })
     };
 
@@ -120,25 +149,48 @@ pub fn new_friend_request() -> Html {
         <section>
             {
                 if *is_modal_open {
-                    html!{<ModalPortal onclick={toggle_modal.clone()}>
-                        <div class={"modal new_friend_request"}>
-                            <button class="return" onclick={toggle_modal.clone()}>
+                    html!{<ModalPortal onclick={_toggle_modal.clone()}>
+                        <div
+                            class={"modal new_friend_request"}
+                            onclick={Callback::from(move |e: MouseEvent| {
+                                e.stop_propagation();
+                            })}
+                        >
+                            <button class="return" onclick={_toggle_modal.clone()}>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x-lg" viewBox="0 0 16 16">
                                     <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z"/>
                                 </svg>
                             </button>
-                            <h2>{ "Add a Note" }</h2>
-                            <form onsubmit={on_send}>
-                                <label for="note">
-                                    <textarea
-                                        ref={note_ref}
-                                        id="note"
-                                        name="note"
-                                    >
-                                    </textarea>
-                                </label>
-                                <button type="submit">{ "Send" }</button>
-                            </form>
+                            {
+                                if *already_friends || *already_requested {
+                                    html!{<>
+                                        <h2>{ "Cant create Request" }</h2>
+                                        {
+                                            if *already_friends {
+                                                html!{<h2>{ "Already Friends" }</h2>}
+                                            } else if *already_requested {
+                                                html!{<h2>{ "Already Requested to be friends" }</h2>}
+                                            }
+                                            else {html!{}}
+                                        }
+                                    </>}
+                                } else {
+                                    html!{<>
+                                        <h2>{ "Add a Note" }</h2>
+                                        <form onsubmit={on_send}>
+                                            <label for="note">
+                                                <textarea
+                                                    ref={note_ref}
+                                                    id="note"
+                                                    name="note"
+                                                >
+                                                </textarea>
+                                            </label>
+                                            <button type="submit">{ "Send" }</button>
+                                        </form>
+                                    </>}
+                                }
+                            }
                         </div>
                     </ModalPortal>}
                 } else { html!{} }

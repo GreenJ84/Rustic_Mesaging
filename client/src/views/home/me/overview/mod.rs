@@ -5,7 +5,7 @@ pub(crate) mod new_friend_request;
 pub(crate) mod edit_friend_request;
 
 use serde::{Deserialize, Serialize};
-use web_sys::MouseEvent;
+use web_sys::{MouseEvent, SubmitEvent};
 use yew::{Callback, function_component, Html, html, use_context, use_state};
 
 use crate::contexts::member_context::TMemberContext;
@@ -20,7 +20,14 @@ use crate::views::{
 #[function_component(Overview)]
 pub fn overview() -> Html {
     let app_ctx = use_context::<TMemberContext>().unwrap();
-    let page_state = use_state(|| "online");
+    let page_state = use_state(|| String::from("online"));
+
+    let setup_callback = {
+        let page_state = page_state.clone();
+        Callback::from(move |view: String| {
+            page_state.set(view);
+        })
+    };
 
     html! {
         <main id="main-content" class="overview">
@@ -35,7 +42,7 @@ pub fn overview() -> Html {
                     onclick={let page_state= page_state.clone();
                         Callback::from(move|e: MouseEvent| {
                             e.prevent_default();
-                            page_state.clone().set("online");
+                            page_state.clone().set(String::from("online"));
                         })}
                     class={if (*page_state).eq("online") {"active"} else {""} }
                 >{"Online"}</button>
@@ -43,7 +50,7 @@ pub fn overview() -> Html {
                     onclick={let page_state= page_state.clone();
                         Callback::from(move|e: MouseEvent| {
                             e.prevent_default();
-                            page_state.clone().set("all");
+                            page_state.clone().set(String::from("all"));
                         })}
                     class={if (*page_state).eq("all") {"active"} else {""} }
                 >{"All"}</button>
@@ -51,7 +58,7 @@ pub fn overview() -> Html {
                     onclick={let page_state= page_state.clone();
                         Callback::from(move|e: MouseEvent| {
                             e.prevent_default();
-                            page_state.clone().set("pending");
+                            page_state.clone().set(String::from("pending"));
                         })}
                     class={if (*page_state).eq("pending") {"active"} else {""} }
                 >{"Pending"}</button>
@@ -59,7 +66,7 @@ pub fn overview() -> Html {
                     onclick={let page_state= page_state.clone();
                         Callback::from(move|e: MouseEvent| {
                             e.prevent_default();
-                            page_state.clone().set("incoming");
+                            page_state.clone().set(String::from("incoming"));
                         })}
                     class={if (*page_state).eq("incoming") {"active"} else {""} }
                 >{"Requests"}</button>
@@ -67,7 +74,7 @@ pub fn overview() -> Html {
                     onclick={let page_state= page_state.clone();
                         Callback::from(move|e: MouseEvent| {
                             e.prevent_default();
-                            page_state.clone().set("new");
+                            page_state.clone().set(String::from("new"));
                         })}
                     class={if (*page_state).eq("new") {"active"} else {""} }
                 >{"Add Friend"}</button>
@@ -95,8 +102,8 @@ pub fn overview() -> Html {
                         html!{}
                     }
                 }
-                {match *page_state{
-                    "new" => html!{ <NewFriendRequest />},
+                {match &(*page_state.as_str()) {
+                    "new" => html!{ <NewFriendRequest submit_callback={setup_callback}/>},
                     "pending" => html! { <ul>
                         <li>{format!("PENDING Requests - {}", app_ctx.requests.outgoing.len())}</li>
                         {for app_ctx.requests.outgoing.clone().into_iter().map(|request| html! {
