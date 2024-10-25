@@ -52,15 +52,18 @@ pub async fn api_post<T: DeserializeOwned + 'static>(extension: String, data: Ve
                 if TypeId::of::<T>() == TypeId::of::<()>(){
                     return Ok(PostResponse::OnlyResponse(response))
                 }
-                let entity = response.json::<T>().await
+                if let Ok(entity) = response.json::<T>().await
                     .map_err(|err| {
                         log::error!("Failed to parse response: {:?}", err);
                         ()
-                    })?;
-                if need_response {
-                    Ok(PostResponse::Response(entity, response))
+                    }) {
+                    if need_response {
+                        Ok(PostResponse::Response(entity, response))
+                    } else {
+                        Ok(PostResponse::NonResponse(entity))
+                    }
                 } else {
-                    Ok(PostResponse::NonResponse(entity))
+                    return Ok(PostResponse::OnlyResponse(response))
                 }
             } else {
                 log::error!("Request failed with status: {}", response.status());
