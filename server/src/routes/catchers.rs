@@ -12,7 +12,12 @@ pub fn not_found(req: &Request) -> String {
 
 #[catch(409)]
 pub fn conflict_catcher(req: &Request) -> String {
-    String::from("Unauthorized: Error validating member authentication")
+    String::from("Transaction conflict")
+}
+
+#[catch(424)]
+pub fn failed_dependency(req: &Request) -> String {
+    String::from("Failed transaction dependency")
 }
 
 #[catch(500)]
