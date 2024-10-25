@@ -80,7 +80,7 @@ pub fn update(
     let mut conn = get_db_connection(pool)?;
 
     let input = form.into_inner().into_inner();
-    if !token.claims.is_admin && !ServerService::is_owner(&mut conn, input.server_id(), token.claims.member_id){
+    if !ServerService::is_owner(&mut conn, input.server_id(), token.claims.member_id){
         return Err::<status::Custom< Channel >, status::Custom<String>>(
             status::Custom(
                 Status::Unauthorized,
@@ -111,11 +111,11 @@ pub fn delete(
     channel_id: i32
 ) -> CustomResponse<String>{
     let mut conn = get_db_connection(pool)?;
-    if !token.claims.is_admin {
+    if !token.claims.is_admin && !ChannelService::has_authorization(&mut conn, channel_id, token.claims.member_id) {
         return Err::<status::Custom<String>, status::Custom<String>>(
             status::Custom(
-                Status::NotImplemented,
-                String::from("Currently cannot delete channels.")
+                Status::Unauthorized,
+                String::from("Only server owner can delete channels.")
             )
         )
     }
