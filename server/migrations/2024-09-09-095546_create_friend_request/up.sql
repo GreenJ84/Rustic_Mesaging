@@ -34,6 +34,19 @@ BEGIN
         RETURN NULL;
     END IF;
 
+       -- Check if already friends
+    IF EXISTS (
+            SELECT 1
+            FROM friend
+            WHERE
+                member_id = NEW.receiver_id AND friend_id = NEW.sender_id
+                OR member_id = NEW.sender_id AND friend_id = NEW.receiver_id
+        ) THEN
+
+        RAISE EXCEPTION USING detail :='Members are already friends';
+        RETURN NULL;
+      END IF;
+
     -- If no reverse request exists, allow the friend request to be inserted
     RETURN NEW;
 END;
