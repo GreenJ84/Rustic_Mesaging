@@ -8,7 +8,7 @@ RUN rustup target add wasm32-unknown-unknown
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
     cargo install --locked trunk
-RUN SERVER_URL=http://localhost:3000/api trunk build --release
+RUN SERVER_URL=/api trunk build --release
 
 
 FROM nginx:alpine
