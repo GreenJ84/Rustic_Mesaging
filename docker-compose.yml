@@ -3,12 +3,12 @@ services:
   yugabyte:
     image: yugabytedb/yugabyte:2024.1.2.0-b77
     container_name: yugabyte
-    ports:
-      - "7001:7000"     # YugabyteDB master web UI
-      - "9000:9000"     # YugabyteDB YSQL API
-      - "15433:15433"   # Postgres compatible port
-      - "5433:5433"     # YSQL client port
-      - "9042:9042"     # YCQL client port
+    expose:
+      - "7001"
+      - "9000"
+      - "15433"
+      - "5433"
+      - "9042"
     command: [ "bin/yugabyted", "start", "--background=false" ]
     restart: unless-stopped
     volumes:
@@ -21,8 +21,6 @@ services:
     build: ./server
     expose:
       - "8000"
-    ports:
-      - "8000:8000"
     env_file:
       - "server/.env"
       - "server/.env.prod"
@@ -44,7 +42,7 @@ services:
     container_name: client
     build: ./client
     ports:
-      - "3000:80"
+      - "80:80"
     networks:
       - frontend
     depends_on:
