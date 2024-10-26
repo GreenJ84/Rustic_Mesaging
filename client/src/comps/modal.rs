@@ -11,6 +11,8 @@ pub struct Props{
     pub button_class: &'static str,
     pub button_icon: Html,
     #[prop_or_default]
+    pub load_state: Option<Callback<()>>,
+    #[prop_or_default]
     pub reset_state: Option<Callback<()>>,
 }
 
@@ -39,23 +41,29 @@ pub fn modal(Props {
      button_class,
      children,
      button_icon,
+     load_state,
      reset_state
  }: &Props) -> Html {
     let is_modal_open = use_state(|| false);
 
     let _toggle_modal = {
         let is_modal_open = is_modal_open.clone();
+        let load_state = load_state.clone();
         let reset_state = reset_state.clone();
         Callback::from(move |event: MouseEvent| {
             event.stop_propagation();
             event.prevent_default();
 
+            let load_state = load_state.clone();
             let reset_state = reset_state.clone();
-            is_modal_open.set(!*is_modal_open);
-            toggle_modal("modal_overlay");
+            if let Some(callback) = load_state {
+                if !(*is_modal_open) { callback.emit(()); }
+            }
             if let Some(callback) = reset_state {
                 if *is_modal_open { callback.emit(()); }
             }
+            is_modal_open.set(!*is_modal_open);
+            toggle_modal("modal_overlay");
         })
     };
 
