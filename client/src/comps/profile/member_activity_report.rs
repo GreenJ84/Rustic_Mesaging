@@ -11,23 +11,31 @@ use crate::utils::format_date;
 pub fn report_table() -> Html {
     let report_data = use_state(|| vec![]);
 
-    {
+    let load_report = {
         let report_data = report_data.clone();
-        use_effect_with((), move |_| {
+        Callback::from( move |_: ()| {
+            let report_data = report_data.clone();
             wasm_bindgen_futures::spawn_local(async move {
                 if let Ok(fetched_data) = api_get::<Vec<ActivityReportItem>>(String::from("reports/member")).await {
                     report_data.set(fetched_data);
                 }
             });
-            || ()
-        });
-    }
+        })
+    };
+    let reset_state = {
+        let report_data = report_data.clone();
+        Callback::from( move |_: ()| {
+            report_data.set(Vec::new());
+        })
+    };
 
     html! {
         <Modal
             modal_class="member_activity_modal"
             button_class="member_activity report"
             button_icon={html!{"Activity Report"}}
+            load_state={load_report}
+            reset_state={reset_state}
         >
             <DownloadCsvButton url_extension={String::from("reports/member/csv")}/>
             <table>

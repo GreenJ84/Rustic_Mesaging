@@ -13,26 +13,33 @@ pub fn report_table() -> Html {
     let server_ctx = use_context::<TServerContext>().unwrap();
     let report_data = use_state(|| vec![]);
 
-    {
-        let report_data = report_data.clone();
+    let load_report = {
         let server_ctx = server_ctx.clone();
-        use_effect_with(server_ctx.current_server.clone(), move |_| {
+        let report_data = report_data.clone();
+        Callback::from( move |_: ()| {
             let server_ctx = server_ctx.clone();
-
+            let report_data = report_data.clone();
             wasm_bindgen_futures::spawn_local(async move {
                 if let Ok(fetched_data) = api_get::<Vec<ServerMemberReportItem>>(String::from(format!("reports/server/{}", server_ctx.current_server.id))).await {
                     report_data.set(fetched_data);
                 }
             });
-            || ()
-        });
-    }
+        })
+    };
+    let reset_state = {
+        let report_data = report_data.clone();
+        Callback::from( move |_: ()| {
+            report_data.set(Vec::new());
+        })
+    };
 
     html! {
         <Modal
             modal_class="server_membership_modal"
             button_class="server_membership report"
             button_icon={html!{"Membership Report"}}
+            load_state={load_report}
+            reset_state={reset_state}
         >
             <DownloadCsvButton
                 url_extension={format!("reports/server/{}/csv", server_ctx.current_server.id)}
