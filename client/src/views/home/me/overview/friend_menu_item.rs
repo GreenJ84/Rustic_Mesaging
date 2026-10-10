@@ -1,16 +1,16 @@
+use crate::comps::icon::Icon;
+use crate::comps::modal::Modal;
+use crate::contexts::member_context::{get_friends, MemberDispatch, TMemberContext};
+use crate::models::friends::FullFriend;
+use crate::utils::api_requests::api_delete;
+use crate::utils::format_date;
 use gloo::net::http::Request;
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
-use crate::comps::icon::Icon;
-use crate::models::friends::FullFriend;
-use crate::comps::modal::Modal;
-use crate::contexts::member_context::{MemberDispatch, get_friends, TMemberContext};
-use crate::utils::api_requests::api_delete;
-use crate::utils::format_date;
 
 #[derive(Properties, PartialEq)]
-pub struct Props{
-    pub(crate) friend: FullFriend
+pub struct Props {
+    pub(crate) friend: FullFriend,
 }
 
 #[function_component(FriendItem)]
@@ -26,16 +26,16 @@ pub fn friend_menu_item(Props { friend }: &Props) -> Html {
             let friend = friend.clone();
 
             spawn_local(async move {
-                if let Ok(_) = api_delete(format!("friend/{}",
-                     friend.member.id.to_string()
-                )).await {
-                    member_ctx.dispatch(MemberDispatch::UpdateFriends(get_friends().await.unwrap()));
+                if let Ok(_) = api_delete(format!("friend/{}", friend.member.id.to_string())).await
+                {
+                    member_ctx
+                        .dispatch(MemberDispatch::UpdateFriends(get_friends().await.unwrap()));
                 }
             });
         })
     };
 
-    html!{
+    html! {
         <li class="overview_menu_item">
             {friend.member.clone().avatar("", "40")}
             <div>

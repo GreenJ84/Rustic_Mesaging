@@ -1,24 +1,20 @@
 #![allow(unused)]
 
-pub(crate) mod views;
-pub(crate) mod models;
-pub(crate) mod contexts;
-pub(crate) mod utils;
 pub(crate) mod comps;
+pub(crate) mod contexts;
+pub(crate) mod models;
+pub(crate) mod utils;
+pub(crate) mod views;
 
 #[macro_use]
 extern crate chrono;
 
-use std::env;
+use crate::contexts::member_context::MemberContextProvider;
+use crate::views::{home::Home, landing::Landing, not_found::NotFound};
 use dotenv::dotenv;
+use std::env;
 use yew::prelude::*;
 use yew_router::prelude::*;
-use crate::contexts::member_context::MemberContextProvider;
-use crate::views::{
-    home::Home,
-    landing::Landing,
-    not_found::NotFound
-};
 
 #[derive(Clone, Routable, PartialEq)]
 pub enum AppRoute {
@@ -47,7 +43,7 @@ fn switch(routes: AppRoute) -> Html {
         AppRoute::Landing | AppRoute::LandingExt => html! {
             <Landing />
         },
-        AppRoute::HomeRoot => html!{ <Redirect<AppRoute> to={AppRoute::Home} />},
+        AppRoute::HomeRoot => html! { <Redirect<AppRoute> to={AppRoute::Home} />},
         AppRoute::Home | AppRoute::HomeExt => html! {
             <Home />
         },
@@ -55,10 +51,8 @@ fn switch(routes: AppRoute) -> Html {
     }
 }
 
-
 #[function_component(Main)]
 fn app() -> Html {
-
     html! {
         <BrowserRouter>
             <MemberContextProvider>

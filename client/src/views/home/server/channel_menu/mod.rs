@@ -1,18 +1,18 @@
-use web_sys::MouseEvent;
-use yew::{Callback, function_component, Html, html, use_context};
-use yew_router::prelude::Link;
-use crate::contexts::member_context::TMemberContext;
-use crate::models::channel::Channel;
 use crate::comps::member_bar::MemberBar;
+use crate::contexts::member_context::TMemberContext;
 use crate::contexts::server_context::{ServerDispatch, TServerContext};
+use crate::models::channel::Channel;
 use crate::views::home::server::channel_menu::channel_form::ChannelForm;
-use crate::views::home::server::channel_menu::channel_menu_item::ChannelMenuItem;
 use crate::views::home::server::channel_menu::channel_menu_header::ChannelMenuHeader;
+use crate::views::home::server::channel_menu::channel_menu_item::ChannelMenuItem;
 use crate::views::home::server::ServerRoute;
+use web_sys::MouseEvent;
+use yew::{function_component, html, use_context, Callback, Html};
+use yew_router::prelude::Link;
 
+pub(crate) mod channel_form;
 pub(crate) mod channel_menu_header;
 pub(crate) mod channel_menu_item;
-pub(crate) mod channel_form;
 mod server_membership_report;
 
 #[function_component(ChannelMenu)]
@@ -20,7 +20,11 @@ pub fn channel_menu() -> Html {
     let app_ctx = use_context::<TMemberContext>().unwrap();
     let server_ctx = use_context::<TServerContext>().unwrap();
 
-    let is_owner = app_ctx.member.id.clone().eq(&server_ctx.current_server.owner_id.clone());
+    let is_owner = app_ctx
+        .member
+        .id
+        .clone()
+        .eq(&server_ctx.current_server.owner_id.clone());
     html! {
         <div id="sidebar-sub" class="channels">
             <ChannelMenuHeader is_owner={is_owner} />

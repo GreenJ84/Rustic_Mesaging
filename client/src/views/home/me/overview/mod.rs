@@ -1,20 +1,17 @@
-
-pub(crate) mod request_menu_item;
+pub(crate) mod edit_friend_request;
 pub(crate) mod friend_menu_item;
 pub(crate) mod new_friend_request;
-pub(crate) mod edit_friend_request;
+pub(crate) mod request_menu_item;
 
 use serde::{Deserialize, Serialize};
 use web_sys::{MouseEvent, SubmitEvent};
-use yew::{Callback, function_component, Html, html, use_context, use_state};
+use yew::{function_component, html, use_context, use_state, Callback, Html};
 
 use crate::contexts::member_context::TMemberContext;
-use crate::views::{
-    home::me::overview::{
-        friend_menu_item::FriendItem,
-        new_friend_request::NewFriendRequest,
-        request_menu_item::{RequestItem, Version}
-    }
+use crate::views::home::me::overview::{
+    friend_menu_item::FriendItem,
+    new_friend_request::NewFriendRequest,
+    request_menu_item::{RequestItem, Version},
 };
 
 #[function_component(Overview)]

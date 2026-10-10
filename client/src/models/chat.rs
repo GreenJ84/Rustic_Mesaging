@@ -1,21 +1,21 @@
-use serde::{Deserialize, Serialize};
-use yew_router::Routable;
 use crate::models::channel::Channel;
 use crate::models::member::Member;
 use crate::models::message::{Message, MessageThread};
+use serde::{Deserialize, Serialize};
+use yew_router::Routable;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct Chat{
+pub struct Chat {
     pub(crate) id: i32,
     pub(crate) name: String,
-    pub(crate) created_at: chrono::NaiveDateTime
+    pub(crate) created_at: chrono::NaiveDateTime,
 }
-impl Chat{
-    pub fn default() -> Self{
-        Self{
+impl Chat {
+    pub fn default() -> Self {
+        Self {
             id: 0,
             name: "Chat".to_string(),
-            created_at: Default::default()
+            created_at: Default::default(),
         }
     }
 }
@@ -24,7 +24,7 @@ impl Chat{
 pub struct MultiChatPreview {
     pub(crate) chat_previews: Vec<Chat>,
 }
-impl MultiChatPreview{
+impl MultiChatPreview {
     pub fn default() -> Self {
         Self {
             chat_previews: Vec::<Chat>::new(),
@@ -35,9 +35,9 @@ impl MultiChatPreview{
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct ChatDetail {
     pub(crate) chat: Chat,
-    pub(crate) thread: MessageThread
+    pub(crate) thread: MessageThread,
 }
-impl ChatDetail{
+impl ChatDetail {
     pub fn default() -> Self {
         Self {
             chat: Chat::default(),

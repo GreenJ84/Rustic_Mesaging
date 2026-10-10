@@ -1,12 +1,12 @@
-use yew::prelude::*;
-use web_sys::HtmlTextAreaElement;
-use wasm_bindgen::JsCast;
-use yew::platform::spawn_local;
 use crate::comps::icon::Icon;
 use crate::contexts::member_context::TMemberContext;
 use crate::contexts::server_context::{get_channel_thread, ServerDispatch, TServerContext};
 use crate::models::post::{Post, PostDetail};
 use crate::utils::api_requests::api_put;
+use wasm_bindgen::JsCast;
+use web_sys::HtmlTextAreaElement;
+use yew::platform::spawn_local;
+use yew::prelude::*;
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
@@ -21,7 +21,6 @@ pub fn post_item(Props { post }: &Props) -> Html {
     let author = post.author.id.eq(&member_ctx.member.id);
     let editing = use_state(|| false);
     let content = use_state(|| post.content.clone());
-
 
     {
         let editing = editing.clone();
@@ -46,7 +45,7 @@ pub fn post_item(Props { post }: &Props) -> Html {
         let post = post.clone();
         let editing = editing.clone();
         Callback::from(move |event: MouseEvent| {
-            if author{
+            if author {
                 editing.set(!(*editing));
             }
         })
@@ -82,7 +81,10 @@ pub fn post_item(Props { post }: &Props) -> Html {
                 let mut form_data = vec![
                     (String::from("content"), (*content).clone()),
                     (String::from("author_id"), member_ctx.member.id.to_string()),
-                    (String::from("channel_id"), server_ctx.current_channel.id.to_string()),
+                    (
+                        String::from("channel_id"),
+                        server_ctx.current_channel.id.to_string(),
+                    ),
                 ];
 
                 if let Ok(_) = api_put::<Post>(format!("/post/{}", post.id), form_data).await {
@@ -114,7 +116,6 @@ pub fn post_item(Props { post }: &Props) -> Html {
             content.set(input.value());
         })
     };
-
 
     html! {
         <>

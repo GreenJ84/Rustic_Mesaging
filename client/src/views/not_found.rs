@@ -1,7 +1,7 @@
-use yew::{function_component, Html, html};
-use yew_router::components::Link;
-use crate::AppRoute;
 use crate::views::home::me::MeRoute;
+use crate::AppRoute;
+use yew::{function_component, html, Html};
+use yew_router::components::Link;
 
 #[function_component(NotFound)]
 pub fn not_found() -> Html {

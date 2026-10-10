@@ -1,25 +1,28 @@
 mod message_item;
 
+use crate::comps::icon::get_random_svg;
+use crate::comps::modal::toggle_modal;
+use crate::contexts::chat_context::{get_message_thread, ChatContext, ChatDispatch, TChatContext};
+use crate::contexts::member_context::{get_servers, MemberDispatch, TMemberContext};
+use crate::models::message::{Message, MessageThread};
+use crate::models::server::{MultiServer, Server};
+use crate::utils::api_requests::api_post;
+use crate::views::home::me::chat_room::message_item::MessageItem;
+use crate::views::home::HomeRoute;
+use gloo::net::http::Request;
 use std::fmt::Debug;
 use std::ops::Deref;
-use gloo::net::http::Request;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
 use web_sys::{Event, HtmlTextAreaElement, InputEvent, KeyboardEvent, SubmitEvent};
-use yew::{Callback, function_component, Html, html, Properties, use_context, use_effect_with, use_node_ref, use_state};
-use crate::contexts::member_context::{MemberDispatch, get_servers, TMemberContext};
-use crate::models::message::{Message, MessageThread};
-use crate::models::server::{MultiServer, Server};
-use crate::comps::icon::get_random_svg;
-use crate::comps::modal::toggle_modal;
-use crate::views::home::HomeRoute;
-use crate::contexts::chat_context::{ChatContext, ChatDispatch, get_message_thread, TChatContext};
-use crate::utils::api_requests::api_post;
-use crate::views::home::me::chat_room::message_item::MessageItem;
+use yew::{
+    function_component, html, use_context, use_effect_with, use_node_ref, use_state, Callback,
+    Html, Properties,
+};
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
-    pub chat_id: i32
+    pub chat_id: i32,
 }
 #[function_component(ChatRoom)]
 pub fn direct_message(Props { chat_id }: &Props) -> Html {
@@ -51,10 +54,15 @@ pub fn direct_message(Props { chat_id }: &Props) -> Html {
             let mut form_data = vec![
                 (String::from("content"), message.value().clone()),
                 (String::from("sender_id"), member_ctx.member.id.to_string()),
-                (String::from("chat_id"), chat_ctx.current_chat.id.to_string()),
+                (
+                    String::from("chat_id"),
+                    chat_ctx.current_chat.id.to_string(),
+                ),
             ];
             spawn_local(async move {
-                if let Ok(post_response) = api_post::<Message>(String::from("message"), form_data, false).await {
+                if let Ok(post_response) =
+                    api_post::<Message>(String::from("message"), form_data, false).await
+                {
                     message.set_value("");
                     if let Ok(thread) = get_message_thread(chat_ctx.current_chat.id).await {
                         chat_ctx.dispatch(ChatDispatch::UpdateCurrentThread(thread.clone()));

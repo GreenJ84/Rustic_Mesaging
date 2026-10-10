@@ -1,43 +1,58 @@
+use crate::comps::icon::{random_color, server_icons};
+use crate::comps::modal::{force_toggle, toggle_modal, Modal};
+use crate::contexts::member_context::{get_servers, MemberDispatch, TMemberContext};
+use crate::contexts::server_context::{ServerDispatch, TServerContext};
+use crate::models::friends::FullFriend;
+use crate::models::server::{MultiServer, Server};
+use crate::utils::api_requests::{api_post, api_put, PostResponse};
+use crate::views::home::me::MeRoute;
+use crate::views::home::HomeRoute;
 use gloo::net::http::Request;
 use rand::seq::IndexedRandom;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
-use web_sys::{Event, HtmlElement, HtmlInputElement, HtmlTextAreaElement, MouseEvent, SubmitEvent, window};
-use yew::{Callback, function_component, Html, html, Properties, TargetCast, use_context, use_node_ref, use_state};
+use web_sys::{
+    window, Event, HtmlElement, HtmlInputElement, HtmlTextAreaElement, MouseEvent, SubmitEvent,
+};
+use yew::{
+    function_component, html, use_context, use_node_ref, use_state, Callback, Html, Properties,
+    TargetCast,
+};
 use yew_router::hooks::use_navigator;
-use crate::comps::icon::{random_color, server_icons};
-use crate::contexts::member_context::{MemberDispatch, get_servers, TMemberContext};
-use crate::models::server::{MultiServer, Server};
-use crate::comps::modal::{force_toggle, Modal, toggle_modal};
-use crate::contexts::server_context::{ServerDispatch, TServerContext};
-use crate::models::friends::FullFriend;
-use crate::utils::api_requests::{api_post, api_put, PostResponse};
-use crate::views::home::HomeRoute;
-use crate::views::home::me::MeRoute;
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
     pub(crate) new: bool,
     pub(crate) button_icon: Html,
-    pub(crate) callback: Option<Callback<MouseEvent>>
+    pub(crate) callback: Option<Callback<MouseEvent>>,
 }
 
 #[function_component(ServerForm)]
-pub fn server_form(Props {new, button_icon, callback}: &Props) -> Html {
+pub fn server_form(
+    Props {
+        new,
+        button_icon,
+        callback,
+    }: &Props,
+) -> Html {
     let member_ctx = use_context::<TMemberContext>().unwrap();
     let server_ctx = use_context::<TServerContext>().unwrap();
     let navigation = use_navigator().unwrap();
     let new = new.clone();
 
-    let name = use_state(|| if new {
-        String::new()
-    } else {
-        server_ctx.current_server.name.clone()
+    let name = use_state(|| {
+        if new {
+            String::new()
+        } else {
+            server_ctx.current_server.name.clone()
+        }
     });
-    let description = use_state(|| if new {
-        String::new()
-    } else {
-        server_ctx.current_server.description.clone()
+    let description = use_state(|| {
+        if new {
+            String::new()
+        } else {
+            server_ctx.current_server.description.clone()
+        }
     });
 
     let on_name_change = {
@@ -77,41 +92,63 @@ pub fn server_form(Props {new, button_icon, callback}: &Props) -> Html {
                 .keys()
                 .map(|i| i.to_owned())
                 .collect::<Vec<String>>()
-                .choose(&mut rand::thread_rng()){
-                    Some(icon) => {format!("{}:{}", icon, random_color())}
-                    None => {format!("default:{}", random_color())}
-                };
+                .choose(&mut rand::thread_rng())
+            {
+                Some(icon) => {
+                    format!("{}:{}", icon, random_color())
+                }
+                None => {
+                    format!("default:{}", random_color())
+                }
+            };
 
             let mut form_data = vec![
                 ("name".to_string(), (*name).clone()),
                 ("description".to_string(), (*description).clone()),
                 ("icon".to_string(), icon),
-                ("owner_id".to_string(), member_ctx.member.id.clone().to_string())
+                (
+                    "owner_id".to_string(),
+                    member_ctx.member.id.clone().to_string(),
+                ),
             ];
             if new {
                 spawn_local(async move {
-                    if let Ok(request) = api_post::<Server>(String::from("server"), form_data, false).await {
+                    if let Ok(request) =
+                        api_post::<Server>(String::from("server"), form_data, false).await
+                    {
                         if let PostResponse::NonResponse(server) = request {
-                            member_ctx.dispatch(MemberDispatch::UpdateServers(get_servers().await.unwrap()));
+                            member_ctx.dispatch(MemberDispatch::UpdateServers(
+                                get_servers().await.unwrap(),
+                            ));
                             server_ctx.dispatch(ServerDispatch::UpdateServer(server.clone()));
                             force_toggle("modal_overlay");
                             if let Some(func) = callback {
                                 func.emit(MouseEvent::new("click").unwrap());
                             }
-                            submit_nav.push(&HomeRoute::Server { server_id: server.id });
+                            submit_nav.push(&HomeRoute::Server {
+                                server_id: server.id,
+                            });
                         }
                     }
                 })
             } else {
                 spawn_local(async move {
-                    if let Ok(server) = api_put::<Server>(format!("server/{}", server_ctx.current_server.id), form_data).await {
-                        member_ctx.dispatch(MemberDispatch::UpdateServers(get_servers().await.unwrap()));
+                    if let Ok(server) = api_put::<Server>(
+                        format!("server/{}", server_ctx.current_server.id),
+                        form_data,
+                    )
+                    .await
+                    {
+                        member_ctx
+                            .dispatch(MemberDispatch::UpdateServers(get_servers().await.unwrap()));
                         server_ctx.dispatch(ServerDispatch::UpdateServer(server.clone()));
                         force_toggle("modal_overlay");
                         if let Some(func) = callback {
                             func.emit(MouseEvent::new("click").unwrap());
                         }
-                        submit_nav.push(&HomeRoute::Server { server_id: server.id });
+                        submit_nav.push(&HomeRoute::Server {
+                            server_id: server.id,
+                        });
                     }
                 })
             }

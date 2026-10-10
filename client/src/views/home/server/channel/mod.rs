@@ -1,15 +1,15 @@
-use wasm_bindgen::JsCast;
-use wasm_bindgen_futures::spawn_local;
-use web_sys::{HtmlTextAreaElement, InputEvent, KeyboardEvent, SubmitEvent};
-use yew::{Callback, function_component, Html, html, use_context, use_effect_with, use_node_ref};
-use crate::contexts::server_context::{get_channel_thread, ServerDispatch, TServerContext};
 use crate::contexts::member_context::TMemberContext;
+use crate::contexts::server_context::{get_channel_thread, ServerDispatch, TServerContext};
 use crate::models::post::Post;
 use crate::utils::api_requests::api_post;
 use crate::views::home::server::channel::post_item::PostItem;
+use wasm_bindgen::JsCast;
+use wasm_bindgen_futures::spawn_local;
+use web_sys::{HtmlTextAreaElement, InputEvent, KeyboardEvent, SubmitEvent};
+use yew::{function_component, html, use_context, use_effect_with, use_node_ref, Callback, Html};
 
-pub(crate) mod welcome;
 mod post_item;
+pub(crate) mod welcome;
 
 #[function_component(ChannelComp)]
 pub fn channel() -> Html {
@@ -40,10 +40,13 @@ pub fn channel() -> Html {
             let mut form_data = vec![
                 (String::from("content"), post.value().clone()),
                 (String::from("author_id"), member_ctx.member.id.to_string()),
-                (String::from("channel_id"), server_ctx.current_channel.id.to_string()),
+                (
+                    String::from("channel_id"),
+                    server_ctx.current_channel.id.to_string(),
+                ),
             ];
             spawn_local(async move {
-                if let Ok(_) = api_post::<Post>(String::from("post"), form_data,false).await{
+                if let Ok(_) = api_post::<Post>(String::from("post"), form_data, false).await {
                     post.set_value("");
                     if let Ok(thread) = get_channel_thread(server_ctx.current_channel.id).await {
                         server_ctx.dispatch(ServerDispatch::UpdateChannelThread(thread));

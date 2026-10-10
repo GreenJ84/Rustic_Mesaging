@@ -1,17 +1,17 @@
-use yew::prelude::*;
-use yew_router::{components::Link, hooks::use_navigator};
-use gloo::net::http::Request;
-use rand::prelude::IndexedRandom;
 use crate::comps::icon::{get_random_svg, Icon};
-use crate::models::chat::{Chat, MultiChatPreview};
 use crate::contexts::chat_context::{ChatDispatch, TChatContext};
+use crate::models::chat::{Chat, MultiChatPreview};
 use crate::utils::api_requests::api_delete;
 use crate::views::home::me::chat_menu::chat_form::ChatForm;
 use crate::views::home::me::MeRoute;
+use gloo::net::http::Request;
+use rand::prelude::IndexedRandom;
+use yew::prelude::*;
+use yew_router::{components::Link, hooks::use_navigator};
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
-    pub chat: Chat
+    pub chat: Chat,
 }
 
 #[function_component(ChatMenuItem)]
@@ -32,16 +32,15 @@ pub fn chat_menu_icon(Props { chat }: &Props) -> Html {
 
             wasm_bindgen_futures::spawn_local(async move {
                 if let Ok(_) = api_delete(format!("chat/{}/leave", chat_clone.id)).await {
-                    inner_ctx.dispatch(ChatDispatch::UpdatePreviews(
-                        MultiChatPreview { chat_previews: inner_ctx.previews.chat_previews
+                    inner_ctx.dispatch(ChatDispatch::UpdatePreviews(MultiChatPreview {
+                        chat_previews: inner_ctx
+                            .previews
+                            .chat_previews
                             .clone()
                             .into_iter()
-                            .filter(|preview|
-                            preview.ne(&chat_clone)
-                            )
-                            .collect::<Vec<Chat>>()
-                        }
-                    ));
+                            .filter(|preview| preview.ne(&chat_clone))
+                            .collect::<Vec<Chat>>(),
+                    }));
                     navigation.replace(&MeRoute::Overview);
                 }
             })

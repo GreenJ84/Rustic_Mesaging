@@ -1,11 +1,11 @@
-use gloo::net::http::Request;
-use yew::prelude::*;
-use serde::Deserialize;
 use crate::comps::csv_download::DownloadCsvButton;
 use crate::comps::modal::Modal;
 use crate::models::report::ActivityReportItem;
-use crate::utils::api_requests::{api_get};
+use crate::utils::api_requests::api_get;
 use crate::utils::format_date;
+use gloo::net::http::Request;
+use serde::Deserialize;
+use yew::prelude::*;
 
 #[function_component(MemberActivityReport)]
 pub fn report_table() -> Html {
@@ -13,10 +13,12 @@ pub fn report_table() -> Html {
 
     let load_report = {
         let report_data = report_data.clone();
-        Callback::from( move |_: ()| {
+        Callback::from(move |_: ()| {
             let report_data = report_data.clone();
             wasm_bindgen_futures::spawn_local(async move {
-                if let Ok(fetched_data) = api_get::<Vec<ActivityReportItem>>(String::from("reports/member")).await {
+                if let Ok(fetched_data) =
+                    api_get::<Vec<ActivityReportItem>>(String::from("reports/member")).await
+                {
                     report_data.set(fetched_data);
                 }
             });
@@ -24,7 +26,7 @@ pub fn report_table() -> Html {
     };
     let reset_state = {
         let report_data = report_data.clone();
-        Callback::from( move |_: ()| {
+        Callback::from(move |_: ()| {
             report_data.set(Vec::new());
         })
     };

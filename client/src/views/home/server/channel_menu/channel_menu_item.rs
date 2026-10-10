@@ -1,24 +1,24 @@
-use rand::prelude::IndexedRandom;
-use yew::prelude::*;
-use yew::{function_component, Html, html};
-use yew_router::components::Link;
 use crate::comps::icon::Icon;
 use crate::contexts::chat_context::ChatDispatch;
-use crate::models::channel::{Channel, MultiChannel};
 use crate::contexts::server_context::{ServerDispatch, TServerContext};
+use crate::models::channel::{Channel, MultiChannel};
 use crate::models::chat::{Chat, MultiChatPreview};
 use crate::models::server::MultiServer;
 use crate::utils::api_requests::api_delete;
 use crate::views::home::server::channel_menu::channel_form::ChannelForm;
 use crate::views::home::server::ServerRoute;
+use rand::prelude::IndexedRandom;
+use yew::prelude::*;
+use yew::{function_component, html, Html};
+use yew_router::components::Link;
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
     pub channel: Channel,
-    pub is_owner: bool
+    pub is_owner: bool,
 }
 #[function_component(ChannelMenuItem)]
-pub fn channel_menu_item(Props { channel, is_owner }: &Props) -> Html{
+pub fn channel_menu_item(Props { channel, is_owner }: &Props) -> Html {
     let server_ctx = use_context::<TServerContext>().unwrap();
     let channel = channel.clone();
 
@@ -33,22 +33,21 @@ pub fn channel_menu_item(Props { channel, is_owner }: &Props) -> Html{
 
             wasm_bindgen_futures::spawn_local(async move {
                 if let Ok(_) = api_delete(format!("channel/{}", channel.id)).await {
-                    inner_ctx.dispatch(ServerDispatch::UpdateServerChannels(
-                        MultiChannel { channels: inner_ctx.channels.channels
+                    inner_ctx.dispatch(ServerDispatch::UpdateServerChannels(MultiChannel {
+                        channels: inner_ctx
+                            .channels
+                            .channels
                             .clone()
                             .into_iter()
-                            .filter(|_channel|
-                            _channel.ne(&channel)
-                            )
-                            .collect::<Vec<Channel>>()
-                        }
-                    ))
+                            .filter(|_channel| _channel.ne(&channel))
+                            .collect::<Vec<Channel>>(),
+                    }))
                 }
             })
         }
     });
 
-    html!{
+    html! {
         <li
             class={format!("sub-menu-item channel-item{}{}",
                 if *is_owner {" owner"} else {""},

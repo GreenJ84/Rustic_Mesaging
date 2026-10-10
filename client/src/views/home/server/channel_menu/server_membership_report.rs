@@ -1,12 +1,12 @@
-use gloo::net::http::Request;
-use yew::prelude::*;
-use serde::Deserialize;
 use crate::comps::csv_download::DownloadCsvButton;
 use crate::comps::modal::Modal;
 use crate::contexts::server_context::TServerContext;
 use crate::models::report::ServerMemberReportItem;
 use crate::utils::api_requests::api_get;
 use crate::utils::format_date;
+use gloo::net::http::Request;
+use serde::Deserialize;
+use yew::prelude::*;
 
 #[function_component(ServerMembershipReport)]
 pub fn report_table() -> Html {
@@ -16,11 +16,15 @@ pub fn report_table() -> Html {
     let load_report = {
         let server_ctx = server_ctx.clone();
         let report_data = report_data.clone();
-        Callback::from( move |_: ()| {
+        Callback::from(move |_: ()| {
             let server_ctx = server_ctx.clone();
             let report_data = report_data.clone();
             wasm_bindgen_futures::spawn_local(async move {
-                if let Ok(fetched_data) = api_get::<Vec<ServerMemberReportItem>>(String::from(format!("reports/server/{}", server_ctx.current_server.id))).await {
+                if let Ok(fetched_data) = api_get::<Vec<ServerMemberReportItem>>(String::from(
+                    format!("reports/server/{}", server_ctx.current_server.id),
+                ))
+                .await
+                {
                     report_data.set(fetched_data);
                 }
             });
@@ -28,7 +32,7 @@ pub fn report_table() -> Html {
     };
     let reset_state = {
         let report_data = report_data.clone();
-        Callback::from( move |_: ()| {
+        Callback::from(move |_: ()| {
             report_data.set(Vec::new());
         })
     };

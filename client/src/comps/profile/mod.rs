@@ -1,21 +1,25 @@
 pub(crate) mod edit_member;
 mod member_activity_report;
 
-use gloo::net::http::Request;
-use web_sys::{MouseEvent, SubmitEvent, window};
-use yew::{Callback, function_component, Html, html, Properties, use_context, use_node_ref, use_ref};
-use yew::platform::spawn_local;
-use yew_router::hooks::use_navigator;
-use yew_router::navigator::Navigator;
-use crate::AppRoute;
-use crate::models::member::Member;
-use crate::models::server::Server;
-use crate::comps::modal::{force_toggle, Modal, toggle_modal};
+use crate::comps::modal::{force_toggle, toggle_modal, Modal};
 use crate::comps::profile::edit_member::EditMemberModal;
 use crate::comps::profile::member_activity_report::MemberActivityReport;
-use crate::views::home::HomeRoute;
-use crate::contexts::member_context::{MemberDispatch, get_friends, get_requests, get_servers, TMemberContext};
+use crate::contexts::member_context::{
+    get_friends, get_requests, get_servers, MemberDispatch, TMemberContext,
+};
+use crate::models::member::Member;
+use crate::models::server::Server;
 use crate::utils::api_requests::{api_delete, api_put};
+use crate::views::home::HomeRoute;
+use crate::AppRoute;
+use gloo::net::http::Request;
+use web_sys::{window, MouseEvent, SubmitEvent};
+use yew::platform::spawn_local;
+use yew::{
+    function_component, html, use_context, use_node_ref, use_ref, Callback, Html, Properties,
+};
+use yew_router::hooks::use_navigator;
+use yew_router::navigator::Navigator;
 
 #[function_component(Profile)]
 pub fn profile() -> Html {
@@ -27,7 +31,6 @@ pub fn profile() -> Html {
         e.stop_propagation();
         toggle_modal("profile-container");
     });
-
 
     let logout = {
         let navigation = navigation.clone();
@@ -45,8 +48,12 @@ pub fn profile() -> Html {
                         }
                         Err(err) => log::error!("Failed to erase JWT token: {:?}", err),
                     }
-                } else { log::error!("Could not access local storage."); }
-            } else { log::error!("No window object available."); }
+                } else {
+                    log::error!("Could not access local storage.");
+                }
+            } else {
+                log::error!("No window object available.");
+            }
         })
     };
 
@@ -67,7 +74,12 @@ pub fn profile() -> Html {
         let member_ctx = member_ctx_clone.clone();
 
         spawn_local(async move {
-            if let Ok(member) = api_put::<Member>(format!("member{}", if is_password {"/password"} else {""}), data).await {
+            if let Ok(member) = api_put::<Member>(
+                format!("member{}", if is_password { "/password" } else { "" }),
+                data,
+            )
+            .await
+            {
                 member_ctx.dispatch(MemberDispatch::UpdateMember(member));
                 force_toggle("modal_overlay");
             }
@@ -89,14 +101,23 @@ pub fn profile() -> Html {
             e.prevent_default();
             let update = update.clone();
             let member_ctx = member_ctx.clone();
-            let username = new_username_ref.cast::<web_sys::HtmlInputElement>().unwrap().value();
-            let password = old_password_ref.cast::<web_sys::HtmlInputElement>().unwrap().value();
-            update(vec![
-                (String::from("username"), username),
-                (String::from("password"), password.clone()),
-                (String::from("confirm_password"), password),
-                (String::from("email"), member_ctx.member.email.clone())
-            ], false)
+            let username = new_username_ref
+                .cast::<web_sys::HtmlInputElement>()
+                .unwrap()
+                .value();
+            let password = old_password_ref
+                .cast::<web_sys::HtmlInputElement>()
+                .unwrap()
+                .value();
+            update(
+                vec![
+                    (String::from("username"), username),
+                    (String::from("password"), password.clone()),
+                    (String::from("confirm_password"), password),
+                    (String::from("email"), member_ctx.member.email.clone()),
+                ],
+                false,
+            )
         })
     };
     let update_password = {
@@ -108,14 +129,23 @@ pub fn profile() -> Html {
             e.prevent_default();
             let update = update.clone();
             let member_ctx = member_ctx.clone();
-            let password = new_password_ref.cast::<web_sys::HtmlInputElement>().unwrap().value();
-            let old_password = old_password_ref.cast::<web_sys::HtmlInputElement>().unwrap().value();
-            update(vec![
-                (String::from("username"), member_ctx.member.username.clone()),
-                (String::from("password"), password),
-                (String::from("confirm_password"), old_password),
-                (String::from("email"), member_ctx.member.email.clone())
-            ], true)
+            let password = new_password_ref
+                .cast::<web_sys::HtmlInputElement>()
+                .unwrap()
+                .value();
+            let old_password = old_password_ref
+                .cast::<web_sys::HtmlInputElement>()
+                .unwrap()
+                .value();
+            update(
+                vec![
+                    (String::from("username"), member_ctx.member.username.clone()),
+                    (String::from("password"), password),
+                    (String::from("confirm_password"), old_password),
+                    (String::from("email"), member_ctx.member.email.clone()),
+                ],
+                true,
+            )
         })
     };
     let update_email = {
@@ -127,14 +157,23 @@ pub fn profile() -> Html {
             e.prevent_default();
             let update = update.clone();
             let member_ctx = member_ctx.clone();
-            let email = new_email_ref.cast::<web_sys::HtmlInputElement>().unwrap().value();
-            let password = old_password_ref.cast::<web_sys::HtmlInputElement>().unwrap().value();
-            update(vec![
-                (String::from("username"), member_ctx.member.username.clone()),
-                (String::from("password"), password.clone()),
-                (String::from("confirm_password"), password),
-                (String::from("email"), email)
-            ], false)
+            let email = new_email_ref
+                .cast::<web_sys::HtmlInputElement>()
+                .unwrap()
+                .value();
+            let password = old_password_ref
+                .cast::<web_sys::HtmlInputElement>()
+                .unwrap()
+                .value();
+            update(
+                vec![
+                    (String::from("username"), member_ctx.member.username.clone()),
+                    (String::from("password"), password.clone()),
+                    (String::from("confirm_password"), password),
+                    (String::from("email"), email),
+                ],
+                false,
+            )
         })
     };
 

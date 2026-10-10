@@ -1,44 +1,55 @@
-use gloo::net::http::Request;
-use wasm_bindgen::JsCast;
-use web_sys::{Event, HtmlElement, HtmlInputElement, InputEvent, KeyboardEvent, MouseEvent, SubmitEvent, window};
-use yew::{Callback, function_component, Html, html, use_context, use_node_ref, use_state, use_effect_with, Properties, TargetCast};
-use yew::platform::spawn_local;
-use yew_router::hooks::use_navigator;
-use crate::models::chat::Chat;
+use crate::comps::modal::{force_toggle, Modal};
+use crate::contexts::chat_context::{get_chat_previews, ChatDispatch, TChatContext};
 use crate::contexts::member_context::TMemberContext;
+use crate::models::chat::Chat;
 use crate::models::friends::FullFriend;
 use crate::models::server::Server;
-use crate::comps::modal::{force_toggle, Modal};
-use crate::views::home::HomeRoute;
-use crate::contexts::chat_context::{ChatDispatch, get_chat_previews, TChatContext};
 use crate::utils::api_requests::{api_post, api_put, PostResponse};
 use crate::views::home::me::MeRoute;
+use crate::views::home::HomeRoute;
+use gloo::net::http::Request;
+use wasm_bindgen::JsCast;
+use web_sys::{
+    window, Event, HtmlElement, HtmlInputElement, InputEvent, KeyboardEvent, MouseEvent,
+    SubmitEvent,
+};
+use yew::platform::spawn_local;
+use yew::{
+    function_component, html, use_context, use_effect_with, use_node_ref, use_state, Callback,
+    Html, Properties, TargetCast,
+};
+use yew_router::hooks::use_navigator;
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
     pub entity: Option<(i32, String)>,
-    pub button_icon: Html
+    pub button_icon: Html,
 }
 
 #[function_component(ChatForm)]
-pub fn chat_form(Props { entity, button_icon }: &Props) -> Html {
+pub fn chat_form(
+    Props {
+        entity,
+        button_icon,
+    }: &Props,
+) -> Html {
     let member_ctx = use_context::<TMemberContext>().unwrap();
     let chat_ctx = use_context::<TChatContext>().unwrap();
     let navigation = use_navigator().unwrap();
     let entity = entity.clone();
 
-
-
     let new = entity.is_none();
-    let name = use_state(|| if let Some(chat) = entity.clone() {
+    let name = use_state(|| {
+        if let Some(chat) = entity.clone() {
             chat.1.clone()
         } else {
             String::new()
+        }
     });
     {
         let name = name.clone();
         let entity = entity.clone();
-        use_effect_with(entity.clone(), move |_|{
+        use_effect_with(entity.clone(), move |_| {
             name.set(if let Some(chat) = entity {
                 chat.1.clone()
             } else {
@@ -67,9 +78,14 @@ pub fn chat_form(Props { entity, button_icon }: &Props) -> Html {
                     new_list
                 });
             } else {
-                selected_friends.set(selected_friends.iter().filter(|&f| f != &friend).cloned().collect());
+                selected_friends.set(
+                    selected_friends
+                        .iter()
+                        .filter(|&f| f != &friend)
+                        .cloned()
+                        .collect(),
+                );
             }
-
         })
     };
 
@@ -80,7 +96,6 @@ pub fn chat_form(Props { entity, button_icon }: &Props) -> Html {
         let selected_friends = selected_friends.clone();
         let entity = entity.clone();
 
-
         Callback::from(move |event: SubmitEvent| {
             event.prevent_default();
             let navigation = navigation.clone();
@@ -89,27 +104,38 @@ pub fn chat_form(Props { entity, button_icon }: &Props) -> Html {
             let name = name.clone();
             let entity = entity.clone();
 
-
-            let selected_friends_names = selected_friends.clone()
+            let selected_friends_names = selected_friends
+                .clone()
                 .iter()
-                .map(|friend| { friend.member.username.clone() })
+                .map(|friend| friend.member.username.clone())
                 .collect::<Vec<String>>();
-            let mut form_data = vec![
-                (String::from("name"), if name.clone().is_empty() {selected_friends_names.join(",")} else { name.clone().to_string()}),
-            ];
+            let mut form_data = vec![(
+                String::from("name"),
+                if name.clone().is_empty() {
+                    selected_friends_names.join(",")
+                } else {
+                    name.clone().to_string()
+                },
+            )];
 
             if new {
-                let selected_friend_ids = selected_friends.clone()
+                let selected_friend_ids = selected_friends
+                    .clone()
                     .iter()
-                    .map(|friend: &FullFriend| { friend.member.id.clone() })
+                    .map(|friend: &FullFriend| friend.member.id.clone())
                     .collect::<Vec<i32>>();
 
-                form_data.extend(selected_friend_ids.iter().map(|id| {
-                    (String::from("members"), id.to_string())
-                }).collect::<Vec<(String, String)>>());
+                form_data.extend(
+                    selected_friend_ids
+                        .iter()
+                        .map(|id| (String::from("members"), id.to_string()))
+                        .collect::<Vec<(String, String)>>(),
+                );
 
                 wasm_bindgen_futures::spawn_local(async move {
-                    if let Ok(post_response) = api_post::<Chat>(String::from("chat"), form_data, false).await {
+                    if let Ok(post_response) =
+                        api_post::<Chat>(String::from("chat"), form_data, false).await
+                    {
                         if let PostResponse::NonResponse(chat) = post_response {
                             if let Ok(previews) = get_chat_previews().await {
                                 chat_ctx.dispatch(ChatDispatch::UpdatePreviews(previews));
@@ -124,14 +150,16 @@ pub fn chat_form(Props { entity, button_icon }: &Props) -> Html {
             }
 
             wasm_bindgen_futures::spawn_local(async move {
-                if let Ok(chat) = api_put::<Chat>(format!("chat/{}", entity.clone().unwrap().0), form_data).await {
+                if let Ok(chat) =
+                    api_put::<Chat>(format!("chat/{}", entity.clone().unwrap().0), form_data).await
+                {
                     if let Ok(previews) = get_chat_previews().await {
                         chat_ctx.dispatch(ChatDispatch::UpdatePreviews(previews));
                     }
                     chat_ctx.dispatch(ChatDispatch::UpdateCurrentChat(chat.clone()));
                     navigation.push(&MeRoute::ChatRoom { chat_id: chat.id });
                     force_toggle("modal_overlay");
-            }
+                }
             });
         })
     };
@@ -144,7 +172,6 @@ pub fn chat_form(Props { entity, button_icon }: &Props) -> Html {
             let entity = entity.clone();
 
             if let Some(chat) = entity {
-
                 name.set(chat.1.clone());
             } else {
                 name.set(String::new());

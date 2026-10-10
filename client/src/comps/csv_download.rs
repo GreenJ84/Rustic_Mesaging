@@ -1,26 +1,24 @@
+use crate::models::report::CsvDownload;
+use crate::utils::api_requests::{api_get, api_url};
+use crate::utils::get_auth_token;
 use gloo::net::http::Request;
 use wasm_bindgen::JsCast;
 use web_sys::window;
 use yew::prelude::*;
-use crate::models::report::CsvDownload;
-use crate::utils::api_requests::{api_get, api_url};
-use crate::utils::get_auth_token;
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
-    pub(crate) url_extension: String
+    pub(crate) url_extension: String,
 }
 #[function_component(DownloadCsvButton)]
-pub fn download_csv_button(Props {url_extension}: &Props) -> Html {
+pub fn download_csv_button(Props { url_extension }: &Props) -> Html {
     let url_extension = url_extension.clone();
     let onclick = Callback::from(move |_| {
         let url_extension = url_extension.clone();
 
         wasm_bindgen_futures::spawn_local(async move {
             let url_extension = url_extension.clone();
-            let result = Request::get(
-                &format!("{}/{}", api_url(), url_extension)
-            )
+            let result = Request::get(&format!("{}/{}", api_url(), url_extension))
                 .header("Authorization", &get_auth_token())
                 .send()
                 .await;
@@ -33,8 +31,11 @@ pub fn download_csv_button(Props {url_extension}: &Props) -> Html {
                             let document = window.document().unwrap();
 
                             let a = document.create_element("a").unwrap();
-                            a.set_attribute("href", &format!("data:text/csv;charset=utf-8,{}", content))
-                                .unwrap();
+                            a.set_attribute(
+                                "href",
+                                &format!("data:text/csv;charset=utf-8,{}", content),
+                            )
+                            .unwrap();
                             a.set_attribute("download", "report.csv").unwrap();
 
                             let body = document.body().unwrap();
@@ -50,7 +51,7 @@ pub fn download_csv_button(Props {url_extension}: &Props) -> Html {
                 }
                 Err(err) => {
                     log::error!("Request failed: {:?}", err);
-                },
+                }
             }
         });
     });

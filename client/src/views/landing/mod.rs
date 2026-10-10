@@ -1,17 +1,14 @@
-pub(crate) mod register;
 pub(crate) mod login;
+pub(crate) mod register;
 
 use yew::prelude::*;
-use yew_router::{Routable, Switch};
 use yew_router::components::{Link, Redirect};
+use yew_router::{Routable, Switch};
 
 use crate::contexts::member_context::TMemberContext;
 use crate::views::{
     home::me::MeRoute,
-    landing::{
-        login::Login,
-        register::Register
-    }
+    landing::{login::Login, register::Register},
 };
 
 #[derive(Clone, Routable, PartialEq)]

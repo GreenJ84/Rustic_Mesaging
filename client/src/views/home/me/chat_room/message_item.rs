@@ -1,13 +1,13 @@
-use yew::prelude::*;
-use web_sys::HtmlTextAreaElement;
-use wasm_bindgen::JsCast;
-use yew::platform::spawn_local;
 use crate::comps::icon::Icon;
-use crate::contexts::chat_context::{ChatDispatch, get_message_thread, TChatContext};
+use crate::contexts::chat_context::{get_message_thread, ChatDispatch, TChatContext};
 use crate::contexts::member_context::TMemberContext;
 use crate::contexts::server_context::TServerContext;
 use crate::models::message::Message;
 use crate::utils::api_requests::api_put;
+use wasm_bindgen::JsCast;
+use web_sys::HtmlTextAreaElement;
+use yew::platform::spawn_local;
+use yew::prelude::*;
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
@@ -22,7 +22,6 @@ pub fn message_item(Props { message }: &Props) -> Html {
     let author = message.sender.id.eq(&member_ctx.member.id);
     let editing = use_state(|| false);
     let content = use_state(|| message.content.clone());
-
 
     {
         let editing = editing.clone();
@@ -47,7 +46,7 @@ pub fn message_item(Props { message }: &Props) -> Html {
         let message = message.clone();
         let editing = editing.clone();
         Callback::from(move |event: MouseEvent| {
-            if author{
+            if author {
                 editing.set(!(*editing));
             }
         })
@@ -83,10 +82,15 @@ pub fn message_item(Props { message }: &Props) -> Html {
                 let mut form_data = vec![
                     (String::from("content"), (*content).clone()),
                     (String::from("sender_id"), member_ctx.member.id.to_string()),
-                    (String::from("chat_id"), chat_ctx.current_chat.id.to_string()),
+                    (
+                        String::from("chat_id"),
+                        chat_ctx.current_chat.id.to_string(),
+                    ),
                 ];
 
-                if let Ok(message) = api_put::<Message>(format!("/message/{}", message.id), form_data).await {
+                if let Ok(message) =
+                    api_put::<Message>(format!("/message/{}", message.id), form_data).await
+                {
                     if let Ok(thread) = get_message_thread(chat_ctx.current_chat.id).await {
                         chat_ctx.dispatch(ChatDispatch::UpdateCurrentThread(thread));
                         editing.set(false);
@@ -115,7 +119,6 @@ pub fn message_item(Props { message }: &Props) -> Html {
             content.set(input.value());
         })
     };
-
 
     html! {
         <>

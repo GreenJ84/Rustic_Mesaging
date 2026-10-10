@@ -1,18 +1,15 @@
-use yew::prelude::*;
-use yew_router::prelude::*;
 use gloo::net::http::Request;
 use gloo::utils::window;
 use web_sys::SubmitEvent;
+use yew::prelude::*;
+use yew_router::prelude::*;
 
 use crate::contexts::member_context::{MemberDispatch, TMemberContext};
-use crate::AppRoute;
 use crate::models::member::Member;
 use crate::utils::api_requests::{api_post, PostResponse};
 use crate::utils::set_auth_token;
-use crate::views::{
-    landing::LandingRoute,
-    home::me::MeRoute
-};
+use crate::views::{home::me::MeRoute, landing::LandingRoute};
+use crate::AppRoute;
 
 #[function_component(Login)]
 pub fn login_modal() -> Html {
@@ -37,8 +34,14 @@ pub fn login_modal() -> Html {
             let username_error = username_error.clone();
             let password_error = password_error.clone();
 
-            let username = username_ref.cast::<web_sys::HtmlInputElement>().unwrap().value();
-            let password = password_ref.cast::<web_sys::HtmlInputElement>().unwrap().value();
+            let username = username_ref
+                .cast::<web_sys::HtmlInputElement>()
+                .unwrap()
+                .value();
+            let password = password_ref
+                .cast::<web_sys::HtmlInputElement>()
+                .unwrap()
+                .value();
             let mut form_data = vec![
                 ("username".to_string(), username.clone()),
                 ("password".to_string(), password.clone()),
@@ -47,11 +50,10 @@ pub fn login_modal() -> Html {
                 let request = api_post::<Member>("login".to_string(), form_data, true).await;
                 match request {
                     Ok(post_response) => {
-                        if let PostResponse::Response(member, response) = post_response{
+                        if let PostResponse::Response(member, response) = post_response {
                             if let Some(auth_header) = response.headers().get("authorization") {
                                 if let Some(bearer_token) = auth_header.strip_prefix("Bearer ") {
-                                    if let Err(_) = set_auth_token(bearer_token.to_string())
-                                    {
+                                    if let Err(_) = set_auth_token(bearer_token.to_string()) {
                                         log::error!("Failed to save authentication");
                                     } else {
                                         log::info!("Login successful.");
@@ -62,15 +64,17 @@ pub fn login_modal() -> Html {
                             } else {
                                 log::error!("Authorization header not found in response");
                             }
-                        } else if let PostResponse::OnlyResponse(response) = post_response{
+                        } else if let PostResponse::OnlyResponse(response) = post_response {
                             if response.status() == 404 {
                                 username_error.set(true);
                             } else if response.status() == 401 {
                                 password_error.set(true);
                             }
                         }
-                    },
-                    Err(_) => { log::error!("Login request failed"); }
+                    }
+                    Err(_) => {
+                        log::error!("Login request failed");
+                    }
                 }
             });
         })

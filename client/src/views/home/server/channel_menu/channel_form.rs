@@ -1,46 +1,57 @@
-use gloo::net::http::Request;
-use wasm_bindgen::JsCast;
-use wasm_bindgen_futures::spawn_local;
-use web_sys::{Event, HtmlElement, HtmlInputElement, MouseEvent, SubmitEvent, window};
-use yew::{Callback, function_component, Html, html, Properties, TargetCast, use_context, use_effect_with, use_node_ref, use_state};
-use yew_router::hooks::{use_location, use_navigator};
 use crate::comps::main_navigation::server_menu_item::_Props::server;
-use crate::contexts::member_context::{MemberDispatch, get_servers, TMemberContext};
-use crate::models::server::{MultiServer, Server};
-use crate::comps::modal::{force_toggle, Modal, toggle_modal};
-use crate::contexts::chat_context::{ChatDispatch, get_chat_previews};
-use crate::views::home::HomeRoute;
-use crate::views::home::me::MeRoute;
+use crate::comps::modal::{force_toggle, toggle_modal, Modal};
+use crate::contexts::chat_context::{get_chat_previews, ChatDispatch};
+use crate::contexts::member_context::{get_servers, MemberDispatch, TMemberContext};
 use crate::contexts::server_context::{get_server_channels, ServerDispatch, TServerContext};
 use crate::models::channel::Channel;
 use crate::models::friends::FullFriend;
+use crate::models::server::{MultiServer, Server};
 use crate::utils::api_requests::{api_post, api_put, PostResponse};
+use crate::views::home::me::MeRoute;
 use crate::views::home::server::ServerRoute;
+use crate::views::home::HomeRoute;
+use gloo::net::http::Request;
+use wasm_bindgen::JsCast;
+use wasm_bindgen_futures::spawn_local;
+use web_sys::{window, Event, HtmlElement, HtmlInputElement, MouseEvent, SubmitEvent};
+use yew::{
+    function_component, html, use_context, use_effect_with, use_node_ref, use_state, Callback,
+    Html, Properties, TargetCast,
+};
+use yew_router::hooks::{use_location, use_navigator};
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
     pub entity: Option<(i32, String)>,
     pub button_icon: Html,
-    pub(crate) callback: Option<Callback<MouseEvent>>
+    pub(crate) callback: Option<Callback<MouseEvent>>,
 }
 
 #[function_component(ChannelForm)]
-pub fn channel_form(Props { entity, button_icon, callback }: &Props) -> Html {
+pub fn channel_form(
+    Props {
+        entity,
+        button_icon,
+        callback,
+    }: &Props,
+) -> Html {
     let member_ctx = use_context::<TMemberContext>().unwrap();
     let server_ctx = use_context::<TServerContext>().unwrap();
     let navigation = use_navigator().unwrap();
     let entity = entity.clone();
 
     let new = entity.is_none();
-    let name = use_state(|| if let Some(chat) = entity.clone() {
-        chat.1.clone()
-    } else {
-        String::new()
+    let name = use_state(|| {
+        if let Some(chat) = entity.clone() {
+            chat.1.clone()
+        } else {
+            String::new()
+        }
     });
     {
         let name = name.clone();
         let entity = entity.clone();
-        use_effect_with(entity.clone(), move |_|{
+        use_effect_with(entity.clone(), move |_| {
             name.set(if let Some(channel) = entity {
                 channel.1.clone()
             } else {
@@ -75,18 +86,21 @@ pub fn channel_form(Props { entity, button_icon, callback }: &Props) -> Html {
             let callback = callback.clone();
 
             let mut form_data = vec![
-                (String::from("server_id"), server_ctx.current_server.id.clone().to_string()),
+                (
+                    String::from("server_id"),
+                    server_ctx.current_server.id.clone().to_string(),
+                ),
                 (String::from("name"), (*name).clone()),
             ];
             if new {
                 spawn_local(async move {
-                    if let Ok(post_response) = api_post::<Channel>(
-                        String::from("channel"),
-                        form_data,
-                        false
-                    ).await{
+                    if let Ok(post_response) =
+                        api_post::<Channel>(String::from("channel"), form_data, false).await
+                    {
                         if let PostResponse::NonResponse(channel) = post_response {
-                            if let Ok(channels) = get_server_channels(server_ctx.current_server.id).await {
+                            if let Ok(channels) =
+                                get_server_channels(server_ctx.current_server.id).await
+                            {
                                 server_ctx.dispatch(ServerDispatch::UpdateServerChannels(channels));
                             }
                             server_ctx.dispatch(ServerDispatch::UpdateChannel(channel.clone()));
@@ -99,16 +113,21 @@ pub fn channel_form(Props { entity, button_icon, callback }: &Props) -> Html {
                 });
             } else {
                 spawn_local(async move {
-                    if let Ok(channel) = api_put::<Channel>(
-                        format!("channel/{}", entity.unwrap().0),
-                        form_data
-                    ).await{
-                        if let Ok(channels) = get_server_channels(server_ctx.current_server.id).await {
+                    if let Ok(channel) =
+                        api_put::<Channel>(format!("channel/{}", entity.unwrap().0), form_data)
+                            .await
+                    {
+                        if let Ok(channels) =
+                            get_server_channels(server_ctx.current_server.id).await
+                        {
                             server_ctx.dispatch(ServerDispatch::UpdateServerChannels(channels));
                         }
                         server_ctx.dispatch(ServerDispatch::UpdateChannel(channel.clone()));
                         force_toggle("modal_overlay");
-                        navigation.push(&ServerRoute::Channel { server_id: server_ctx.current_server.id, channel_id: channel.id})
+                        navigation.push(&ServerRoute::Channel {
+                            server_id: server_ctx.current_server.id,
+                            channel_id: channel.id,
+                        })
                     }
                 });
             }
@@ -129,7 +148,7 @@ pub fn channel_form(Props { entity, button_icon, callback }: &Props) -> Html {
                 name.set(chat.1.clone());
             } else {
                 name.set(String::new());
-                if let Some(func) = callback{
+                if let Some(func) = callback {
                     func.emit(MouseEvent::new("click").unwrap())
                 }
             }

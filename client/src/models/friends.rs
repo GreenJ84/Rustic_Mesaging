@@ -1,18 +1,18 @@
+use crate::models::member::{Member, MemberShort};
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use yew::Properties;
-use crate::models::member::{Member, MemberShort};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct FullFriend {
     pub(crate) member: MemberShort,
     pub(crate) created_at: NaiveDateTime,
 }
-impl FullFriend{
+impl FullFriend {
     pub fn default() -> Self {
         Self {
             member: MemberShort::default(),
-            created_at: NaiveDateTime::default()
+            created_at: NaiveDateTime::default(),
         }
     }
 }
@@ -21,10 +21,10 @@ impl FullFriend{
 pub struct MultiFriend {
     pub(crate) friends: Vec<FullFriend>,
 }
-impl MultiFriend{
+impl MultiFriend {
     pub fn default() -> Self {
-        Self{
-            friends: Vec::<FullFriend>::new()
+        Self {
+            friends: Vec::<FullFriend>::new(),
         }
     }
 }

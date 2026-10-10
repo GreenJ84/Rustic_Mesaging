@@ -1,19 +1,14 @@
-use yew::prelude::*;
-use yew_router::{BrowserRouter, components::Redirect, Routable, Switch};
 use crate::comps::main_navigation::server_menu::ServerSidebar;
 use crate::comps::profile::Profile;
 use crate::contexts::{
-    chat_context::ChatProvider,
-    member_context::TMemberContext,
-    server_context::ServerProvider,
+    chat_context::ChatProvider, member_context::TMemberContext, server_context::ServerProvider,
 };
 use crate::views::{
-    home::{
-        me::Me,
-        server::ServerComp
-    },
+    home::{me::Me, server::ServerComp},
     landing::LandingRoute,
 };
+use yew::prelude::*;
+use yew_router::{components::Redirect, BrowserRouter, Routable, Switch};
 
 pub(crate) mod me;
 pub(crate) mod server;
@@ -33,15 +28,14 @@ pub enum HomeRoute {
 
 fn switch(routes: HomeRoute) -> Html {
     match routes {
-        HomeRoute::Me |  HomeRoute::MeExt => html! {
+        HomeRoute::Me | HomeRoute::MeExt => html! {
             <ChatProvider>
                 <Me />
             </ChatProvider>
         },
-        HomeRoute::Server {server_id } |
-        HomeRoute::ServerExt {server_id} => html! {
+        HomeRoute::Server { server_id } | HomeRoute::ServerExt { server_id } => html! {
             <ServerComp server_id={server_id}/>
-        }
+        },
     }
 }
 

@@ -1,22 +1,22 @@
-use rand::prelude::IndexedRandom;
-use yew::prelude::*;
-use yew::{function_component, Html, html};
-use yew_router::components::Link;
+use crate::contexts::server_context::{ServerDispatch, TServerContext};
 use crate::models::server::Server;
 use crate::views::home::HomeRoute;
-use crate::contexts::server_context::{ServerDispatch, TServerContext};
+use rand::prelude::IndexedRandom;
+use yew::prelude::*;
+use yew::{function_component, html, Html};
+use yew_router::components::Link;
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
     pub server: Server,
-    pub selected: bool
+    pub selected: bool,
 }
 #[function_component(ServerMenuItem)]
-pub fn server_menu_item(Props { server, selected }: &Props) -> Html{
+pub fn server_menu_item(Props { server, selected }: &Props) -> Html {
     let server_ctx = use_context::<TServerContext>().unwrap();
     let server = server.clone();
 
-    html!{
+    html! {
         <li
             class={format!("server-menu-item{}", if *selected {" selected"} else {""})}
             title={server.name.clone()}

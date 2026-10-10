@@ -1,16 +1,16 @@
-use yew::prelude::*;
-use yew::html::ChildrenProps;
-use std::rc::Rc;
-use gloo::net::http::Request;
-use serde::{Deserialize, Serialize};
-use wasm_bindgen_futures::spawn_local;
 use crate::models::{
     chat::{Chat, MultiChatPreview},
     member::Member,
     message::MessageThread,
-    server::MultiServer
+    server::MultiServer,
 };
 use crate::utils::api_requests::api_get;
+use gloo::net::http::Request;
+use serde::{Deserialize, Serialize};
+use std::rc::Rc;
+use wasm_bindgen_futures::spawn_local;
+use yew::html::ChildrenProps;
+use yew::prelude::*;
 
 pub type TChatContext = UseReducerHandle<ChatContext>;
 
@@ -18,7 +18,7 @@ pub type TChatContext = UseReducerHandle<ChatContext>;
 pub struct ChatContext {
     pub previews: MultiChatPreview,
     pub current_chat: Chat,
-    pub thread: MessageThread
+    pub thread: MessageThread,
 }
 pub enum ChatDispatch {
     UpdatePreviews(MultiChatPreview),
@@ -33,10 +33,10 @@ impl Reducible for ChatContext {
             ChatDispatch::UpdatePreviews(previews) => Self {
                 previews,
                 current_chat: Chat::default(),
-                thread: MessageThread::default()
+                thread: MessageThread::default(),
             },
             ChatDispatch::UpdateCurrentChat(chat) => {
-                if self.current_chat.eq(&chat){
+                if self.current_chat.eq(&chat) {
                     return self;
                 }
                 Self {
@@ -44,11 +44,11 @@ impl Reducible for ChatContext {
                     current_chat: chat,
                     thread: MessageThread::default(),
                 }
-            },
+            }
             ChatDispatch::UpdateCurrentThread(new_thread) => Self {
                 previews: self.previews.clone(),
                 current_chat: self.current_chat.clone(),
-                thread: new_thread
+                thread: new_thread,
             },
         };
         Rc::new(new_context)
@@ -60,7 +60,7 @@ pub fn chat_provider(props: &ChildrenProps) -> Html {
     let context = use_reducer(|| ChatContext {
         previews: MultiChatPreview::default(),
         current_chat: Chat::default(),
-        thread: MessageThread::default()
+        thread: MessageThread::default(),
     });
 
     {
@@ -78,7 +78,7 @@ pub fn chat_provider(props: &ChildrenProps) -> Html {
     {
         let context = context.clone();
         use_effect_with(context.current_chat.clone(), move |_| {
-            if context.current_chat.clone().eq(&Chat::default()){
+            if context.current_chat.clone().eq(&Chat::default()) {
                 return;
             }
             let context = context.clone();

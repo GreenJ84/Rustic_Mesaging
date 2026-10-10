@@ -1,19 +1,27 @@
-use std::collections::HashMap;
 use rand::prelude::IndexedRandom;
-use yew::{function_component, Html, html, Properties};
+use std::collections::HashMap;
 use yew::virtual_dom::VNode;
+use yew::{function_component, html, Html, Properties};
 
 #[derive(Properties, PartialEq)]
-pub struct Props{
+pub struct Props {
     pub(crate) class_name: String,
     pub(crate) avatar: Html,
     pub(crate) size: String,
     pub(crate) color: String,
     #[prop_or_default]
-    pub(crate) ratio: Option<String>
+    pub(crate) ratio: Option<String>,
 }
 #[function_component(Icon)]
-pub fn icon(Props { class_name, size, avatar, color, ratio }: &Props) -> Html {
+pub fn icon(
+    Props {
+        class_name,
+        size,
+        avatar,
+        color,
+        ratio,
+    }: &Props,
+) -> Html {
     let ratio = match ratio {
         Some(ratio) => ratio.clone(),
         None => "0 0 16 16".to_string(),
@@ -137,7 +145,7 @@ pub fn server_icons(class_name: &str, size: &str, color: &str) -> HashMap<String
                 <path d="M4.355.522a.5.5 0 0 1 .623.333l.291.956A5 5 0 0 1 8 1c1.007 0 1.946.298 2.731.811l.29-.956a.5.5 0 1 1 .957.29l-.41 1.352A5 5 0 0 1 13 6h.5a.5.5 0 0 0 .5-.5V5a.5.5 0 0 1 1 0v.5A1.5 1.5 0 0 1 13.5 7H13v1h1.5a.5.5 0 0 1 0 1H13v1h.5a1.5 1.5 0 0 1 1.5 1.5v.5a.5.5 0 1 1-1 0v-.5a.5.5 0 0 0-.5-.5H13a5 5 0 0 1-10 0h-.5a.5.5 0 0 0-.5.5v.5a.5.5 0 1 1-1 0v-.5A1.5 1.5 0 0 1 2.5 10H3V9H1.5a.5.5 0 0 1 0-1H3V7h-.5A1.5 1.5 0 0 1 1 5.5V5a.5.5 0 0 1 1 0v.5a.5.5 0 0 0 .5.5H3c0-1.364.547-2.601 1.432-3.503l-.41-1.352a.5.5 0 0 1 .333-.623M4 7v4a4 4 0 0 0 3.5 3.97V7zm4.5 0v7.97A4 4 0 0 0 12 11V7zM12 6a4 4 0 0 0-1.334-2.982A3.98 3.98 0 0 0 8 2a3.98 3.98 0 0 0-2.667 1.018A4 4 0 0 0 4 6z"/>
         }),
     ].into_iter()
-        .map(|(key, el)| 
+        .map(|(key, el)|
             (
                 key.to_string(),
                 html! {
@@ -155,35 +163,33 @@ pub fn server_icons(class_name: &str, size: &str, color: &str) -> HashMap<String
 
 pub fn random_color() -> &'static str {
     let colors = vec![
-        "limegreen", "yellow", "lightblue", "purple", "green", "white", "red",
+        "limegreen",
+        "yellow",
+        "lightblue",
+        "purple",
+        "green",
+        "white",
+        "red",
     ];
     let mut rng = rand::thread_rng();
     colors.choose(&mut rng).cloned().unwrap_or(colors[0])
 }
 pub fn get_all_svg(member: bool, class_name: &str, size: &str) -> HashMap<String, Html> {
     match member {
-        true => {
-            member_avatars(class_name, size)
-        },
-        false => {
-            server_icons(class_name, size, "var(--accent-green)")
-        }
+        true => member_avatars(class_name, size),
+        false => server_icons(class_name, size, "var(--accent-green)"),
     }
 }
 
 pub fn get_random_svg(member: bool, class_name: &str, size: &str) -> Html {
     match member {
-        true => {
-            member_avatars(class_name, size)
-                .get("default")
-                .unwrap()
-                .to_owned()
-        },
-        false => {
-            server_icons(class_name, size, random_color())
-                .get("default")
-                .unwrap()
-                .to_owned()
-        }
+        true => member_avatars(class_name, size)
+            .get("default")
+            .unwrap()
+            .to_owned(),
+        false => server_icons(class_name, size, random_color())
+            .get("default")
+            .unwrap()
+            .to_owned(),
     }
 }

@@ -1,15 +1,12 @@
-use yew::prelude::*;
-use yew::html::ChildrenProps;
-use std::rc::Rc;
 use gloo::utils::window;
 use serde::{Deserialize, Serialize};
+use std::rc::Rc;
 use wasm_bindgen_futures::spawn_local;
+use yew::html::ChildrenProps;
+use yew::prelude::*;
 
 use crate::models::{
-    member::Member,
-    server::MultiServer,
-    friends::MultiFriend,
-    friend_request::MultiFriendRequest
+    friend_request::MultiFriendRequest, friends::MultiFriend, member::Member, server::MultiServer,
 };
 use crate::utils::api_requests::{api_get, api_head};
 
@@ -27,7 +24,7 @@ pub enum MemberDispatch {
     UpdateMember(Member),
     UpdateServers(MultiServer),
     UpdateFriends(MultiFriend),
-    UpdateRequests(MultiFriendRequest)
+    UpdateRequests(MultiFriendRequest),
 }
 impl Reducible for MemberContext {
     type Action = MemberDispatch;
@@ -38,7 +35,7 @@ impl Reducible for MemberContext {
                 logged_in: !member.eq(&Member::default()),
                 member,
                 servers: MultiServer::default(),
-                friends:  MultiFriend::default(),
+                friends: MultiFriend::default(),
                 requests: MultiFriendRequest::default(),
             },
             MemberDispatch::UpdateServers(servers) => Self {
@@ -46,21 +43,21 @@ impl Reducible for MemberContext {
                 member: self.member.clone(),
                 servers,
                 friends: self.friends.clone(),
-                requests: self.requests.clone()
+                requests: self.requests.clone(),
             },
             MemberDispatch::UpdateFriends(friends) => Self {
                 logged_in: self.logged_in,
                 member: self.member.clone(),
                 servers: self.servers.clone(),
                 friends,
-                requests: self.requests.clone()
+                requests: self.requests.clone(),
             },
             MemberDispatch::UpdateRequests(requests) => Self {
                 logged_in: self.logged_in,
                 member: self.member.clone(),
                 servers: self.servers.clone(),
                 friends: self.friends.clone(),
-                requests
+                requests,
             },
         };
         Rc::new(new_context)
@@ -74,14 +71,17 @@ pub fn member_context_provider(props: &ChildrenProps) -> Html {
         member: Member::default(),
         servers: MultiServer::default(),
         friends: MultiFriend::default(),
-        requests: MultiFriendRequest { incoming: Vec::new(), outgoing: Vec::new() }
+        requests: MultiFriendRequest {
+            incoming: Vec::new(),
+            outgoing: Vec::new(),
+        },
     });
 
     {
         let context = context.clone();
         use_effect_with((), move |_| {
             spawn_local(async move {
-                if is_logged_in().await{
+                if is_logged_in().await {
                     if let Ok(member) = get_member().await {
                         context.dispatch(MemberDispatch::UpdateMember(member));
                     }
@@ -93,7 +93,7 @@ pub fn member_context_provider(props: &ChildrenProps) -> Html {
     {
         let context = context.clone();
         use_effect_with(context.member.clone(), move |_| {
-            if context.member.clone().eq(&Member::default()){
+            if context.member.clone().eq(&Member::default()) {
                 return;
             }
             let context = context.clone();
@@ -121,13 +121,18 @@ pub fn member_context_provider(props: &ChildrenProps) -> Html {
 }
 
 pub async fn is_logged_in() -> bool {
-    if let Ok(Some(token)) = window().local_storage().unwrap().unwrap().get_item("jwt_token") {
+    if let Ok(Some(token)) = window()
+        .local_storage()
+        .unwrap()
+        .unwrap()
+        .get_item("jwt_token")
+    {
         return !token.is_empty() && validate_token().await;
     }
     false
 }
 
-async fn validate_token() -> bool{
+async fn validate_token() -> bool {
     api_head("member".to_string()).await
 }
 
@@ -139,10 +144,10 @@ pub async fn get_servers() -> Result<MultiServer, ()> {
     api_get::<MultiServer>("member/servers".to_string()).await
 }
 
-pub async fn get_friends() -> Result<MultiFriend, ()>{
+pub async fn get_friends() -> Result<MultiFriend, ()> {
     api_get::<MultiFriend>("member/friends".to_string()).await
 }
 
-pub async fn get_requests() -> Result<MultiFriendRequest, ()>{
+pub async fn get_requests() -> Result<MultiFriendRequest, ()> {
     api_get::<MultiFriendRequest>("member/requests".to_string()).await
 }

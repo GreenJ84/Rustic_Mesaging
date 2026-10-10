@@ -1,22 +1,22 @@
+use crate::comps::icon::Icon;
+use crate::comps::modal::{force_toggle, Modal};
+use crate::contexts::member_context::{get_requests, get_servers, MemberDispatch, TMemberContext};
+use crate::models::friend_request::{FriendRequest, RequestDetailed};
+use crate::models::server::Server;
+use crate::utils::api_requests::api_put;
+use crate::views::home::me::overview::new_friend_request::NewFriendRequest;
+use crate::views::home::HomeRoute;
 use gloo::net::http::Request;
 use yew::prelude::*;
 use yew_router::hooks::use_navigator;
-use crate::models::friend_request::{FriendRequest, RequestDetailed};
-use crate::models::server::Server;
-use crate::comps::icon::Icon;
-use crate::comps::modal::{force_toggle, Modal};
-use crate::views::home::HomeRoute;
-use crate::views::home::me::overview::new_friend_request::NewFriendRequest;
-use crate::contexts::member_context::{MemberDispatch, get_requests, get_servers, TMemberContext};
-use crate::utils::api_requests::api_put;
 
 #[derive(Properties, PartialEq)]
-pub struct Props{
-    pub request: RequestDetailed
+pub struct Props {
+    pub request: RequestDetailed,
 }
 
 #[function_component(EditFriendRequest)]
-pub fn edit_friend_request(Props { request }: &Props) -> Html{
+pub fn edit_friend_request(Props { request }: &Props) -> Html {
     let app_ctx = use_context::<TMemberContext>().unwrap();
     let navigation = use_navigator().unwrap();
 
@@ -34,7 +34,10 @@ pub fn edit_friend_request(Props { request }: &Props) -> Html{
             let app_ctx = app_ctx.clone();
             let submit_nav = submit_nav.clone();
             let request = request.clone();
-            let note = note_ref.cast::<web_sys::HtmlTextAreaElement>().unwrap().value();
+            let note = note_ref
+                .cast::<web_sys::HtmlTextAreaElement>()
+                .unwrap()
+                .value();
             let mut form_data = vec![
                 (String::from("sender_id"), app_ctx.member.id.to_string()),
                 (String::from("receiver_id"), request.member.id.to_string()),
@@ -43,7 +46,9 @@ pub fn edit_friend_request(Props { request }: &Props) -> Html{
             wasm_bindgen_futures::spawn_local(async move {
                 if let Ok(_) = api_put::<FriendRequest>(String::from("request"), form_data).await {
                     force_toggle("modal_overlay");
-                    app_ctx.dispatch(MemberDispatch::UpdateRequests(get_requests().await.unwrap()));
+                    app_ctx.dispatch(MemberDispatch::UpdateRequests(
+                        get_requests().await.unwrap(),
+                    ));
                 }
             });
         })

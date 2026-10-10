@@ -1,15 +1,14 @@
-use yew::{function_component, Html, html};
-use yew::prelude::*;
-use yew_router::prelude::{Link, use_navigator};
-use crate::comps::main_navigation::{
-    discover_servers::DiscoverServersModal,
-    server_menu_item::ServerMenuItem,
-};
 use crate::comps::main_navigation::server_form::ServerForm;
+use crate::comps::main_navigation::{
+    discover_servers::DiscoverServersModal, server_menu_item::ServerMenuItem,
+};
 use crate::contexts::member_context::TMemberContext;
 use crate::contexts::server_context::{ServerDispatch, TServerContext};
 use crate::models::server::Server;
 use crate::views::home::HomeRoute;
+use yew::prelude::*;
+use yew::{function_component, html, Html};
+use yew_router::prelude::{use_navigator, Link};
 
 #[function_component(ServerSidebar)]
 pub fn server_sidebar() -> Html {
@@ -74,4 +73,3 @@ pub fn server_sidebar() -> Html {
         </nav>
     }
 }
-

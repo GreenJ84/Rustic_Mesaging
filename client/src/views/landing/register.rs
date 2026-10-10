@@ -1,19 +1,16 @@
-use yew::prelude::*;
-use yew_router::prelude::*;
 use gloo::net::http::Request;
 use gloo::utils::window;
 use web_sys::SubmitEvent;
+use yew::prelude::*;
+use yew_router::prelude::*;
 
-use crate::contexts::member_context::{MemberDispatch, TMemberContext};
-use crate::AppRoute;
 use crate::comps::modal::toggle_modal;
+use crate::contexts::member_context::{MemberDispatch, TMemberContext};
 use crate::models::member::Member;
 use crate::utils::api_requests::{api_post, PostResponse};
 use crate::utils::set_auth_token;
-use crate::views::{
-    home::me::MeRoute,
-    landing::LandingRoute
-};
+use crate::views::{home::me::MeRoute, landing::LandingRoute};
+use crate::AppRoute;
 
 #[function_component(Register)]
 pub fn register_modal() -> Html {
@@ -47,18 +44,30 @@ pub fn register_modal() -> Html {
             let member_ctx = member_ctx.clone();
             let navigation = navigation.clone();
 
-            let username = username_ref.cast::<web_sys::HtmlInputElement>().unwrap().value();
+            let username = username_ref
+                .cast::<web_sys::HtmlInputElement>()
+                .unwrap()
+                .value();
             let username_error = username_error.clone();
 
-            let password = password_ref.cast::<web_sys::HtmlInputElement>().unwrap().value();
+            let password = password_ref
+                .cast::<web_sys::HtmlInputElement>()
+                .unwrap()
+                .value();
 
-            let confirm_pass = confirm_pass_ref.cast::<web_sys::HtmlInputElement>().unwrap().value();
-            if confirm_pass.ne(&password){
+            let confirm_pass = confirm_pass_ref
+                .cast::<web_sys::HtmlInputElement>()
+                .unwrap()
+                .value();
+            if confirm_pass.ne(&password) {
                 confirm_error.set(true);
                 return;
             }
 
-            let email = email_ref.cast::<web_sys::HtmlInputElement>().unwrap().value();
+            let email = email_ref
+                .cast::<web_sys::HtmlInputElement>()
+                .unwrap()
+                .value();
             let mut form_data = vec![
                 ("username".to_string(), username.clone()),
                 ("password".to_string(), password.clone()),
@@ -73,8 +82,7 @@ pub fn register_modal() -> Html {
                         if let PostResponse::Response(member, response) = post_response {
                             if let Some(auth_header) = response.headers().get("authorization") {
                                 if let Some(bearer_token) = auth_header.strip_prefix("Bearer ") {
-                                    if let Err(_) = set_auth_token(bearer_token.to_string())
-                                    {
+                                    if let Err(_) = set_auth_token(bearer_token.to_string()) {
                                         log::error!("Failed to save authentication");
                                     } else {
                                         log::info!("Registration successful.");
@@ -85,20 +93,21 @@ pub fn register_modal() -> Html {
                             } else {
                                 log::error!("Authorization header not found in response");
                             }
-                        } else if let PostResponse::OnlyResponse(response) = post_response{
+                        } else if let PostResponse::OnlyResponse(response) = post_response {
                             match response.status() {
                                 409 => {
                                     username_error.set(true);
-                                },
-                                400 => {
-                                },
+                                }
+                                400 => {}
                                 _ => {
                                     log::error!("Unexpected request response");
                                 }
                             }
                         }
-                    },
-                    Err(_) => { log::error!("Registration request failed"); }
+                    }
+                    Err(_) => {
+                        log::error!("Registration request failed");
+                    }
                 }
             })
         })

@@ -1,11 +1,11 @@
-use yew::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::{HtmlElement, MouseEvent, window};
+use web_sys::{window, HtmlElement, MouseEvent};
+use yew::prelude::*;
 
 use crate::comps::modal_portal::ModalPortal;
 
 #[derive(Properties, PartialEq)]
-pub struct Props{
+pub struct Props {
     pub modal_class: &'static str,
     pub children: Html,
     pub button_class: &'static str,
@@ -16,7 +16,7 @@ pub struct Props{
     pub reset_state: Option<Callback<()>>,
 }
 
-pub fn toggle_modal(id: &str){
+pub fn toggle_modal(id: &str) {
     if let Some(document) = window().and_then(|w| w.document()) {
         if let Some(overlay) = document.get_element_by_id(id) {
             if let Some(html_element) = overlay.dyn_ref::<HtmlElement>() {
@@ -25,7 +25,7 @@ pub fn toggle_modal(id: &str){
         }
     }
 }
-pub fn force_toggle(id: &str){
+pub fn force_toggle(id: &str) {
     if let Some(document) = window().and_then(|w| w.document()) {
         if let Some(overlay) = document.get_element_by_id(id) {
             if let Some(html_element) = overlay.dyn_ref::<HtmlElement>() {
@@ -36,14 +36,16 @@ pub fn force_toggle(id: &str){
 }
 
 #[function_component(Modal)]
-pub fn modal(Props {
-     modal_class,
-     button_class,
-     children,
-     button_icon,
-     load_state,
-     reset_state
- }: &Props) -> Html {
+pub fn modal(
+    Props {
+        modal_class,
+        button_class,
+        children,
+        button_icon,
+        load_state,
+        reset_state,
+    }: &Props,
+) -> Html {
     let is_modal_open = use_state(|| false);
 
     let _toggle_modal = {
@@ -57,16 +59,19 @@ pub fn modal(Props {
             let load_state = load_state.clone();
             let reset_state = reset_state.clone();
             if let Some(callback) = load_state {
-                if !(*is_modal_open) { callback.emit(()); }
+                if !(*is_modal_open) {
+                    callback.emit(());
+                }
             }
             if let Some(callback) = reset_state {
-                if *is_modal_open { callback.emit(()); }
+                if *is_modal_open {
+                    callback.emit(());
+                }
             }
             is_modal_open.set(!*is_modal_open);
             toggle_modal("modal_overlay");
         })
     };
-
 
     html! {
         <>

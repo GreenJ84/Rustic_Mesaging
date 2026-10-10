@@ -1,11 +1,10 @@
-
-use std::borrow::Borrow;
+use crate::comps::icon::member_avatars;
+use crate::models::friend_request::RequestDetailed;
+use crate::models::{deserialize_naive_date_time, serialize_naive_date_time};
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
-use yew::{Html, html};
-use crate::comps::icon::member_avatars;
-use crate::models::{serialize_naive_date_time, deserialize_naive_date_time};
-use crate::models::friend_request::RequestDetailed;
+use std::borrow::Borrow;
+use yew::{html, Html};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct UpdateMember {
@@ -28,7 +27,7 @@ impl UpdateMember {
             password,
             email,
             avatar,
-            is_admin
+            is_admin,
         }
     }
 }
@@ -40,8 +39,11 @@ pub struct Member {
     pub(crate) email: String,
     pub(crate) avatar: Option<String>,
     pub(crate) is_admin: bool,
-    #[serde(serialize_with ="serialize_naive_date_time", deserialize_with = "deserialize_naive_date_time")]
-    pub(crate) created_at: NaiveDateTime
+    #[serde(
+        serialize_with = "serialize_naive_date_time",
+        deserialize_with = "deserialize_naive_date_time"
+    )]
+    pub(crate) created_at: NaiveDateTime,
 }
 impl Member {
     pub fn new(
@@ -50,7 +52,7 @@ impl Member {
         email: String,
         avatar: Option<String>,
         is_admin: bool,
-        created_at: NaiveDateTime
+        created_at: NaiveDateTime,
     ) -> Self {
         Self {
             id,
@@ -58,7 +60,7 @@ impl Member {
             email,
             avatar,
             is_admin,
-            created_at
+            created_at,
         }
     }
     pub fn default() -> Self {
@@ -68,16 +70,20 @@ impl Member {
             "member.email@provider".to_string(),
             None,
             false,
-            NaiveDateTime::default()
+            NaiveDateTime::default(),
         )
     }
 
-    pub fn avatar(self, class_name: &str, size: &str) -> Html{
+    pub fn avatar(self, class_name: &str, size: &str) -> Html {
         match self.avatar {
-            Some(option) => {
-                member_avatars(&class_name, &size).get(&option).unwrap().to_owned()
-            }
-            None => { member_avatars(&class_name, &size).get("default").unwrap().to_owned() }
+            Some(option) => member_avatars(&class_name, &size)
+                .get(&option)
+                .unwrap()
+                .to_owned(),
+            None => member_avatars(&class_name, &size)
+                .get("default")
+                .unwrap()
+                .to_owned(),
         }
     }
 }
@@ -89,11 +95,7 @@ pub struct MemberShort {
     pub(crate) avatar: Option<String>,
 }
 impl MemberShort {
-    pub fn new(
-        id: i32,
-        username: String,
-        avatar: Option<String>,
-    ) -> Self {
+    pub fn new(id: i32, username: String, avatar: Option<String>) -> Self {
         Self {
             id,
             username,
@@ -101,18 +103,18 @@ impl MemberShort {
         }
     }
     pub fn default() -> Self {
-        Self::new(
-            0,
-            "guest".to_string(),
-            None,
-        )
+        Self::new(0, "guest".to_string(), None)
     }
-    pub fn avatar(self, class_name: &str, size: &str) -> Html{
+    pub fn avatar(self, class_name: &str, size: &str) -> Html {
         match self.avatar {
-            Some(option) => {
-                member_avatars(&class_name, &size).get(&option).unwrap().to_owned()
-            }
-            None => { member_avatars(&class_name, &size).get("default").unwrap().to_owned() }
+            Some(option) => member_avatars(&class_name, &size)
+                .get(&option)
+                .unwrap()
+                .to_owned(),
+            None => member_avatars(&class_name, &size)
+                .get("default")
+                .unwrap()
+                .to_owned(),
         }
     }
 }
@@ -122,16 +124,10 @@ pub struct MultiMember {
     pub(crate) members: Vec<MemberShort>,
 }
 impl MultiMember {
-    pub fn new(
-        members: Vec<MemberShort>
-    ) -> Self {
-        Self {
-            members
-        }
+    pub fn new(members: Vec<MemberShort>) -> Self {
+        Self { members }
     }
     pub fn default() -> Self {
-        Self::new(
-            Vec::<MemberShort>::new()
-        )
+        Self::new(Vec::<MemberShort>::new())
     }
 }

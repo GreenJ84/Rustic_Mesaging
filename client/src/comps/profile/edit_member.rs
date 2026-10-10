@@ -1,23 +1,24 @@
-
-use web_sys::SubmitEvent;
-use yew::{Callback, function_component, Html, html, NodeRef, Properties};
 use crate::comps::modal::Modal;
+use web_sys::SubmitEvent;
+use yew::{function_component, html, Callback, Html, NodeRef, Properties};
 
 #[derive(Properties, PartialEq)]
 pub struct EditProps {
     pub(crate) first_node_ref: NodeRef,
     pub(crate) first_label: String,
     pub(crate) second_node_ref: NodeRef,
-    pub(crate) on_submit: Callback<SubmitEvent>
+    pub(crate) on_submit: Callback<SubmitEvent>,
 }
 
 #[function_component(EditMemberModal)]
-pub fn edit_member(EditProps {
-    first_node_ref,
-    first_label,
-    second_node_ref,
-    on_submit
-}: &EditProps) -> Html {
+pub fn edit_member(
+    EditProps {
+        first_node_ref,
+        first_label,
+        second_node_ref,
+        on_submit,
+    }: &EditProps,
+) -> Html {
     html! {
         <Modal
             modal_class={"edit_member_modal"}

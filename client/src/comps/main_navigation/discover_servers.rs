@@ -1,20 +1,23 @@
+use crate::comps::modal::Modal;
+use crate::contexts::member_context::{get_servers, MemberDispatch, TMemberContext};
+use crate::models::server::{MultiServer, Server};
+use crate::models::server_membership::ServerMembership;
+use crate::utils::api_requests::{api_delete, api_get, api_post};
+use crate::views::home::me::MeRoute;
+use crate::views::home::HomeRoute;
 use gloo::net::http::{Method, Request, RequestBuilder};
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
 use web_sys::{Event, HtmlElement, MouseEvent, SubmitEvent};
-use yew::{Callback, function_component, Html, html, Properties, use_context, use_effect, use_effect_with, use_node_ref, use_state};
+use yew::{
+    function_component, html, use_context, use_effect, use_effect_with, use_node_ref, use_state,
+    Callback, Html, Properties,
+};
 use yew_router::hooks::use_navigator;
-use crate::contexts::member_context::{MemberDispatch, get_servers, TMemberContext};
-use crate::models::server::{MultiServer, Server};
-use crate::comps::modal::Modal;
-use crate::models::server_membership::ServerMembership;
-use crate::utils::api_requests::{api_delete, api_get, api_post};
-use crate::views::home::HomeRoute;
-use crate::views::home::me::MeRoute;
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
-    pub(crate) switch_icon: Html
+    pub(crate) switch_icon: Html,
 }
 
 #[function_component(DiscoverServersModal)]
@@ -24,9 +27,11 @@ pub fn discover_servers(Props { switch_icon }: &Props) -> Html {
 
     {
         let servers_state = servers_state.clone();
-        use_effect_with(member_ctx.servers.clone(), move|_|{
+        use_effect_with(member_ctx.servers.clone(), move |_| {
             spawn_local(async move {
-                let servers = api_get::<MultiServer>(String::from("server/all")).await.unwrap();
+                let servers = api_get::<MultiServer>(String::from("server/all"))
+                    .await
+                    .unwrap();
                 servers_state.set(servers);
             })
         });
@@ -53,7 +58,7 @@ pub fn discover_servers(Props { switch_icon }: &Props) -> Html {
 }
 
 #[derive(Properties, PartialEq)]
-pub struct ServerItemProps{
+pub struct ServerItemProps {
     server: Server,
 }
 #[function_component(ServerDiscoveryItem)]
@@ -85,14 +90,26 @@ fn discover_server_item(ServerItemProps { server }: &ServerItemProps) -> Html {
                         let member = element.get_attribute("member");
                         spawn_local(async move {
                             if member.is_none() {
-                                if let Ok(_) = api_post::<ServerMembership>(format!("server/{}/join",server_id), vec![], false).await {
+                                if let Ok(_) = api_post::<ServerMembership>(
+                                    format!("server/{}/join", server_id),
+                                    vec![],
+                                    false,
+                                )
+                                .await
+                                {
                                     is_member.set(!*is_member);
-                                    member_ctx.dispatch(MemberDispatch::UpdateServers(get_servers().await.unwrap()))
+                                    member_ctx.dispatch(MemberDispatch::UpdateServers(
+                                        get_servers().await.unwrap(),
+                                    ))
                                 }
                             } else {
-                                if let Ok(_) = api_delete(format!("server/{}/leave", server_id)).await {
+                                if let Ok(_) =
+                                    api_delete(format!("server/{}/leave", server_id)).await
+                                {
                                     is_member.set(!*is_member);
-                                    member_ctx.dispatch(MemberDispatch::UpdateServers(get_servers().await.unwrap()))
+                                    member_ctx.dispatch(MemberDispatch::UpdateServers(
+                                        get_servers().await.unwrap(),
+                                    ))
                                 }
                             }
                         });
@@ -106,7 +123,7 @@ fn discover_server_item(ServerItemProps { server }: &ServerItemProps) -> Html {
         })
     };
 
-    html!{
+    html! {
         <li>
             <div></div>
             <span>{server.clone().icon("icon", "35")}</span>

@@ -1,22 +1,24 @@
-use gloo::net::http::Request;
-use wasm_bindgen_futures::spawn_local;
-use web_sys::MouseEvent;
-use yew::{Callback, CallbackRef, function_component, Html, html, Properties, use_context, use_state};
-use yew_router::hooks::use_navigator;
 use crate::comps::main_navigation::server_form::ServerForm;
-use crate::models::channel::NewChannel;
-use crate::comps::modal::{Modal, toggle_modal};
-use crate::views::home::HomeRoute;
-use crate::contexts::member_context::{MemberDispatch, get_servers, TMemberContext};
+use crate::comps::modal::{toggle_modal, Modal};
+use crate::contexts::member_context::{get_servers, MemberDispatch, TMemberContext};
 use crate::contexts::server_context::TServerContext;
+use crate::models::channel::NewChannel;
 use crate::models::report::ServerMemberReportItem;
 use crate::utils::api_requests::api_delete;
 use crate::views::home::server::channel_menu::channel_form::ChannelForm;
 use crate::views::home::server::channel_menu::server_membership_report::ServerMembershipReport;
+use crate::views::home::HomeRoute;
+use gloo::net::http::Request;
+use wasm_bindgen_futures::spawn_local;
+use web_sys::MouseEvent;
+use yew::{
+    function_component, html, use_context, use_state, Callback, CallbackRef, Html, Properties,
+};
+use yew_router::hooks::use_navigator;
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
-    pub is_owner: bool
+    pub is_owner: bool,
 }
 
 #[function_component(ChannelMenuHeader)]
@@ -44,7 +46,9 @@ pub fn channel_menu(Props { is_owner }: &Props) -> Html {
             let nav = nav.clone();
 
             spawn_local(async move {
-                if let Ok(_) = api_delete(format!("server/{}/leave", server_ctx.current_server.id)).await {
+                if let Ok(_) =
+                    api_delete(format!("server/{}/leave", server_ctx.current_server.id)).await
+                {
                     app_ctx.dispatch(MemberDispatch::UpdateServers(get_servers().await.unwrap()));
                     nav.push(&HomeRoute::Me);
                 }
@@ -63,7 +67,8 @@ pub fn channel_menu(Props { is_owner }: &Props) -> Html {
             let nav = nav.clone();
 
             spawn_local(async move {
-                if let Ok(_) = api_delete(format!("server/{}", server_ctx.current_server.id)).await {
+                if let Ok(_) = api_delete(format!("server/{}", server_ctx.current_server.id)).await
+                {
                     app_ctx.dispatch(MemberDispatch::UpdateServers(get_servers().await.unwrap()));
                     nav.push(&HomeRoute::Me);
                 }

@@ -1,34 +1,34 @@
+use crate::comps::icon::Icon;
+use crate::comps::modal::Modal;
+use crate::contexts::member_context::{get_friends, get_requests, MemberDispatch, TMemberContext};
+use crate::models::friend_request::RequestDetailed;
+use crate::models::member::Member;
+use crate::utils::api_requests::api_delete;
+use crate::utils::format_date;
+use crate::views::home::me::overview::edit_friend_request::EditFriendRequest;
 use chrono::NaiveDateTime;
 use gloo::net::http::Request;
 use yew::platform::spawn_local;
 use yew::prelude::*;
-use crate::comps::icon::Icon;
-use crate::models::friend_request::RequestDetailed;
-use crate::models::member::Member;
-use crate::comps::modal::Modal;
-use crate::views::home::me::overview::edit_friend_request::EditFriendRequest;
-use crate::contexts::member_context::{MemberDispatch, get_friends, get_requests, TMemberContext};
-use crate::utils::api_requests::api_delete;
-use crate::utils::format_date;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Version {
     Pending,
     Incoming,
 }
-impl Version{
-    pub fn value(self: &Self) -> String{
-        match self{
+impl Version {
+    pub fn value(self: &Self) -> String {
+        match self {
             Version::Pending => "pending".to_string(),
-            Version::Incoming => "incoming".to_string()
+            Version::Incoming => "incoming".to_string(),
         }
     }
 }
 
 #[derive(Properties, PartialEq)]
-pub struct Props{
+pub struct Props {
     pub(crate) request: RequestDetailed,
-    pub(crate) version: Version
+    pub(crate) version: Version,
 }
 
 #[function_component(RequestItem)]
@@ -47,14 +47,25 @@ pub fn request_menu_item(Props { request, version }: &Props) -> Html {
             let version = version.clone();
             let option = option.clone();
             spawn_local(async move {
-                if let Ok(_) = api_delete(format!("request/{}/{}/{}",
-                    if is_sender {member_ctx.member.id} else {request.member.id},
-                    if is_sender {request.member.id} else {member_ctx.member.id},
+                if let Ok(_) = api_delete(format!(
+                    "request/{}/{}/{}",
+                    if is_sender {
+                        member_ctx.member.id
+                    } else {
+                        request.member.id
+                    },
+                    if is_sender {
+                        request.member.id
+                    } else {
+                        member_ctx.member.id
+                    },
                     option.clone()
-                )).await {
+                ))
+                .await
+                {
                     let requests = get_requests().await.unwrap();
                     member_ctx.dispatch(MemberDispatch::UpdateRequests(requests));
-                    if option.eq("accept"){
+                    if option.eq("accept") {
                         let friends = get_friends().await.unwrap();
                         member_ctx.dispatch(MemberDispatch::UpdateFriends(friends));
                     }
@@ -66,10 +77,14 @@ pub fn request_menu_item(Props { request, version }: &Props) -> Html {
     let accept_request = handle_request("accept", false);
     let deny_request = handle_request("deny", false);
 
-    let request_type = if let Version::Pending = version { "Outgoing" } else { "Incoming" };
+    let request_type = if let Version::Pending = version {
+        "Outgoing"
+    } else {
+        "Incoming"
+    };
     let is_outgoing = version.eq(&Version::Pending);
 
-    html!{
+    html! {
         <li class={format!("overview_menu_item {}", version.value())} >
             {request.member.clone().avatar("friend-icon", "30")}
             <div>

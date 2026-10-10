@@ -1,6 +1,6 @@
+use crate::models::member::Member;
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
-use crate::models::member::Member;
 
 #[derive(Deserialize, Debug)]
 pub(crate) struct ActivityReportItem {

@@ -1,6 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::models::deserialize_naive_date_time;
-
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct NewServerMembership {

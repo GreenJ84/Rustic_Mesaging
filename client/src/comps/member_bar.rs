@@ -1,5 +1,5 @@
-use yew::prelude::*;
 use crate::comps::modal::toggle_modal;
+use yew::prelude::*;
 
 use crate::contexts::member_context::TMemberContext;
 
@@ -7,7 +7,7 @@ use crate::contexts::member_context::TMemberContext;
 pub fn member_bar() -> Html {
     let member_context = use_context::<TMemberContext>().unwrap();
 
-    let onclick = move |e: MouseEvent|{
+    let onclick = move |e: MouseEvent| {
         e.prevent_default();
         e.stop_propagation();
         toggle_modal("profile-container");

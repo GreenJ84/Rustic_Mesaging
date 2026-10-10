@@ -1,18 +1,22 @@
-use wasm_bindgen::JsCast;
-use web_sys::{HtmlElement, HtmlInputElement};
-use yew::platform::spawn_local;
-use yew::prelude::*;
 use crate::comps::modal::Modal;
 use crate::models::member::{Member, MemberShort, MultiMember};
 use crate::models::server::{MultiServer, Server};
 use crate::utils::api_requests::api_get;
 use crate::views::home::me::chat_menu::search_item::SearchItem;
+use wasm_bindgen::JsCast;
+use web_sys::{HtmlElement, HtmlInputElement};
+use yew::platform::spawn_local;
+use yew::prelude::*;
 
 #[function_component(SearchModal)]
-pub fn search_modal() -> Html{
+pub fn search_modal() -> Html {
     let search_ref = use_node_ref();
-    let member_state = use_state(|| MultiMember { members: Vec::<MemberShort>::new() });
-    let server_state = use_state(|| MultiServer { servers: Vec::<Server>::new() });
+    let member_state = use_state(|| MultiMember {
+        members: Vec::<MemberShort>::new(),
+    });
+    let server_state = use_state(|| MultiServer {
+        servers: Vec::<Server>::new(),
+    });
 
     let on_keyup = {
         let search_ref = search_ref.clone();
@@ -32,10 +36,20 @@ pub fn search_modal() -> Html{
                     return;
                 }
                 spawn_local(async move {
-                    if let Ok(members) = api_get::<MultiMember>(format!("/member/search?search_term={}", &search_term)).await {
+                    if let Ok(members) = api_get::<MultiMember>(format!(
+                        "/member/search?search_term={}",
+                        &search_term
+                    ))
+                    .await
+                    {
                         member_state.set(members);
                     }
-                    if let Ok(servers) = api_get::<MultiServer>(format!("/server/search?search_term={}", &search_term)).await {
+                    if let Ok(servers) = api_get::<MultiServer>(format!(
+                        "/server/search?search_term={}",
+                        &search_term
+                    ))
+                    .await
+                    {
                         server_state.set(servers);
                     }
                 });
@@ -50,12 +64,16 @@ pub fn search_modal() -> Html{
             let member_state = member_state.clone();
             let server_state = server_state.clone();
 
-            member_state.set(MultiMember { members: Vec::<MemberShort>::new() });
-            server_state.set(MultiServer { servers: Vec::<Server>::new() });
+            member_state.set(MultiMember {
+                members: Vec::<MemberShort>::new(),
+            });
+            server_state.set(MultiServer {
+                servers: Vec::<Server>::new(),
+            });
         })
     };
 
-    html!{
+    html! {
         <Modal
             modal_class="search_modal"
             button_class="search"

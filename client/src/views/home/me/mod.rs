@@ -1,16 +1,12 @@
+pub(crate) mod chat_menu;
 pub(crate) mod chat_room;
 pub(crate) mod overview;
-pub(crate) mod chat_menu;
 
-use yew::{function_component, Html, html};
-use yew_router::{Routable, Switch};
-use yew_router::prelude::Redirect;
+use crate::views::home::me::{chat_menu::ChatMenu, chat_room::ChatRoom, overview::Overview};
 use crate::AppRoute;
-use crate::views::home::me::{
-    chat_menu::ChatMenu,
-    chat_room::ChatRoom,
-    overview::Overview
-};
+use yew::{function_component, html, Html};
+use yew_router::prelude::Redirect;
+use yew_router::{Routable, Switch};
 
 #[derive(Clone, Routable, PartialEq)]
 pub enum MeRoute {
@@ -25,8 +21,8 @@ pub enum MeRoute {
 fn switch(routes: MeRoute) -> Html {
     match routes {
         MeRoute::Overview => html! { <Overview />},
-        MeRoute::ChatRoom { chat_id} => html! { <ChatRoom chat_id={chat_id} /> },
-        MeRoute::NotFound => html!{ <Redirect<AppRoute> to={ AppRoute::NotFound }/>}
+        MeRoute::ChatRoom { chat_id } => html! { <ChatRoom chat_id={chat_id} /> },
+        MeRoute::NotFound => html! { <Redirect<AppRoute> to={ AppRoute::NotFound }/>},
     }
 }
 

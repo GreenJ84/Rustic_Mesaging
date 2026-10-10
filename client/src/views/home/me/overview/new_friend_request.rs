@@ -1,20 +1,22 @@
+use crate::comps::main_navigation::discover_servers::DiscoverServersModal;
+use crate::comps::modal::toggle_modal;
+use crate::comps::modal_portal::ModalPortal;
+use crate::contexts::member_context::{
+    get_friends, get_requests, get_servers, MemberDispatch, TMemberContext,
+};
+use crate::models::friend_request::FriendRequest;
+use crate::models::member::{Member, MemberShort};
+use crate::models::server::Server;
+use crate::utils::api_requests::{api_get, api_post, PostResponse};
+use crate::views::home::HomeRoute;
 use gloo::net::http::Request;
 use web_sys::{HtmlElement, HtmlInputElement};
 use yew::prelude::*;
 use yew_router::hooks::use_navigator;
-use crate::comps::main_navigation::discover_servers::DiscoverServersModal;
-use crate::comps::modal::toggle_modal;
-use crate::models::member::{Member, MemberShort};
-use crate::models::server::Server;
-use crate::comps::modal_portal::ModalPortal;
-use crate::views::home::HomeRoute;
-use crate::contexts::member_context::{MemberDispatch, get_friends, get_requests, get_servers, TMemberContext};
-use crate::models::friend_request::FriendRequest;
-use crate::utils::api_requests::{api_get, api_post, PostResponse};
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
-    pub(crate) submit_callback: Callback<String>
+    pub(crate) submit_callback: Callback<String>,
 }
 
 #[function_component(NewFriendRequest)]
@@ -79,9 +81,9 @@ pub fn new_friend_request(Props { submit_callback }: &Props) -> Html {
             let _toggle_modal = _toggle_modal.clone();
             let receiver = receiver.clone();
 
-
             wasm_bindgen_futures::spawn_local(async move {
-                if let Ok(member) = api_get::<MemberShort>(format!("member/{}", (*username))).await {
+                if let Ok(member) = api_get::<MemberShort>(format!("member/{}", (*username))).await
+                {
                     receiver.set(member);
                     _toggle_modal.emit(MouseEvent::new("click").unwrap());
                 } else {
@@ -100,7 +102,6 @@ pub fn new_friend_request(Props { submit_callback }: &Props) -> Html {
         let already_friends = already_friends.clone();
         let already_requested = already_requested.clone();
 
-
         Callback::from(move |event: SubmitEvent| {
             event.prevent_default();
             event.stop_propagation();
@@ -108,7 +109,10 @@ pub fn new_friend_request(Props { submit_callback }: &Props) -> Html {
             let _toggle_modal = _toggle_modal.clone();
             let submit_callback = submit_callback.clone();
             let receiver = receiver.clone();
-            let note = note_ref.cast::<web_sys::HtmlTextAreaElement>().unwrap().value();
+            let note = note_ref
+                .cast::<web_sys::HtmlTextAreaElement>()
+                .unwrap()
+                .value();
             let already_friends = already_friends.clone();
             let already_requested = already_requested.clone();
             let mut form_data = vec![
@@ -117,25 +121,33 @@ pub fn new_friend_request(Props { submit_callback }: &Props) -> Html {
                 (String::from("note"), note.clone()),
             ];
             wasm_bindgen_futures::spawn_local(async move {
-                if let Ok(res) = api_post::<FriendRequest>(String::from("request"), form_data, false).await {
+                if let Ok(res) =
+                    api_post::<FriendRequest>(String::from("request"), form_data, false).await
+                {
                     if let PostResponse::NonResponse(request) = res {
-                        app_ctx.dispatch(MemberDispatch::UpdateRequests(get_requests().await.unwrap()));
+                        app_ctx.dispatch(MemberDispatch::UpdateRequests(
+                            get_requests().await.unwrap(),
+                        ));
                         _toggle_modal.emit(MouseEvent::new("click").unwrap());
                         submit_callback.emit(String::from("pending"));
                     } else if let PostResponse::OnlyResponse(response) = res {
-                        match response.status(){
+                        match response.status() {
                             200 => {
                                 toggle_modal("modal_overlay");
-                                app_ctx.dispatch(MemberDispatch::UpdateRequests(get_requests().await.unwrap()));
-                                app_ctx.dispatch(MemberDispatch::UpdateFriends(get_friends().await.unwrap()));
+                                app_ctx.dispatch(MemberDispatch::UpdateRequests(
+                                    get_requests().await.unwrap(),
+                                ));
+                                app_ctx.dispatch(MemberDispatch::UpdateFriends(
+                                    get_friends().await.unwrap(),
+                                ));
                                 submit_callback.emit(String::from("all"));
-                            },
+                            }
                             409 => {
                                 already_requested.set(true);
-                            },
+                            }
                             424 => {
                                 already_friends.set(true);
-                            },
+                            }
                             _ => {}
                         }
                     }
@@ -143,7 +155,6 @@ pub fn new_friend_request(Props { submit_callback }: &Props) -> Html {
             });
         })
     };
-
 
     html! {
         <section>
