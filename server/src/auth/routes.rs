@@ -1,13 +1,16 @@
-use crate::db::{get_db_connection, DbPool};
-use crate::models::authentication::*;
-use crate::models::member::MemberSafe;
-use crate::routes::CustomResponse;
-use crate::service::member_service::MemberService;
-use crate::service::CrudOps;
 use rocket::form::{Form, Strict};
 use rocket::http::Status;
 use rocket::response::status;
 use rocket::{Request, State};
+
+use crate::db::{get_db_connection, DbPool};
+
+use super::models::*;
+
+use crate::models::member::MemberSafe;
+use crate::routes::CustomResponse;
+use crate::service::member_service::MemberService;
+use crate::service::CrudOps;
 
 #[post("/register", data = "<form>")]
 pub fn register(
