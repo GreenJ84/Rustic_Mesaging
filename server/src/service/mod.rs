@@ -1,7 +1,6 @@
 use crate::db::DbConn;
 
 pub(crate) mod channel_service;
-pub(crate) mod chat_service;
 pub(crate) mod friend_request_service;
 pub(crate) mod friend_service;
 pub(crate) mod member_chat_service;

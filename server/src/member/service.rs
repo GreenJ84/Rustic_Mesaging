@@ -6,14 +6,15 @@ use diesel::{
 };
 use std::collections::HashSet;
 
+use crate::chat::models::Chat;
 use crate::db::DbConn;
 use crate::member::models::{Member, MemberShort, NewMember};
 use crate::models::friend_request::{MultiFriendRequest, RequestDetailed};
-use crate::models::{chat::Chat, server::Server};
 use crate::schema::{
     chat::dsl as c_dsl, friend::dsl as f_dsl, friend_request::dsl as fr_dsl, member::dsl as m_dsl,
     member_chat::dsl as mc_dsl, server::dsl as s_dsl, server_membership::dsl as sm_dsl,
 };
+use crate::server::models::Server;
 use crate::service::CrudOps;
 
 pub struct MemberService;

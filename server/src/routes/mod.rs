@@ -2,7 +2,6 @@ use rocket::response::status;
 
 pub(crate) mod catchers;
 pub(crate) mod channel_routes;
-pub(crate) mod chat_routes;
 pub(crate) mod friend_request_routes;
 pub(crate) mod friend_routes;
 pub(crate) mod member_chat_routes;

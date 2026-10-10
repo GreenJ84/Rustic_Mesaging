@@ -2,9 +2,9 @@ use chrono::NaiveDateTime;
 use diesel::result::Error;
 use diesel::{ExpressionMethods, JoinOnDsl, OptionalExtension, QueryDsl, RunQueryDsl};
 
+use crate::chat::models::{Chat, NewChat};
 use crate::db::DbConn;
 use crate::member::models::MemberShort;
-use crate::models::chat::{Chat, NewChat};
 use crate::models::message::ResponseMessage;
 use crate::schema::{
     chat::dsl as c_dsl, member::dsl as m_dsl, member_chat::dsl as mc_dsl, message::dsl as ms_dsl,

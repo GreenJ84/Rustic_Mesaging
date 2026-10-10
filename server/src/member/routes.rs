@@ -9,12 +9,11 @@ use crate::db::{get_db_connection, DbPool};
 use super::models::{MemberSafe, MemberShort, MultiMemberPreview, NewMember};
 use super::service::MemberService;
 
+use crate::chat::models::MultiChatPreview;
 use crate::models::friend::FullFriend;
-use crate::models::{
-    chat::MultiChatPreview, friend::MultiFriend, friend_request::MultiFriendRequest,
-    server::MultiServer,
-};
+use crate::models::{friend::MultiFriend, friend_request::MultiFriendRequest};
 use crate::routes::CustomResponse;
+use crate::server::models::MultiServer;
 use crate::service::CrudOps;
 
 #[head("/")]

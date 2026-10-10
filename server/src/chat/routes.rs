@@ -4,13 +4,13 @@ use rocket::response::status;
 use rocket::State;
 
 use crate::auth::models::JWT;
+use crate::chat::models::{Chat, NewChat, NewChatWithMembers};
+use crate::chat::service::ChatService;
 use crate::db::{get_db_connection, DbPool};
 use crate::member::models::MultiMemberPreview;
-use crate::models::chat::{Chat, NewChat, NewChatWithMembers};
 use crate::models::member_chat::NewMemberChat;
 use crate::models::message::MessageThread;
 use crate::routes::CustomResponse;
-use crate::service::chat_service::ChatService;
 use crate::service::member_chat_service::MemberChatService;
 use crate::service::CrudOps;
 

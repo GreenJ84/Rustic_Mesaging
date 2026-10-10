@@ -11,6 +11,7 @@ pub(crate) mod db;
 pub(crate) mod schema;
 
 pub(crate) mod auth;
+pub(crate) mod chat;
 pub(crate) mod member;
 pub(crate) mod server;
 
@@ -28,9 +29,11 @@ use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions};
 
 use self::routes::*;
 use crate::auth::routes as auth_route;
+use crate::chat::routes as chat_routes;
 use crate::member::routes as member_routes;
-use crate::models::web_socket::WebSocketManager;
 use crate::server::routes as server_routes;
+
+use crate::models::web_socket::WebSocketManager;
 use db::establish_db_connection;
 
 // #[rocket::main]
