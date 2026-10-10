@@ -1,4 +1,4 @@
-FROM rust:1.80 as builder
+FROM rust:1.81 as builder
 LABEL authors="jessegreenough"
 WORKDIR ./
 
@@ -8,7 +8,7 @@ RUN rustup target add wasm32-unknown-unknown
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
     cargo install --locked trunk
-RUN SERVER_URL=/api trunk build --release
+RUN RUSTFLAGS='--cfg getrandom_backend="wasm_js"' SERVER_URL=/api trunk build --release
 
 
 FROM nginx:alpine
