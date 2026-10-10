@@ -22,19 +22,18 @@ use crate::member::models::{Member, MemberSafe, NewMember};
 use crate::member::service::MemberService;
 
 #[derive(Serialize, Deserialize, Debug, FromForm)]
-pub struct RegisterInput<'a> {
-    #[field(validate = len(3..=250))]
-    pub username: &'a str,
-    #[field(validate = len(8..=80))]
-    pub password: &'a str,
-    #[field(validate = len(8..=80))]
-    pub confirm_password: &'a str,
+pub struct RegisterInput {
+    #[field(validate = len(3..=125).or_else(msg!("Username must be between 3 and 125 characters long.")))]
+    pub username: String,
+    #[field(validate = len(MIN_PASSWORD_LENGTH..=MAX_PASSWORD_LENGTH).or_else(msg!(format!("Password must be between {MIN_PASSWORD_LENGTH} and {MAX_PASSWORD_LENGTH} characters long."))))]
+    pub password: String,
+    pub confirm_password: String,
     #[field(validate = contains('@').or_else(msg!("Invalid email address")))]
-    pub email: &'a str,
+    pub email: String,
 }
-impl RegisterInput<'_> {
-    pub fn validate(&self, conn: &mut DbConn) -> Result<NewMember, (Status, String)> {
-        if self.password.ne(self.confirm_password) {
+impl RegisterInput {
+    pub fn validate(self, conn: &mut DbConn) -> Result<NewMember, AuthError> {
+        if self.password.ne(&self.confirm_password) {
             return Err((
                 Status::BadRequest,
                 String::from("Confirm Password does not match Password"),
@@ -69,11 +68,11 @@ impl RegisterInput<'_> {
 }
 
 #[derive(Serialize, Deserialize, Debug, FromForm)]
-pub struct LoginInput<'a> {
-    #[field(validate = len(3..=250))]
-    pub username: &'a str,
-    #[field(validate = len(8..=80))]
-    pub password: &'a str,
+pub struct LoginInput {
+    #[field(validate = len(3..=125).or_else(msg!("Usernames are between 3 and 125 characters long.")))]
+    pub username: String,
+    #[field(validate = len(MIN_PASSWORD_LENGTH..=MAX_PASSWORD_LENGTH).or_else(msg!(format!("Password are between {MIN_PASSWORD_LENGTH} and {MAX_PASSWORD_LENGTH} characters long."))))]
+    pub password: String,
 }
 
 // JWT Member Authentication

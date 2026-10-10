@@ -50,14 +50,14 @@ pub fn update(
         )
     })?;
 
-    if input.password.ne(input.confirm_password) {
+    if input.password.ne(&input.confirm_password) {
         return Err::<status::Custom<MemberSafe>, status::Custom<String>>(status::Custom(
             Status::Unauthorized,
             String::from("Username or Password incorrect"),
         ));
     }
     member
-        .validate_password(input.confirm_password)
+        .validate_password(&input.confirm_password)
         .map_err(|e| status::Custom(e.0, e.1))?;
 
     match MemberService::update(

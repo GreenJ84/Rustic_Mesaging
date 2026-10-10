@@ -70,7 +70,7 @@ pub fn login(
             )
         })?;
     // Authenticate member
-    match member.validate_password(input.password) {
+    match member.validate_password(&input.password) {
         Ok(_) => {
             // Attach JWT to valid login
             match JWT::create_jwt(&member) {
@@ -118,13 +118,13 @@ pub fn update_password(
         ));
     }
     member
-        .validate_password(input.confirm_password)
+        .validate_password(&input.confirm_password)
         .map_err(|e| status::Custom(e.0, e.1))?;
 
     match MemberService::update_password(
         &mut conn,
         token.claims.member_id,
-        RegisterInput::hash_password(input.password),
+        RegisterInput::hash_password(&input.password),
     ) {
         Ok(member) => Ok(status::Custom(Status::Ok, member.into_safe())),
         Err(e) => Err::<status::Custom<MemberSafe>, status::Custom<String>>(status::Custom(
