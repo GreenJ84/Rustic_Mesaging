@@ -1,8 +1,7 @@
 use crate::db::DbConn;
-use crate::models::member::MemberShort;
+use crate::member::models::{Member, MemberShort};
 use crate::models::{
     channel::Channel,
-    member::Member,
     server::{NewServer, Server},
 };
 use crate::schema::{

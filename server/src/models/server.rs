@@ -1,4 +1,4 @@
-use crate::models::member::Member;
+use crate::member::models::Member;
 use crate::schema::server;
 use chrono::NaiveDateTime;
 use diesel::{Associations, Identifiable, Insertable, Queryable, Selectable};

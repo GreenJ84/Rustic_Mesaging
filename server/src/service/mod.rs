@@ -5,7 +5,6 @@ pub(crate) mod chat_service;
 pub(crate) mod friend_request_service;
 pub(crate) mod friend_service;
 pub(crate) mod member_chat_service;
-pub(crate) mod member_service;
 pub(crate) mod message_service;
 pub(crate) mod post_service;
 pub(crate) mod report_service;

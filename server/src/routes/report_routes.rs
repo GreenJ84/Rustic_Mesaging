@@ -5,13 +5,13 @@ use rocket::response::status;
 use rocket::serde::json::Json;
 use rocket::State;
 
+use crate::auth::models::JWT;
 use crate::db::{get_db_connection, DbConn, DbPool};
-use crate::models::authentication::JWT;
-use crate::models::member::MemberSafe;
+use crate::member::models::MemberSafe;
+use crate::member::service::MemberService;
 use crate::models::report::{
     ActivityReportItem, CsvDownload, ServerMemberReportCsv, ServerMemberReportItem,
 };
-use crate::service::member_service::MemberService;
 use crate::service::report_service::ReportService;
 
 #[get("/member")]

@@ -1,4 +1,4 @@
-use crate::models::member::{MemberSafe, MemberShort};
+use crate::member::models::{MemberSafe, MemberShort};
 use chrono::NaiveDateTime;
 use diesel::sql_types::{Text, Timestamp};
 use diesel::{Queryable, QueryableByName};

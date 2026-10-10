@@ -3,8 +3,8 @@ use rocket::response::status;
 use rocket::serde::json::Json;
 use rocket::State;
 
+use crate::auth::models::JWT;
 use crate::db::{get_db_connection, DbPool};
-use crate::models::authentication::JWT;
 use crate::models::member_chat::{MemberChat, NewMemberChat};
 use crate::routes::CustomResponse;
 use crate::service::member_chat_service::MemberChatService;

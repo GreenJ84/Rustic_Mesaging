@@ -1,8 +1,6 @@
+use crate::auth::models::JWT;
 use crate::db::{get_db_connection, DbPool};
-use crate::models::{
-    authentication::JWT,
-    friend::{Friend, NewFriend},
-};
+use crate::models::friend::{Friend, NewFriend};
 use crate::routes::CustomResponse;
 use crate::service::friend_service::FriendService;
 use rocket::http::Status;

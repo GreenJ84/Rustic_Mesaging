@@ -18,8 +18,8 @@ use argon2::password_hash::SaltString;
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 
 use crate::db::DbConn;
-use crate::models::member::{Member, MemberSafe, NewMember};
-use crate::service::member_service::MemberService;
+use crate::member::models::{Member, MemberSafe, NewMember};
+use crate::member::service::MemberService;
 
 #[derive(Serialize, Deserialize, Debug, FromForm)]
 pub struct Register<'a> {

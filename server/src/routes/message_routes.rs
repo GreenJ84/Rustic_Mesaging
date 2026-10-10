@@ -3,12 +3,12 @@ use rocket::http::Status;
 use rocket::response::status;
 use rocket::State;
 
+use crate::auth::models::JWT;
 use crate::db::{get_db_connection, DbPool};
-use crate::models::authentication::JWT;
+use crate::member::service::MemberService;
 use crate::models::message::{Message, NewMessage, ResponseMessage};
 use crate::routes::CustomResponse;
 use crate::service::member_chat_service::MemberChatService;
-use crate::service::member_service::MemberService;
 use crate::service::{message_service::MessageService, CrudOps};
 
 #[post("/", data = "<form>")]

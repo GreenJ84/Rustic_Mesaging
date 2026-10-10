@@ -1,6 +1,6 @@
 use super::rocket;
-use crate::models::authentication::AuthenticationResponse;
-use crate::models::member::MemberSafe;
+use crate::auth::models::AuthenticationResponse;
+use crate::member::models::MemberSafe;
 use rocket::http::{ContentType, Status};
 use rocket::local::blocking::Client;
 use rocket::serde::json::json;

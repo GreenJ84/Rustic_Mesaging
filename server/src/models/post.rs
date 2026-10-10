@@ -1,4 +1,5 @@
-use crate::models::{channel::Channel, member::Member, member::MemberShort};
+use crate::member::models::{Member, MemberShort};
+use crate::models::channel::Channel;
 use crate::schema::post;
 use chrono::NaiveDateTime;
 use diesel::{Associations, Identifiable, Insertable, Queryable, Selectable};

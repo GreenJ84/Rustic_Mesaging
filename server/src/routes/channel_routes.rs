@@ -1,5 +1,5 @@
+use crate::auth::models::JWT;
 use crate::db::{get_db_connection, DbConn, DbPool};
-use crate::models::authentication::JWT;
 use crate::models::channel::{Channel, NewChannel};
 use crate::models::post::MultiPost;
 use crate::routes::CustomResponse;

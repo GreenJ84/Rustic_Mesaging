@@ -1,9 +1,7 @@
-pub(crate) mod authentication;
 pub(crate) mod channel;
 pub(crate) mod chat;
 pub(crate) mod friend;
 pub(crate) mod friend_request;
-pub(crate) mod member;
 pub(crate) mod member_chat;
 pub(crate) mod message;
 pub(crate) mod post;

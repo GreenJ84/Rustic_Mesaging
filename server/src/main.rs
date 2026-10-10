@@ -7,14 +7,17 @@ extern crate diesel;
 extern crate dotenv;
 extern crate tokio;
 
-mod db;
-mod schema;
+pub(crate) mod db;
+pub(crate) mod schema;
 
-mod models;
-mod routes;
-mod service;
+pub(crate) mod auth;
+pub(crate) mod member;
+
+pub(crate) mod models;
+pub(crate) mod routes;
+pub(crate) mod service;
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;
 
 use std::collections::HashSet;
 use std::str::FromStr;
@@ -23,6 +26,8 @@ use std::sync::Arc;
 use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions};
 
 use self::routes::*;
+use crate::auth::routes as auth_route;
+use crate::member::routes as member_routes;
 use crate::models::web_socket::WebSocketManager;
 use db::establish_db_connection;
 

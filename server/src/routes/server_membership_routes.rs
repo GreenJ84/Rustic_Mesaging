@@ -1,8 +1,6 @@
+use crate::auth::models::JWT;
 use crate::db::{get_db_connection, DbPool};
-use crate::models::{
-    authentication::JWT,
-    server_membership::{NewServerMembership, ServerMembership},
-};
+use crate::models::server_membership::{NewServerMembership, ServerMembership};
 use crate::routes::CustomResponse;
 use crate::service::server_membership_service::MembershipService;
 use rocket::http::Status;

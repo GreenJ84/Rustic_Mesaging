@@ -1,6 +1,6 @@
 use crate::db::DbConn;
+use crate::member::models::MemberShort;
 use crate::models::channel::{Channel, NewChannel};
-use crate::models::member::MemberShort;
 use crate::models::post::{MultiPost, PostDetail};
 use crate::schema::{channel::dsl as c_dsl, member::dsl as m_dsl, post::dsl as p_dsl};
 use crate::service::server_membership_service::MembershipService;

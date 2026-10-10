@@ -3,8 +3,8 @@ use rocket::http::Status;
 use rocket::response::status;
 use rocket::State;
 
+use crate::auth::models::JWT;
 use crate::db::{get_db_connection, DbConn, DbPool};
-use crate::models::authentication::JWT;
 use crate::models::post::{NewPost, Post, PostDetail};
 use crate::routes::CustomResponse;
 use crate::service::{post_service::PostService, CrudOps};

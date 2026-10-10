@@ -3,10 +3,10 @@ use rocket::http::Status;
 use rocket::response::status;
 use rocket::State;
 
+use crate::auth::models::JWT;
 use crate::db::{get_db_connection, DbPool};
-use crate::models::authentication::JWT;
+use crate::member::models::MultiMemberPreview;
 use crate::models::chat::{Chat, NewChat, NewChatWithMembers};
-use crate::models::member::MultiMemberPreview;
 use crate::models::member_chat::NewMemberChat;
 use crate::models::message::MessageThread;
 use crate::routes::CustomResponse;

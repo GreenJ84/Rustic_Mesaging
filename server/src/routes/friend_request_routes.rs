@@ -1,6 +1,7 @@
+use crate::auth::models::JWT;
 use crate::db::{get_db_connection, DbConn, DbPool};
+use crate::models::friend::Friend;
 use crate::models::friend_request::{FriendRequest, NewFriendRequest};
-use crate::models::{authentication::JWT, friend::Friend};
 use crate::routes::CustomResponse;
 use crate::service::friend_request_service::FriendRequestService;
 use crate::service::friend_request_service::RequestResolve;

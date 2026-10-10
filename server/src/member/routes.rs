@@ -3,20 +3,19 @@ use rocket::http::Status;
 use rocket::response::status;
 use rocket::State;
 
+use crate::auth::models::{Register, JWT};
 use crate::db::{get_db_connection, DbPool};
-use crate::models::authentication::Register;
+
+use super::models::{MemberSafe, MemberShort, MultiMemberPreview, NewMember};
+use super::service::MemberService;
+
 use crate::models::friend::FullFriend;
-use crate::models::member::{MemberShort, MultiMemberPreview};
 use crate::models::{
-    authentication::JWT,
-    chat::MultiChatPreview,
-    friend::MultiFriend,
-    friend_request::MultiFriendRequest,
-    member::{MemberSafe, NewMember},
+    chat::MultiChatPreview, friend::MultiFriend, friend_request::MultiFriendRequest,
     server::MultiServer,
 };
 use crate::routes::CustomResponse;
-use crate::service::{member_service::MemberService, CrudOps};
+use crate::service::CrudOps;
 
 #[head("/")]
 pub fn head(_token: JWT) -> CustomResponse<()> {

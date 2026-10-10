@@ -5,10 +5,10 @@ use rocket::http::Status;
 use rocket::response::status;
 use rocket::State;
 
+use crate::auth::models::JWT;
 use crate::db::{get_db_connection, DbConn, DbPool};
-use crate::models::authentication::JWT;
+use crate::member::models::{MemberSafe, MultiMember};
 use crate::models::channel::MultiChannel;
-use crate::models::member::{MemberSafe, MultiMember};
 use crate::models::server::{MultiServer, NewServer, Server};
 use crate::models::server_membership::NewServerMembership;
 use crate::routes::CustomResponse;

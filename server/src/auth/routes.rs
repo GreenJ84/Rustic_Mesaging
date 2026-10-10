@@ -7,9 +7,9 @@ use crate::db::{get_db_connection, DbPool};
 
 use super::models::*;
 
-use crate::models::member::MemberSafe;
+use crate::member::models::MemberSafe;
+use crate::member::service::MemberService;
 use crate::routes::CustomResponse;
-use crate::service::member_service::MemberService;
 use crate::service::CrudOps;
 
 #[post("/register", data = "<form>")]
