@@ -1,15 +1,15 @@
-use chrono::NaiveDateTime;
-use diesel::{Queryable, QueryableByName};
-use serde::Serialize;
 use crate::models::member::{MemberSafe, MemberShort};
+use chrono::NaiveDateTime;
 use diesel::sql_types::{Text, Timestamp};
-use rocket::{Request, Response};
-use rocket::response::{Responder, content};
+use diesel::{Queryable, QueryableByName};
 use rocket::http::{ContentType, Status};
-use std::io::Cursor;
+use rocket::response::{content, Responder};
+use rocket::{Request, Response};
+use serde::Serialize;
 use std::fs::File;
-use std::path::Path;
+use std::io::Cursor;
 use std::io::Write;
+use std::path::Path;
 
 #[derive(Debug, QueryableByName, Serialize)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
@@ -43,8 +43,8 @@ pub struct ServerMemberReportCsv {
     created_at: NaiveDateTime,
     joined_at: NaiveDateTime,
 }
-impl ServerMemberReportCsv{
-    pub fn from_report_item(item: ServerMemberReportItem) -> Self{
+impl ServerMemberReportCsv {
+    pub fn from_report_item(item: ServerMemberReportItem) -> Self {
         Self {
             id: item.member.id(),
             username: item.member.username().to_string(),
@@ -86,7 +86,10 @@ impl<'r> Responder<'r, 'r> for CsvDownload {
         let content_type = ContentType::new("text", "csv");
         let mut response = Response::build()
             .header(content_type)
-            .header(rocket::http::Header::new("Content-Disposition", format!("attachment; filename=\"{}\"", self.filename)))
+            .header(rocket::http::Header::new(
+                "Content-Disposition",
+                format!("attachment; filename=\"{}\"", self.filename),
+            ))
             .sized_body(self.content.len(), Cursor::new(self.content))
             .finalize();
         Ok(response)

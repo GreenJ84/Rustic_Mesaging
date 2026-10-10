@@ -1,30 +1,28 @@
-use std::collections::HashSet;
 use chrono::NaiveDateTime;
-use diesel::{QueryDsl, RunQueryDsl, ExpressionMethods, OptionalExtension, SelectableHelper, JoinOnDsl, BoolExpressionMethods, PgTextExpressionMethods, TextExpressionMethods};
 use diesel::result::Error;
+use diesel::{
+    BoolExpressionMethods, ExpressionMethods, JoinOnDsl, OptionalExtension,
+    PgTextExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper, TextExpressionMethods,
+};
+use std::collections::HashSet;
 
 use crate::db::DbConn;
-use crate::models::{
-    member::{Member, NewMember},
-    server::Server,
-    chat::Chat
-};
 use crate::models::friend_request::{MultiFriendRequest, RequestDetailed};
 use crate::models::member::MemberShort;
+use crate::models::{
+    chat::Chat,
+    member::{Member, NewMember},
+    server::Server,
+};
 use crate::schema::{
-    chat::dsl as c_dsl,
-    member_chat::dsl as mc_dsl,
-    member::dsl as m_dsl,
-    server_membership::dsl as sm_dsl,
-    server::dsl as s_dsl,
-    friend::dsl as f_dsl,
-    friend_request::dsl as fr_dsl
+    chat::dsl as c_dsl, friend::dsl as f_dsl, friend_request::dsl as fr_dsl, member::dsl as m_dsl,
+    member_chat::dsl as mc_dsl, server::dsl as s_dsl, server_membership::dsl as sm_dsl,
 };
 use crate::service::CrudOps;
 
 pub struct MemberService;
 
-impl CrudOps<NewMember, Member> for MemberService{
+impl CrudOps<NewMember, Member> for MemberService {
     fn create(conn: &mut DbConn, new_member: NewMember) -> Result<Member, Error> {
         diesel::insert_into(m_dsl::member)
             .values(&new_member)
@@ -32,14 +30,11 @@ impl CrudOps<NewMember, Member> for MemberService{
     }
 
     fn read(conn: &mut DbConn, id: i32) -> Result<Member, Error> {
-        let user = m_dsl::member
-            .find(id)
-            .first::<Member>(conn)
-            .optional()?;
+        let user = m_dsl::member.find(id).first::<Member>(conn).optional()?;
 
         match user {
             Some(user) => Ok(user),
-            None => Err(Error::NotFound)
+            None => Err(Error::NotFound),
         }
     }
 
@@ -61,7 +56,10 @@ impl CrudOps<NewMember, Member> for MemberService{
 }
 
 impl MemberService {
-    pub fn search_usernames(conn: &mut DbConn, search_term: String) -> Result<Vec<MemberShort>, Error>{
+    pub fn search_usernames(
+        conn: &mut DbConn,
+        search_term: String,
+    ) -> Result<Vec<MemberShort>, Error> {
         let mut unique_members = HashSet::new();
 
         let mut match_high: Vec<MemberShort> = m_dsl::member
@@ -96,21 +94,21 @@ impl MemberService {
         Ok(match_high)
     }
     pub fn find_by_username(conn: &mut DbConn, username: String) -> Result<Member, Error> {
-        let member= m_dsl::member
+        let member = m_dsl::member
             .filter(m_dsl::username.eq(username))
             .first::<Member>(conn)
             .optional()?;
 
         match member {
             Some(user) => Ok(user),
-            None => Err(Error::NotFound)
+            None => Err(Error::NotFound),
         }
     }
-    pub fn get_member_servers(conn: &mut DbConn, member_id: i32) -> Result<Vec<Server>, Error>{
+    pub fn get_member_servers(conn: &mut DbConn, member_id: i32) -> Result<Vec<Server>, Error> {
         sm_dsl::server_membership
             .filter(sm_dsl::member_id.eq(member_id))
             .inner_join(s_dsl::server.on(sm_dsl::server_id.eq(s_dsl::id)))
-            .select(Server::as_select())  // Select server ID and name
+            .select(Server::as_select()) // Select server ID and name
             .load::<Server>(conn)
     }
 
@@ -122,7 +120,10 @@ impl MemberService {
             .load::<Chat>(conn)
     }
 
-    pub fn get_member_friends(conn: &mut DbConn, member_id: i32) -> Result<Vec<(NaiveDateTime, Member)>, Error>{
+    pub fn get_member_friends(
+        conn: &mut DbConn,
+        member_id: i32,
+    ) -> Result<Vec<(NaiveDateTime, Member)>, Error> {
         f_dsl::friend
             .filter(
                 f_dsl::member_id.eq(member_id)
@@ -136,15 +137,20 @@ impl MemberService {
             .load::<(NaiveDateTime, Member)>(conn)
     }
 
-    pub fn get_member_requests(conn: &mut DbConn, member_id: i32) -> Result<MultiFriendRequest, Error>{
+    pub fn get_member_requests(
+        conn: &mut DbConn,
+        member_id: i32,
+    ) -> Result<MultiFriendRequest, Error> {
         let incoming: Vec<RequestDetailed> = fr_dsl::friend_request
             .filter(fr_dsl::receiver_id.eq(member_id))
             .inner_join(m_dsl::member.on(m_dsl::id.eq(fr_dsl::sender_id)))
             .select((fr_dsl::created_at, fr_dsl::note, Member::as_select()))
             .load::<(NaiveDateTime, Option<String>, Member)>(conn)?
             .into_iter()
-            .map(|entry| {
-                RequestDetailed {member: entry.2, note: entry.1, created_at: entry.0}
+            .map(|entry| RequestDetailed {
+                member: entry.2,
+                note: entry.1,
+                created_at: entry.0,
             })
             .collect::<Vec<RequestDetailed>>();
 
@@ -154,18 +160,18 @@ impl MemberService {
             .select((fr_dsl::created_at, fr_dsl::note, Member::as_select()))
             .load::<(NaiveDateTime, Option<String>, Member)>(conn)?
             .into_iter()
-            .map(|entry| {
-                RequestDetailed {member: entry.2, note: entry.1, created_at: entry.0}
+            .map(|entry| RequestDetailed {
+                member: entry.2,
+                note: entry.1,
+                created_at: entry.0,
             })
-            .collect::<Vec<RequestDetailed>>();;
+            .collect::<Vec<RequestDetailed>>();
 
         Ok(MultiFriendRequest { incoming, outgoing })
     }
 
     pub fn update_password(conn: &mut DbConn, id: i32, new_pass: String) -> Result<Member, Error> {
-        let updated_fields = (
-            m_dsl::password.eq(new_pass.to_owned()),
-        );
+        let updated_fields = (m_dsl::password.eq(new_pass.to_owned()),);
 
         // Update member details by id
         diesel::update(m_dsl::member.filter(m_dsl::id.eq(id)))
@@ -173,4 +179,3 @@ impl MemberService {
             .get_result::<Member>(conn)
     }
 }
-

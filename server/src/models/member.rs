@@ -1,14 +1,14 @@
+use crate::schema::member;
 use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use chrono::NaiveDateTime;
+use diesel::sql_types::{Bool, Integer, Nullable, Text, Timestamp};
 use diesel::{Identifiable, Insertable, Queryable, QueryableByName, Selectable};
+use rand::seq::IteratorRandom;
 use rocket::http::Status;
-use rocket::Response;
-use rocket::serde::json::Json;
 use rocket::response::Responder;
+use rocket::serde::json::Json;
+use rocket::Response;
 use serde::{Deserialize, Serialize};
-use diesel::sql_types::{Text, Timestamp, Integer, Nullable, Bool};
-use rand::seq::{IteratorRandom};
-use crate::schema::member;
 
 #[derive(Insertable, Serialize, Deserialize, Debug, FromForm)]
 #[diesel(table_name = member)]
@@ -20,12 +20,24 @@ pub struct NewMember {
     is_admin: bool,
 }
 impl NewMember {
-    pub fn username(&self) -> &str { &self.username }
-    pub fn password(&self) -> &str { &self.password }
-    pub fn email(&self) -> &str { &self.email }
-    pub fn avatar(&self) -> &Option<String> { &self.avatar }
-    pub fn is_admin(&self) -> &bool { &self.is_admin }
-    pub fn set_admin(&mut self) { self.is_admin = true; }
+    pub fn username(&self) -> &str {
+        &self.username
+    }
+    pub fn password(&self) -> &str {
+        &self.password
+    }
+    pub fn email(&self) -> &str {
+        &self.email
+    }
+    pub fn avatar(&self) -> &Option<String> {
+        &self.avatar
+    }
+    pub fn is_admin(&self) -> &bool {
+        &self.is_admin
+    }
+    pub fn set_admin(&mut self) {
+        self.is_admin = true;
+    }
 
     pub fn new(username: String, password: String, email: String) -> Self {
         let avatar = vec![
@@ -41,14 +53,14 @@ impl NewMember {
             "cat",
             "eagle",
             "pikachu",
-            "default"
+            "default",
         ]
-            .into_iter()
-            .map(|i| i.to_string())
-            // .collect::<Vec<String>>()
-            .choose(&mut rand::thread_rng())
-            .unwrap_or(String::from("default"))
-            .to_owned();
+        .into_iter()
+        .map(|i| i.to_string())
+        // .collect::<Vec<String>>()
+        .choose(&mut rand::thread_rng())
+        .unwrap_or(String::from("default"))
+        .to_owned();
 
         Self {
             username,
@@ -81,26 +93,43 @@ pub struct Member {
 }
 impl<'r> Responder<'r, 'r> for Member {
     fn respond_to(self, req: &'r rocket::Request<'_>) -> rocket::response::Result<'r> {
-        Response::build_from(Json(self).respond_to(req)?)
-            .ok()
+        Response::build_from(Json(self).respond_to(req)?).ok()
     }
 }
 impl Member {
     // Encapsulation (Getter for id)
-    pub fn id(&self) -> i32 { self.id }
-    pub fn username(&self) -> &str { &self.username }
-    pub fn password(&self) -> &str { &self.password }
-    pub fn email(&self) -> &str { &self.email }
-    pub fn avatar(&self) -> &Option<String> { &self.avatar }
-    pub fn is_admin(&self) -> bool { self.is_admin }
+    pub fn id(&self) -> i32 {
+        self.id
+    }
+    pub fn username(&self) -> &str {
+        &self.username
+    }
+    pub fn password(&self) -> &str {
+        &self.password
+    }
+    pub fn email(&self) -> &str {
+        &self.email
+    }
+    pub fn avatar(&self) -> &Option<String> {
+        &self.avatar
+    }
+    pub fn is_admin(&self) -> bool {
+        self.is_admin
+    }
 
-    pub fn validate_password(&self, password: &str) -> Result<(), (Status, String)>{
+    pub fn validate_password(&self, password: &str) -> Result<(), (Status, String)> {
         let argon2 = Argon2::default();
         let password_hash = PasswordHash::new(&self.password)
-            .map_err(|_| { (Status::InternalServerError, String::from("Hashing error.")) })?;
+            .map_err(|_| (Status::InternalServerError, String::from("Hashing error.")))?;
 
-        argon2.verify_password(password.as_bytes(), &password_hash)
-            .map_err(|_| { (Status::Unauthorized, String::from("Username or Password is incorrect.")) })?;
+        argon2
+            .verify_password(password.as_bytes(), &password_hash)
+            .map_err(|_| {
+                (
+                    Status::Unauthorized,
+                    String::from("Username or Password is incorrect."),
+                )
+            })?;
 
         Ok(())
     }
@@ -111,7 +140,7 @@ impl Member {
             email: self.email.clone(),
             avatar: self.avatar.clone(),
             is_admin: self.is_admin,
-            created_at: self.created_at
+            created_at: self.created_at,
         }
     }
     pub fn into_short(self) -> MemberShort {
@@ -138,18 +167,30 @@ pub struct MemberSafe {
     is_admin: bool,
     #[diesel(sql_type = Timestamp)]
     created_at: NaiveDateTime,
-}impl MemberSafe {
-    pub fn id(&self) -> i32 { self.id }
-    pub fn username(&self) -> &str { &self.username }
-    pub fn email(&self) -> &str { &self.email }
-    pub fn avatar(&self) -> &Option<String> { &self.avatar }
-    pub fn is_admin(&self) -> bool { self.is_admin }
-    pub fn created_at(&self) -> NaiveDateTime { self.created_at }
+}
+impl MemberSafe {
+    pub fn id(&self) -> i32 {
+        self.id
+    }
+    pub fn username(&self) -> &str {
+        &self.username
+    }
+    pub fn email(&self) -> &str {
+        &self.email
+    }
+    pub fn avatar(&self) -> &Option<String> {
+        &self.avatar
+    }
+    pub fn is_admin(&self) -> bool {
+        self.is_admin
+    }
+    pub fn created_at(&self) -> NaiveDateTime {
+        self.created_at
+    }
 }
 impl<'r> Responder<'r, 'r> for MemberSafe {
     fn respond_to(self, req: &'r rocket::Request<'_>) -> rocket::response::Result<'r> {
-        Response::build_from(Json(self).respond_to(req)?)
-            .ok()
+        Response::build_from(Json(self).respond_to(req)?).ok()
     }
 }
 #[derive(Serialize, Debug)]
@@ -158,11 +199,9 @@ pub struct MultiMember {
 }
 impl<'r> Responder<'r, 'r> for MultiMember {
     fn respond_to(self, req: &'r rocket::Request<'_>) -> rocket::response::Result<'static> {
-        Response::build_from(Json(self).respond_to(req)?)
-            .ok()
+        Response::build_from(Json(self).respond_to(req)?).ok()
     }
 }
-
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MemberShort {
@@ -172,8 +211,7 @@ pub struct MemberShort {
 }
 impl<'r> Responder<'r, 'r> for MemberShort {
     fn respond_to(self, req: &'r rocket::Request<'_>) -> rocket::response::Result<'r> {
-        Response::build_from(Json(self).respond_to(req)?)
-            .ok()
+        Response::build_from(Json(self).respond_to(req)?).ok()
     }
 }
 #[derive(Serialize, Debug)]
@@ -182,7 +220,6 @@ pub struct MultiMemberPreview {
 }
 impl<'r> Responder<'r, 'r> for MultiMemberPreview {
     fn respond_to(self, req: &'r rocket::Request<'_>) -> rocket::response::Result<'static> {
-        Response::build_from(Json(self).respond_to(req)?)
-            .ok()
+        Response::build_from(Json(self).respond_to(req)?).ok()
     }
 }

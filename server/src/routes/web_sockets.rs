@@ -1,17 +1,17 @@
-use std::io::ErrorKind;
-use ws::{WebSocket};
-use rocket::{State};
-use rocket::futures::{StreamExt};
+use rocket::futures::StreamExt;
 use rocket::http::Status;
 use rocket::response::status;
+use rocket::State;
+use std::io::ErrorKind;
+use ws::WebSocket;
 
-use crate::db::{DbPool, get_db_connection};
+use crate::db::{get_db_connection, DbPool};
 use crate::models::message::{Message, NewMessage};
 use crate::models::post::NewPost;
 use crate::models::web_socket::{WebSocketId, WebSocketMgr};
-use crate::service::CrudOps;
 use crate::service::message_service::MessageService;
 use crate::service::post_service::PostService;
+use crate::service::CrudOps;
 
 #[get("/ws/<channel_id>/<user_id>")]
 pub fn channel_websocket<'a>(
@@ -19,22 +19,24 @@ pub fn channel_websocket<'a>(
     user_id: i32,
     ws: WebSocket,
     manager: &'a State<WebSocketMgr>,
-    pool: &'a State<DbPool>
-) -> ws::Channel<'a>{
-
+    pool: &'a State<DbPool>,
+) -> ws::Channel<'a> {
     ws.channel(move |stream| {
         let manager = manager;
-        let mut conn = get_db_connection(pool).map_err(|_| {
-            return Err::<status::Custom<Message>, status::Custom<String>>(status::Custom(Status::InternalServerError, String::from("Database connection error")))
-        }).unwrap();
+        let mut conn = get_db_connection(pool)
+            .map_err(|_| {
+                return Err::<status::Custom<Message>, status::Custom<String>>(status::Custom(
+                    Status::InternalServerError,
+                    String::from("Database connection error"),
+                ));
+            })
+            .unwrap();
 
         Box::pin(async move {
             let (sender, mut receiver) = stream.split();
             let id = WebSocketId::Channel(channel_id);
 
-            manager.add_connection(&id, user_id, sender)
-                .await
-                .unwrap();
+            manager.add_connection(&id, user_id, sender).await.unwrap();
 
             while let Some(message) = receiver.next().await {
                 match message {
@@ -47,7 +49,9 @@ pub fn channel_websocket<'a>(
                             .unwrap();
                         manager.broadcast(&id, post).await;
                     }
-                    Err(e) => { std::io::Error::new(ErrorKind::BrokenPipe, e); }
+                    Err(e) => {
+                        std::io::Error::new(ErrorKind::BrokenPipe, e);
+                    }
                 }
             }
 
@@ -64,13 +68,17 @@ pub async fn ws_direct<'a>(
     receiver_id: i32,
     ws: WebSocket,
     manager: &'a State<WebSocketMgr>,
-    pool: &'a State<DbPool>
+    pool: &'a State<DbPool>,
 ) -> ws::Channel<'a> {
-
     ws.channel(move |stream| {
-        let mut conn = get_db_connection(pool).map_err(|_| {
-            return Err::<status::Custom<Message>, status::Custom<String>>(status::Custom(Status::InternalServerError, String::from("Database connection error")))
-        }).unwrap();
+        let mut conn = get_db_connection(pool)
+            .map_err(|_| {
+                return Err::<status::Custom<Message>, status::Custom<String>>(status::Custom(
+                    Status::InternalServerError,
+                    String::from("Database connection error"),
+                ));
+            })
+            .unwrap();
 
         Box::pin(async move {
             let (sender, mut receiver) = stream.split();
@@ -81,7 +89,8 @@ pub async fn ws_direct<'a>(
             };
             let id = WebSocketId::DirectMessage(direct_message_id);
 
-            manager.add_connection(&id, sender_id, sender)
+            manager
+                .add_connection(&id, sender_id, sender)
                 .await
                 .unwrap();
 

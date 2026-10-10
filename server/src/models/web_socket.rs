@@ -1,11 +1,11 @@
-use std::collections::HashMap;
-use std::sync::{Arc};
-use rocket::futures::SinkExt;
 use rocket::futures::stream::SplitSink;
-use rocket::tokio::sync::{broadcast, Mutex};
+use rocket::futures::SinkExt;
 use serde::Serialize;
-use ws::Message;
+use std::collections::HashMap;
+use std::sync::Arc;
+use tokio::sync::{broadcast, Mutex};
 use ws::stream::DuplexStream;
+use ws::Message;
 
 #[derive(Hash, Eq, PartialEq, Debug, Clone)]
 pub enum WebSocketId {
@@ -36,7 +36,12 @@ impl WebSocketManager {
     }
 
     // Add a new WebSocket connection to a specific channel
-    pub async fn add_connection(&self, id: &WebSocketId, user_id: i32, ws: SplitSink<DuplexStream, Message>) -> Result<(), String> {
+    pub async fn add_connection(
+        &self,
+        id: &WebSocketId,
+        user_id: i32,
+        ws: SplitSink<DuplexStream, Message>,
+    ) -> Result<(), String> {
         let mut connections = self.connections.lock().await;
         let entry = connections.entry(id.clone()).or_insert_with(Vec::new);
 
@@ -45,7 +50,10 @@ impl WebSocketManager {
             return Err("User already connected in this channel".to_string());
         }
 
-        entry.push(WebSocketConnection { user_id, stream: ws });
+        entry.push(WebSocketConnection {
+            user_id,
+            stream: ws,
+        });
         Ok(())
     }
 
@@ -61,15 +69,14 @@ impl WebSocketManager {
     }
 
     // Broadcast a message to all connections in a specific channel
-    pub async fn broadcast<T: Serialize>(
-        &self,
-        id: &WebSocketId,
-        message: T
-    ) {
+    pub async fn broadcast<T: Serialize>(&self, id: &WebSocketId, message: T) {
         let mut connections = self.connections.lock().await;
         if let Some(conns) = connections.get_mut(&id) {
             for conn in conns.iter_mut() {
-                let _ = conn.stream.send(ws::Message::Text(serde_json::to_string(&message).unwrap())).await;
+                let _ = conn
+                    .stream
+                    .send(ws::Message::Text(serde_json::to_string(&message).unwrap()))
+                    .await;
             }
         }
     }

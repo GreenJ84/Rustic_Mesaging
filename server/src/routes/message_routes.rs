@@ -3,13 +3,13 @@ use rocket::http::Status;
 use rocket::response::status;
 use rocket::State;
 
-use crate::db::{DbPool, get_db_connection};
-use crate::models::message::{NewMessage, Message, ResponseMessage};
-use crate::routes::CustomResponse;
+use crate::db::{get_db_connection, DbPool};
 use crate::models::authentication::JWT;
-use crate::service::{CrudOps, message_service::MessageService};
+use crate::models::message::{Message, NewMessage, ResponseMessage};
+use crate::routes::CustomResponse;
 use crate::service::member_chat_service::MemberChatService;
 use crate::service::member_service::MemberService;
+use crate::service::{message_service::MessageService, CrudOps};
 
 #[post("/", data = "<form>")]
 pub fn create(
@@ -21,65 +21,72 @@ pub fn create(
 
     let input = form.into_inner().into_inner();
     // Make sure member is participant of chat where message will be displayed
-    if !MemberChatService::is_participant(&mut conn, input.chat_id(), token.claims.member_id){
-        return Err::<status::Custom<ResponseMessage>, status::Custom<String>>(status::Custom(Status::Unauthorized, String::from("Only chat participants can create messages within")))
+    if !MemberChatService::is_participant(&mut conn, input.chat_id(), token.claims.member_id) {
+        return Err::<status::Custom<ResponseMessage>, status::Custom<String>>(status::Custom(
+            Status::Unauthorized,
+            String::from("Only chat participants can create messages within"),
+        ));
     }
 
-    match MessageService::create(&mut conn, input){
-        Ok(message) => Ok(
-            status::Custom(
-                Status::Ok,
-                ResponseMessage {
-                    id: message.id(),
-                    content: message.content().to_string(),
-                    sender: MemberService::read(&mut conn, token.claims.member_id).unwrap().into_short(),
-                    created_at: message.created_at()
-                }
-            )),
-        Err(e) =>
-            return Err::<status::Custom<ResponseMessage>, status::Custom<String>>(
-                status::Custom(
-                    Status::InternalServerError,
-                    format!("Message creation error: {}", e)
-                ))
+    match MessageService::create(&mut conn, input) {
+        Ok(message) => Ok(status::Custom(
+            Status::Ok,
+            ResponseMessage {
+                id: message.id(),
+                content: message.content().to_string(),
+                sender: MemberService::read(&mut conn, token.claims.member_id)
+                    .unwrap()
+                    .into_short(),
+                created_at: message.created_at(),
+            },
+        )),
+        Err(e) => {
+            return Err::<status::Custom<ResponseMessage>, status::Custom<String>>(status::Custom(
+                Status::InternalServerError,
+                format!("Message creation error: {}", e),
+            ))
+        }
     }
 }
 
 #[get("/<message_id>")]
-pub fn get(
-    token: JWT,
-    pool: &State<DbPool>,
-    message_id: i32
-) -> CustomResponse<ResponseMessage>{
+pub fn get(token: JWT, pool: &State<DbPool>, message_id: i32) -> CustomResponse<ResponseMessage> {
     let mut conn = get_db_connection(pool)?;
 
     // Get message details
-    let message = MessageService::read(&mut conn, message_id).map_err(|_|
-        status::Custom(Status::InternalServerError, String::from("Database connection error"))
-    )?;
+    let message = MessageService::read(&mut conn, message_id).map_err(|_| {
+        status::Custom(
+            Status::InternalServerError,
+            String::from("Database connection error"),
+        )
+    })?;
 
     // Make sure member is participant of chat where message displays
-    if !MemberChatService::is_participant(&mut conn, message.chat_id(), token.claims.member_id){
-        return Err::<status::Custom<ResponseMessage>, status::Custom<String>>(status::Custom(Status::Unauthorized, String::from("Only chat participants can view messages within")))
+    if !MemberChatService::is_participant(&mut conn, message.chat_id(), token.claims.member_id) {
+        return Err::<status::Custom<ResponseMessage>, status::Custom<String>>(status::Custom(
+            Status::Unauthorized,
+            String::from("Only chat participants can view messages within"),
+        ));
     }
 
-    match MessageService::read(&mut conn, message_id){
-        Ok(message) => Ok(
-            status::Custom(
-                Status::Ok,
-                ResponseMessage {
-                    id: message.id(),
-                    content: message.content().to_string(),
-                    sender: MemberService::read(&mut conn, token.claims.member_id).unwrap().into_short(),
-                    created_at: message.created_at()
-                }
-            )),
-        Err(e) =>
-            return Err::<status::Custom<ResponseMessage>, status::Custom<String>>(
-                status::Custom(
-                    Status::NotFound,
-                    format!("Message lookup error: {}", e)
-                ))
+    match MessageService::read(&mut conn, message_id) {
+        Ok(message) => Ok(status::Custom(
+            Status::Ok,
+            ResponseMessage {
+                id: message.id(),
+                content: message.content().to_string(),
+                sender: MemberService::read(&mut conn, token.claims.member_id)
+                    .unwrap()
+                    .into_short(),
+                created_at: message.created_at(),
+            },
+        )),
+        Err(e) => {
+            return Err::<status::Custom<ResponseMessage>, status::Custom<String>>(status::Custom(
+                Status::NotFound,
+                format!("Message lookup error: {}", e),
+            ))
+        }
     }
 }
 
@@ -88,67 +95,72 @@ pub fn update(
     token: JWT,
     pool: &State<DbPool>,
     form: Form<Lenient<NewMessage>>,
-    message_id: i32
+    message_id: i32,
 ) -> CustomResponse<ResponseMessage> {
     let mut conn = get_db_connection(pool)?;
 
-    let message = MessageService::read(&mut conn, message_id).map_err(|_|
-        status::Custom(Status::InternalServerError, String::from("Database connection error"))
-    )?;
+    let message = MessageService::read(&mut conn, message_id).map_err(|_| {
+        status::Custom(
+            Status::InternalServerError,
+            String::from("Database connection error"),
+        )
+    })?;
     // Make sure only sender can update their messages
-    if !token.claims.member_id == message.sender_id(){
-        return Err::<status::Custom<ResponseMessage>, status::Custom<String>>(status::Custom(Status::Unauthorized, String::from("Only message sender can update content")))
+    if !token.claims.member_id == message.sender_id() {
+        return Err::<status::Custom<ResponseMessage>, status::Custom<String>>(status::Custom(
+            Status::Unauthorized,
+            String::from("Only message sender can update content"),
+        ));
     }
 
     let input = form.into_inner().into_inner();
-    match MessageService::update(&mut conn, message_id, input){
-        Ok(message) => Ok(
-            status::Custom(
-                Status::Ok,
-                ResponseMessage {
-                    id: message.id(),
-                    content: message.content().to_string(),
-                    sender: MemberService::read(&mut conn, token.claims.member_id).unwrap().into_short(),
-                    created_at: message.created_at()
-                }
-            )),
-        Err(e) =>
-            return Err::<status::Custom<ResponseMessage>, status::Custom<String>>(
-                status::Custom(
-                    Status::InternalServerError,
-                    format!("Message update error: {}", e)
-                ))
+    match MessageService::update(&mut conn, message_id, input) {
+        Ok(message) => Ok(status::Custom(
+            Status::Ok,
+            ResponseMessage {
+                id: message.id(),
+                content: message.content().to_string(),
+                sender: MemberService::read(&mut conn, token.claims.member_id)
+                    .unwrap()
+                    .into_short(),
+                created_at: message.created_at(),
+            },
+        )),
+        Err(e) => {
+            return Err::<status::Custom<ResponseMessage>, status::Custom<String>>(status::Custom(
+                Status::InternalServerError,
+                format!("Message update error: {}", e),
+            ))
+        }
     }
 }
 
 #[delete("/<message_id>")]
-pub fn delete(
-    token: JWT,
-    pool: &State<DbPool>,
-    message_id: i32
-) -> CustomResponse<String>{
+pub fn delete(token: JWT, pool: &State<DbPool>, message_id: i32) -> CustomResponse<String> {
     let mut conn = get_db_connection(pool)?;
 
     if !token.claims.is_admin {
-        return Err::<status::Custom<String>, status::Custom<String>>(
-            status::Custom(Status::Unauthorized,
-               String::from("Message deletions not allowed")
-        ))
+        return Err::<status::Custom<String>, status::Custom<String>>(status::Custom(
+            Status::Unauthorized,
+            String::from("Message deletions not allowed"),
+        ));
     }
 
-    match MessageService::delete(&mut conn, message_id){
+    match MessageService::delete(&mut conn, message_id) {
         Ok(size) => {
             if size > 1 {
                 eprint!("{} number of documents were deleted", size);
             }
-            Ok(status::Custom(Status::Ok, format!("Message number {} has been deleted.", message_id)))
-        },
+            Ok(status::Custom(
+                Status::Ok,
+                format!("Message number {} has been deleted.", message_id),
+            ))
+        }
         Err(e) => {
-            return Err::<status::Custom<String>, status::Custom<String>>(
-                status::Custom(
-                    Status::InternalServerError,
-                    format!("Message deletion error: {}", e)
-                ))
+            return Err::<status::Custom<String>, status::Custom<String>>(status::Custom(
+                Status::InternalServerError,
+                format!("Message deletion error: {}", e),
+            ))
         }
     }
 }

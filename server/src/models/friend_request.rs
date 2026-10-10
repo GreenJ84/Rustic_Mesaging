@@ -1,34 +1,44 @@
-use chrono::NaiveDateTime;
-use diesel::{Insertable, Queryable, Selectable};
-use rocket::Response;
-use rocket::response::Responder;
-use rocket::serde::json::Json;
-use serde::{Deserialize, Serialize};
 use crate::models::member::Member;
 use crate::schema::friend_request;
+use chrono::NaiveDateTime;
+use diesel::{Insertable, Queryable, Selectable};
+use rocket::response::Responder;
+use rocket::serde::json::Json;
+use rocket::Response;
+use serde::{Deserialize, Serialize};
 
 #[derive(Insertable, Serialize, Deserialize, Debug, FromForm)]
 #[diesel(table_name = friend_request)]
-pub struct NewFriendRequest{
+pub struct NewFriendRequest {
     sender_id: i32,
     receiver_id: i32,
-    note: String
+    note: String,
 }
 impl NewFriendRequest {
-    pub fn sender_id(&self) -> i32 { self.sender_id }
-    pub fn receiver_id(&self) -> i32 { self.receiver_id }
-    pub fn note(&self) -> &str { &self.note }
+    pub fn sender_id(&self) -> i32 {
+        self.sender_id
+    }
+    pub fn receiver_id(&self) -> i32 {
+        self.receiver_id
+    }
+    pub fn note(&self) -> &str {
+        &self.note
+    }
 
     // Order id's to avoid duplication
     pub fn new(sender_id: i32, receiver_id: i32, note: String) -> Self {
-        Self { sender_id, receiver_id, note }
+        Self {
+            sender_id,
+            receiver_id,
+            note,
+        }
     }
 }
 
 #[derive(Queryable, Selectable, Serialize, Deserialize, Clone, Debug)]
 #[diesel(table_name = friend_request)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct FriendRequest{
+pub struct FriendRequest {
     #[diesel(sql_type = Int4)]
     sender_id: i32,
     #[diesel(sql_type = Int4)]
@@ -40,26 +50,37 @@ pub struct FriendRequest{
 }
 impl<'r> Responder<'r, 'r> for FriendRequest {
     fn respond_to(self, req: &'r rocket::Request<'_>) -> rocket::response::Result<'r> {
-        Response::build_from(Json(self).respond_to(req)?)
-            .ok()
+        Response::build_from(Json(self).respond_to(req)?).ok()
     }
 }
 impl FriendRequest {
-    pub fn sender_id(&self) -> i32 { self.sender_id }
-    pub fn receiver_id(&self) -> i32 { self.receiver_id }
-    pub fn note(&self) -> &Option<String> { &self.note }
-    pub fn created_at(&self) -> NaiveDateTime { self.created_at }
+    pub fn sender_id(&self) -> i32 {
+        self.sender_id
+    }
+    pub fn receiver_id(&self) -> i32 {
+        self.receiver_id
+    }
+    pub fn note(&self) -> &Option<String> {
+        &self.note
+    }
+    pub fn created_at(&self) -> NaiveDateTime {
+        self.created_at
+    }
 
     pub fn new(
         sender_id: i32,
         receiver_id: i32,
         note: Option<String>,
-        created_at: NaiveDateTime
+        created_at: NaiveDateTime,
     ) -> Self {
-        Self { sender_id, receiver_id, note, created_at }
+        Self {
+            sender_id,
+            receiver_id,
+            note,
+            created_at,
+        }
     }
 }
-
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RequestDetailed {
@@ -74,7 +95,6 @@ pub struct MultiFriendRequest {
 }
 impl<'r> Responder<'r, 'r> for MultiFriendRequest {
     fn respond_to(self, req: &'r rocket::Request<'_>) -> rocket::response::Result<'static> {
-        Response::build_from(Json(self).respond_to(req)?)
-            .ok()
+        Response::build_from(Json(self).respond_to(req)?).ok()
     }
 }

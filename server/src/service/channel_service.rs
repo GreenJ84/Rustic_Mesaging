@@ -1,22 +1,17 @@
-use chrono::NaiveDateTime;
-use diesel::{QueryDsl, RunQueryDsl, ExpressionMethods, OptionalExtension, JoinOnDsl};
-use diesel::result::Error;
 use crate::db::DbConn;
-use crate::models::channel::{NewChannel, Channel};
+use crate::models::channel::{Channel, NewChannel};
 use crate::models::member::MemberShort;
 use crate::models::post::{MultiPost, PostDetail};
-use crate::schema::{
-    post::dsl as p_dsl,
-    channel::dsl as c_dsl,
-    member::dsl as m_dsl
-};
-use crate::service::CrudOps;
+use crate::schema::{channel::dsl as c_dsl, member::dsl as m_dsl, post::dsl as p_dsl};
 use crate::service::server_membership_service::MembershipService;
+use crate::service::CrudOps;
+use chrono::NaiveDateTime;
+use diesel::result::Error;
+use diesel::{ExpressionMethods, JoinOnDsl, OptionalExtension, QueryDsl, RunQueryDsl};
 
 pub struct ChannelService;
 
-
-impl CrudOps<NewChannel, Channel> for ChannelService{
+impl CrudOps<NewChannel, Channel> for ChannelService {
     fn create(conn: &mut DbConn, new_channel: NewChannel) -> Result<Channel, Error> {
         diesel::insert_into(c_dsl::channel)
             .values(&new_channel)
@@ -32,14 +27,12 @@ impl CrudOps<NewChannel, Channel> for ChannelService{
 
         match channel {
             Some(user) => Ok(user),
-            None => Err(Error::NotFound)
+            None => Err(Error::NotFound),
         }
     }
 
     fn update(conn: &mut DbConn, id: i32, entity: NewChannel) -> Result<Channel, Error> {
-        let updated_fields = (
-            c_dsl::name.eq(entity.name().to_owned()),
-        );
+        let updated_fields = (c_dsl::name.eq(entity.name().to_owned()),);
 
         diesel::update(c_dsl::channel.find(id))
             .set(updated_fields)
@@ -51,25 +44,23 @@ impl CrudOps<NewChannel, Channel> for ChannelService{
     }
 }
 impl ChannelService {
-    pub fn has_authorization(
-        conn: &mut DbConn,
-        channel_id: i32,
-        member_id: i32
-    ) -> bool {
+    pub fn has_authorization(conn: &mut DbConn, channel_id: i32, member_id: i32) -> bool {
         let server_id = c_dsl::channel
             .find(channel_id)
             .select(c_dsl::server_id)
             .first::<i32>(conn)
-            .optional().unwrap().unwrap();
+            .optional()
+            .unwrap()
+            .unwrap();
 
         MembershipService::has_membership(conn, server_id, member_id)
     }
-    pub fn get_all_channels(conn: &mut DbConn) -> Result<Vec<Channel>, Error>{
+    pub fn get_all_channels(conn: &mut DbConn) -> Result<Vec<Channel>, Error> {
         c_dsl::channel
             .order_by(c_dsl::name.asc())
             .load::<Channel>(conn)
     }
-    pub fn get_channel_posts(conn: &mut DbConn, channel_id: i32) -> Result<MultiPost, Error>{
+    pub fn get_channel_posts(conn: &mut DbConn, channel_id: i32) -> Result<MultiPost, Error> {
         let posts = p_dsl::post
             .filter(p_dsl::channel_id.eq(channel_id))
             .inner_join(m_dsl::member.on(p_dsl::author_id.eq(m_dsl::id)))
@@ -78,23 +69,31 @@ impl ChannelService {
                 p_dsl::content,
                 (m_dsl::id, m_dsl::username, m_dsl::avatar),
                 p_dsl::channel_id,
-                p_dsl::created_at
+                p_dsl::created_at,
             ))
-            .order_by(p_dsl::created_at.desc())// Select member ID and username
-            .load::<(i32, String, (i32, String, Option<String>), i32, NaiveDateTime)>(conn)?
+            .order_by(p_dsl::created_at.desc()) // Select member ID and username
+            .load::<(
+                i32,
+                String,
+                (i32, String, Option<String>),
+                i32,
+                NaiveDateTime,
+            )>(conn)?
             .into_iter()
-            .map(|(id, content, (member_id, username, avatar), channel_id, timestamp)|
-                PostDetail::new(
-                    id,
-                    content,
-                    MemberShort {
-                        id: member_id,
-                        username,
-                        avatar
-                    },
-                    channel_id,
-                    timestamp
-                )
+            .map(
+                |(id, content, (member_id, username, avatar), channel_id, timestamp)| {
+                    PostDetail::new(
+                        id,
+                        content,
+                        MemberShort {
+                            id: member_id,
+                            username,
+                            avatar,
+                        },
+                        channel_id,
+                        timestamp,
+                    )
+                },
             )
             .collect::<Vec<PostDetail>>();
 

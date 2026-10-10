@@ -1,14 +1,13 @@
-use diesel::{QueryDsl, RunQueryDsl, ExpressionMethods, OptionalExtension};
 use diesel::result::Error;
+use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
 
 use crate::db::DbConn;
-use crate::service::CrudOps;
-use crate::models::message::{NewMessage, Message};
+use crate::models::message::{Message, NewMessage};
 use crate::schema::message::dsl;
-
+use crate::service::CrudOps;
 
 pub struct MessageService;
-impl CrudOps<NewMessage, Message> for MessageService{
+impl CrudOps<NewMessage, Message> for MessageService {
     fn create(conn: &mut DbConn, new_message: NewMessage) -> Result<Message, Error> {
         diesel::insert_into(dsl::message)
             .values(&new_message)
@@ -24,14 +23,12 @@ impl CrudOps<NewMessage, Message> for MessageService{
 
         match message {
             Some(message) => Ok(message),
-            None => Err(Error::NotFound)
+            None => Err(Error::NotFound),
         }
     }
 
     fn update(conn: &mut DbConn, id: i32, entity: NewMessage) -> Result<Message, Error> {
-        let updated_fields = (
-            dsl::content.eq(entity.content().to_owned()),
-        );
+        let updated_fields = (dsl::content.eq(entity.content().to_owned()),);
 
         diesel::update(dsl::message.find(id))
             .set(updated_fields)

@@ -1,18 +1,20 @@
-use rocket::local::blocking::Client;
-use rocket::http::{ContentType, Status};
-use rocket::{Ignite, Rocket};
-use rocket::serde::json::json;
+use super::rocket;
 use crate::models::authentication::AuthenticationResponse;
 use crate::models::member::MemberSafe;
-use super::rocket;
-
+use rocket::http::{ContentType, Status};
+use rocket::local::blocking::Client;
+use rocket::serde::json::json;
+use rocket::{Ignite, Rocket};
 
 #[test]
 fn prevent_unregistered_user() {
     let client = Client::tracked(rocket()).expect("valid rocket instance");
     let response = client.get(uri!("/member")).dispatch();
     assert_eq!(response.status(), Status::Unauthorized);
-    assert_eq!(response.into_string().unwrap(), "Unauthorized: Error validating member authentication")
+    assert_eq!(
+        response.into_string().unwrap(),
+        "Unauthorized: Error validating member authentication"
+    )
 }
 
 #[test]
@@ -21,15 +23,24 @@ fn register_user() {
         ("username", "not_a_used_username"),
         ("password", "password123"),
         ("confirm_password", "password123"),
-        ("email", "new_user@example.com")
+        ("email", "new_user@example.com"),
     ];
     let client = Client::tracked(rocket()).expect("valid rocket instance");
-    let mut response = client.post("/register")
+    let mut response = client
+        .post("/register")
         .header(ContentType::Form)
-        .body(form_data.iter()
-            .map(|(key, value)| format!("{}={}", key.to_string(), urlencoding::encode(value).to_string()))
-            .collect::<Vec<String>>()
-            .join("&")
+        .body(
+            form_data
+                .iter()
+                .map(|(key, value)| {
+                    format!(
+                        "{}={}",
+                        key.to_string(),
+                        urlencoding::encode(value).to_string()
+                    )
+                })
+                .collect::<Vec<String>>()
+                .join("&"),
         )
         .dispatch();
     assert_eq!(response.status(), Status::Created);
@@ -43,25 +54,43 @@ fn prevent_duplicate_username_registration() {
         ("username", "twice_used_username"),
         ("password", "password123"),
         ("confirm_password", "password123"),
-        ("email", "twice_used_username@example.com")
+        ("email", "twice_used_username@example.com"),
     ];
     let client = Client::tracked(rocket()).expect("valid rocket instance");
-    let mut response = client.post("/register")
+    let mut response = client
+        .post("/register")
         .header(ContentType::Form)
-        .body(form_data.iter()
-            .map(|(key, value)| format!("{}={}", key.to_string(), urlencoding::encode(value).to_string()))
-            .collect::<Vec<String>>()
-            .join("&")
+        .body(
+            form_data
+                .iter()
+                .map(|(key, value)| {
+                    format!(
+                        "{}={}",
+                        key.to_string(),
+                        urlencoding::encode(value).to_string()
+                    )
+                })
+                .collect::<Vec<String>>()
+                .join("&"),
         )
         .dispatch();
     assert_eq!(response.status(), Status::Created);
 
-    response = client.post("/register")
+    response = client
+        .post("/register")
         .header(ContentType::Form)
-        .body(form_data.iter()
-            .map(|(key, value)| format!("{}={}", key.to_string(), urlencoding::encode(value).to_string()))
-            .collect::<Vec<String>>()
-            .join("&")
+        .body(
+            form_data
+                .iter()
+                .map(|(key, value)| {
+                    format!(
+                        "{}={}",
+                        key.to_string(),
+                        urlencoding::encode(value).to_string()
+                    )
+                })
+                .collect::<Vec<String>>()
+                .join("&"),
         )
         .dispatch();
 
@@ -71,17 +100,23 @@ fn prevent_duplicate_username_registration() {
 
 #[test]
 fn login_registered_user() {
-    let registered_user_credentials = vec![
-        ("username", "GreenJ"),
-        ("password", "password123"),
-    ];
+    let registered_user_credentials = vec![("username", "GreenJ"), ("password", "password123")];
     let client = Client::tracked(rocket()).expect("valid rocket instance");
-    let mut response = client.post("/login")
+    let mut response = client
+        .post("/login")
         .header(ContentType::Form)
-        .body(registered_user_credentials.iter()
-            .map(|(key, value)| format!("{}={}", key.to_string(), urlencoding::encode(value).to_string()))
-            .collect::<Vec<String>>()
-            .join("&")
+        .body(
+            registered_user_credentials
+                .iter()
+                .map(|(key, value)| {
+                    format!(
+                        "{}={}",
+                        key.to_string(),
+                        urlencoding::encode(value).to_string()
+                    )
+                })
+                .collect::<Vec<String>>()
+                .join("&"),
         )
         .dispatch();
     assert_eq!(response.status(), Status::Ok);

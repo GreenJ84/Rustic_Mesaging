@@ -1,7 +1,7 @@
-use chrono::NaiveDateTime;
-use diesel::{OptionalExtension, RunQueryDsl, sql_query};
 use crate::db::DbConn;
 use crate::models::report::{ActivityReportItem, ServerMemberReportItem};
+use chrono::NaiveDateTime;
+use diesel::{sql_query, OptionalExtension, RunQueryDsl};
 
 pub struct ReportService;
 
@@ -69,7 +69,10 @@ impl ReportService {
             .unwrap()
     }
 
-    pub fn generate_membership_report(conn: &mut DbConn, server_id: i32) -> Vec<ServerMemberReportItem>{
+    pub fn generate_membership_report(
+        conn: &mut DbConn,
+        server_id: i32,
+    ) -> Vec<ServerMemberReportItem> {
         sql_query(
             "
             SELECT
@@ -90,10 +93,10 @@ impl ReportService {
                 sm.server_id = $1
             ORDER BY
                 sm.joined_at DESC;
-            "
+            ",
         )
-            .bind::<diesel::sql_types::Integer, _>(server_id)
-            .get_results::<ServerMemberReportItem>(conn)
-            .unwrap_or(Vec::new())
+        .bind::<diesel::sql_types::Integer, _>(server_id)
+        .get_results::<ServerMemberReportItem>(conn)
+        .unwrap_or(Vec::new())
     }
 }
