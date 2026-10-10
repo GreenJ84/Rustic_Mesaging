@@ -22,7 +22,7 @@ use crate::member::models::{Member, MemberSafe, NewMember};
 use crate::member::service::MemberService;
 
 #[derive(Serialize, Deserialize, Debug, FromForm)]
-pub struct Register<'a> {
+pub struct RegisterInput<'a> {
     #[field(validate = len(3..=250))]
     pub username: &'a str,
     #[field(validate = len(8..=80))]
@@ -32,7 +32,7 @@ pub struct Register<'a> {
     #[field(validate = contains('@').or_else(msg!("Invalid email address")))]
     pub email: &'a str,
 }
-impl Register<'_> {
+impl RegisterInput<'_> {
     pub fn validate(&self, conn: &mut DbConn) -> Result<NewMember, (Status, String)> {
         if self.password.ne(self.confirm_password) {
             return Err((
@@ -69,7 +69,7 @@ impl Register<'_> {
 }
 
 #[derive(Serialize, Deserialize, Debug, FromForm)]
-pub struct Login<'a> {
+pub struct LoginInput<'a> {
     #[field(validate = len(3..=250))]
     pub username: &'a str,
     #[field(validate = len(8..=80))]

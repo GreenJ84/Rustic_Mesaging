@@ -3,7 +3,7 @@ use rocket::http::Status;
 use rocket::response::status;
 use rocket::State;
 
-use crate::auth::models::{Register, JWT};
+use crate::auth::models::{RegisterInput, JWT};
 use crate::db::{get_db_connection, DbPool};
 
 use super::models::{MemberSafe, MemberShort, MultiMemberPreview, NewMember};
@@ -39,7 +39,7 @@ pub fn get(token: JWT, pool: &State<DbPool>) -> CustomResponse<MemberSafe> {
 pub fn update(
     token: JWT,
     pool: &State<DbPool>,
-    form: Form<Strict<Register>>,
+    form: Form<Strict<RegisterInput>>,
 ) -> CustomResponse<MemberSafe> {
     let mut conn = get_db_connection(pool)?;
     let input = form.into_inner().into_inner();

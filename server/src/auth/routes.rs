@@ -15,7 +15,7 @@ use crate::service::CrudOps;
 #[post("/register", data = "<form>")]
 pub fn register(
     pool: &State<DbPool>,
-    form: Form<Strict<Register>>,
+    form: Form<Strict<RegisterInput>>,
     admin: AdminKey,
 ) -> CustomResponse<AuthenticationResponse> {
     let mut conn = get_db_connection(pool)?;
@@ -57,7 +57,7 @@ pub fn register(
 #[post("/login", data = "<form>")]
 pub fn login(
     pool: &State<DbPool>,
-    form: Form<Strict<Login>>,
+    form: Form<Strict<LoginInput>>,
 ) -> CustomResponse<AuthenticationResponse> {
     let mut conn = get_db_connection(pool)?;
     let input = form.into_inner().into_inner();
@@ -98,7 +98,7 @@ pub fn login(
 pub fn update_password(
     token: JWT,
     pool: &State<DbPool>,
-    form: Form<Strict<Register>>,
+    form: Form<Strict<RegisterInput>>,
 ) -> CustomResponse<MemberSafe> {
     let mut conn = get_db_connection(pool)?;
     let input = form.into_inner().into_inner();
@@ -124,7 +124,7 @@ pub fn update_password(
     match MemberService::update_password(
         &mut conn,
         token.claims.member_id,
-        Register::hash_password(input.password),
+        RegisterInput::hash_password(input.password),
     ) {
         Ok(member) => Ok(status::Custom(Status::Ok, member.into_safe())),
         Err(e) => Err::<status::Custom<MemberSafe>, status::Custom<String>>(status::Custom(
