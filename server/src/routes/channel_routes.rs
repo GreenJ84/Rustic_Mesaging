@@ -3,7 +3,7 @@ use crate::db::{get_db_connection, DbConn, DbPool};
 use crate::models::channel::{Channel, NewChannel};
 use crate::models::post::MultiPost;
 use crate::routes::CustomResponse;
-use crate::service::server_service::ServerService;
+use crate::server::service::ServerService;
 use crate::service::{channel_service::ChannelService, CrudOps};
 use rocket::form::{Form, Lenient, Strict};
 use rocket::http::Status;

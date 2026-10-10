@@ -9,7 +9,6 @@ pub(crate) mod message_service;
 pub(crate) mod post_service;
 pub(crate) mod report_service;
 pub(crate) mod server_membership_service;
-pub(crate) mod server_service;
 
 pub trait CrudOps<N, T> {
     fn create(conn: &mut DbConn, entity: N) -> Result<T, diesel::result::Error>;

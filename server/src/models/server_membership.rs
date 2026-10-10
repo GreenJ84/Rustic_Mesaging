@@ -1,6 +1,6 @@
 use crate::member::models::Member;
-use crate::models::server::Server;
 use crate::schema::server_membership;
+use crate::server::models::Server;
 use chrono::NaiveDateTime;
 use diesel::{Associations, Insertable, Queryable, Selectable};
 use rocket::response::Responder;

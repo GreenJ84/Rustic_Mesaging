@@ -6,6 +6,5 @@ pub(crate) mod member_chat;
 pub(crate) mod message;
 pub(crate) mod post;
 pub(crate) mod report;
-pub(crate) mod server;
 pub(crate) mod server_membership;
 pub(crate) mod web_socket;

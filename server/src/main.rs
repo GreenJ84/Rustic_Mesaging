@@ -12,6 +12,7 @@ pub(crate) mod schema;
 
 pub(crate) mod auth;
 pub(crate) mod member;
+pub(crate) mod server;
 
 pub(crate) mod models;
 pub(crate) mod routes;
@@ -29,6 +30,7 @@ use self::routes::*;
 use crate::auth::routes as auth_route;
 use crate::member::routes as member_routes;
 use crate::models::web_socket::WebSocketManager;
+use crate::server::routes as server_routes;
 use db::establish_db_connection;
 
 // #[rocket::main]

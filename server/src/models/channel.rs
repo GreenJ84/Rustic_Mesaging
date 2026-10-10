@@ -1,5 +1,5 @@
-use crate::models::server::Server;
 use crate::schema::channel;
+use crate::server::models::Server;
 use chrono::NaiveDateTime;
 use diesel::{Associations, Identifiable, Insertable, Queryable, Selectable};
 use rocket::form::FromForm;

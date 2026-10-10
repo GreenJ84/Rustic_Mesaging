@@ -1,9 +1,7 @@
+use super::models::{NewServer, Server};
 use crate::db::DbConn;
 use crate::member::models::{Member, MemberShort};
-use crate::models::{
-    channel::Channel,
-    server::{NewServer, Server},
-};
+use crate::models::channel::Channel;
 use crate::schema::{
     channel::dsl as c_dsl, member::dsl as m_dsl, server::dsl as s_dsl,
     server_membership::dsl as sm_dsl,

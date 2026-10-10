@@ -10,7 +10,6 @@ pub(crate) mod message_routes;
 pub(crate) mod post_routes;
 pub(crate) mod report_routes;
 pub(crate) mod server_membership_routes;
-pub(crate) mod server_routes;
 pub(crate) mod web_sockets;
 
 pub(crate) type CustomResponse<T> = Result<status::Custom<T>, status::Custom<String>>;
