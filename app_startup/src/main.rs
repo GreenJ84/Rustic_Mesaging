@@ -1,18 +1,26 @@
-use std::process::Command;
-use std::time::Duration;
-use std::thread::sleep;
 use std::env;
+use std::process::Command;
+use std::thread::sleep;
+use std::time::Duration;
 
 fn main() {
     // Step 1: Run the Docker container for YugabyteDB
     println!("Starting YugabyteDB Docker container...");
     let yugabyte = Command::new("docker")
         .args(&[
-            "run", "-d", "--name", "yugabyte",
-            "-p7001:7000", "-p9000:9000", "-p15433:15433",
-            "-p5433:5433", "-p9042:9042",
+            "run",
+            "-d",
+            "--name",
+            "yugabyte",
+            "-p7001:7000",
+            "-p9000:9000",
+            "-p15433:15433",
+            "-p5433:5433",
+            "-p9042:9042",
             "yugabytedb/yugabyte:2024.1.2.0-b77",
-            "bin/yugabyted", "start", "--background=false"
+            "bin/yugabyted",
+            "start",
+            "--background=false",
         ])
         .status()
         .expect("Failed to start YugabyteDB Docker container");
