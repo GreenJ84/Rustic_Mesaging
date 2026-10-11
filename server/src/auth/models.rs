@@ -128,7 +128,7 @@ impl<'r> FromRequest<'r> for JWT {
     }
 }
 impl JWT {
-    pub fn create_jwt(member: &Member) -> Result<String, jsonwebtoken::errors::Error> {
+    pub fn create_jwt(member: &Member) -> Result<String, AuthError> {
         let secret = env::var("JWT_SECRET").expect("JWT_SECRET must be set");
         let encoding_key = EncodingKey::from_secret(secret.as_ref());
 
@@ -137,7 +137,10 @@ impl JWT {
             is_admin: member.is_admin(),
             exp: (chrono::Utc::now() + chrono::Duration::days(1)).timestamp() as usize,
         };
-        encode(&JWTHeader::new(Algorithm::HS512), &claims, &encoding_key)
+        encode(&JWTHeader::new(Algorithm::HS512), &claims, &encoding_key).map_err(|e| {
+            log::error!("Error creating JWT token: {}", e);
+            AuthError::TokenCreationFailure
+        })
     }
 
     fn validate_jwt(token: &str) -> Result<JwtClaims, jsonwebtoken::errors::Error> {
