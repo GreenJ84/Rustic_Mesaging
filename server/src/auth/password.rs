@@ -30,14 +30,13 @@ impl PasswordManager {
 
     pub(crate) fn hash(password: &str) -> Result<String, AuthError> {
         let salt = SaltString::generate(&mut OsRng);
-        match Argon2::default()
-            .hash_password(password.as_bytes(), &salt){
-                Ok(hash) => Ok(hash.to_string()),
-                Err(e) => {
-                    log::error!("Failed to hash password: {}", e);
-                    Err(AuthError::HashingError)
-                }
+        match Argon2::default().hash_password(password.as_bytes(), &salt) {
+            Ok(hash) => Ok(hash.to_string()),
+            Err(e) => {
+                log::error!("Failed to hash password: {}", e);
+                Err(AuthError::HashingError)
             }
+        }
     }
 
     pub fn verify(password: &str, hash: &str) -> Result<(), AuthError> {

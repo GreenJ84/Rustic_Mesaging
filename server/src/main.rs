@@ -7,9 +7,9 @@ extern crate diesel;
 extern crate dotenv;
 extern crate tokio;
 
+pub(crate) mod api_error;
 pub(crate) mod db;
 pub(crate) mod schema;
-pub(crate) mod api_error;
 
 pub(crate) mod auth;
 pub(crate) mod chat;

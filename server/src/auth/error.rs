@@ -35,7 +35,9 @@ impl AuthError {
             Self::UsernameTaken => "Username is already taken.".to_string(),
             Self::EmailTaken => "Email is already taken.".to_string(),
             Self::PasswordRejected(violation) => violation.message(),
-            Self::PasswordConfirmationMismatch => "Password confirmation does not match.".to_string(),
+            Self::PasswordConfirmationMismatch => {
+                "Password confirmation does not match.".to_string()
+            }
 
             Self::AccountNotFound => "Account not found.".to_string(),
             Self::InvalidCredentials => "Invalid username or password.".to_string(),

@@ -53,12 +53,14 @@ impl CrudOps<NewMember, Member> for MemberService {
 }
 
 impl MemberService {
-    pub fn identity_exists(conn: &mut DbConn, username: String, email: String) -> Result<Option<String>, Error> {
+    pub fn identity_exists(
+        conn: &mut DbConn,
+        username: String,
+        email: String,
+    ) -> Result<Option<String>, Error> {
         let exists = m_dsl::member
             .filter(
-                m_dsl::username
-                    .eq(username)
-                    .or(m_dsl::email.eq(email)), // Check if either username or email matches
+                m_dsl::username.eq(username).or(m_dsl::email.eq(email)), // Check if either username or email matches
             )
             .select(m_dsl::username)
             .first::<String>(conn)
