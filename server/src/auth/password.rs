@@ -28,7 +28,7 @@ impl PasswordManager {
         Ok(Self::hash(password)?)
     }
 
-    fn hash(password: &str) -> Result<String, AuthError> {
+    pub(crate) fn hash(password: &str) -> Result<String, AuthError> {
         let salt = SaltString::generate(&mut OsRng);
         match Argon2::default()
             .hash_password(password.as_bytes(), &salt){

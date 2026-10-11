@@ -10,6 +10,7 @@ pub enum AuthError {
 
     // Login Errors
     InvalidCredentials,
+    AccountNotFound,
     AccountDisabled,
 
     // Token Errors
@@ -36,6 +37,7 @@ impl AuthError {
             Self::PasswordRejected(violation) => violation.message(),
             Self::PasswordConfirmationMismatch => "Password confirmation does not match.".to_string(),
 
+            Self::AccountNotFound => "Account not found.".to_string(),
             Self::InvalidCredentials => "Invalid username or password.".to_string(),
             Self::AccountDisabled => "Account is disabled.".to_string(),
 
@@ -65,6 +67,7 @@ impl From<AuthError> for ApiError {
             AuthError::PasswordRejected(violation) => ApiError::BadRequest(violation.message()),
             AuthError::PasswordConfirmationMismatch => ApiError::BadRequest(err.message()),
 
+            AuthError::AccountNotFound => ApiError::NotFound(err.message()),
             AuthError::InvalidCredentials => ApiError::Unauthorized(err.message()),
             AuthError::AccountDisabled => ApiError::Forbidden(err.message()),
 

@@ -3,13 +3,16 @@ use rocket::http::Status;
 use rocket::response::status;
 use rocket::{Request, State};
 
+use crate::auth::password::PasswordManager;
 use crate::db::{get_db_connection, DbPool};
 
+use super::error::AuthError;
 use super::models::*;
 
+use crate::api_error::ApiError;
 use crate::member::models::MemberSafe;
 use crate::member::service::MemberService;
-use crate::routes::CustomResponse;
+use crate::routes::{ApiResponse, CustomResponse};
 use crate::service::CrudOps;
 
 #[post("/register", data = "<form>")]
@@ -17,24 +20,16 @@ pub fn register(
     pool: &State<DbPool>,
     form: Form<Strict<RegisterInput>>,
     admin: AdminKey,
-) -> CustomResponse<AuthenticationResponse> {
-    let mut conn = get_db_connection(pool)?;
+) -> ApiResponse<AuthenticationResponse> {
+    let mut conn = get_db_connection(pool).map_err(|e| ApiError::DatabaseError(e.1))?;
+
     let input = form.into_inner().into_inner();
-
-    let mut new_user = input
-        .validate(&mut conn)
-        .map_err(|e| status::Custom(e.0, e.1))?;
-
+    let mut new_user = input.validate(&mut conn)?;
     if admin.passkey {
         new_user.set_admin();
     }
 
-    let user = MemberService::create(&mut conn, new_user).map_err(|e| {
-        status::Custom(
-            Status::InternalServerError,
-            format!("Error creating new member: {}", e),
-        )
-    })?;
+    let user = MemberService::create(&mut conn, new_user).map_err(|e| ApiError::InternalError)?;
 
     // Send new MemberSafe with JWT
     match JWT::create_jwt(&user) {
@@ -45,12 +40,7 @@ pub fn register(
                 token,
             },
         )),
-        Err(e) => {
-            Err::<status::Custom<AuthenticationResponse>, status::Custom<String>>(status::Custom(
-                Status::InternalServerError,
-                format!("Error creating Json Web Token: {}", e),
-            ))
-        }
+        Err(_) => Err(ApiError::InternalError),
     }
 }
 
@@ -58,40 +48,25 @@ pub fn register(
 pub fn login(
     pool: &State<DbPool>,
     form: Form<Strict<LoginInput>>,
-) -> CustomResponse<AuthenticationResponse> {
-    let mut conn = get_db_connection(pool)?;
-    let input = form.into_inner().into_inner();
+) -> ApiResponse<AuthenticationResponse> {
+    let mut conn = get_db_connection(pool).map_err(|e| ApiError::DatabaseError(e.1))?;
 
-    let member =
-        MemberService::find_by_username(&mut conn, input.username.to_string()).map_err(|_| {
-            status::Custom(
-                Status::NotFound,
-                String::from("Username or Password is incorrect"),
-            )
-        })?;
+    let input = form.into_inner().into_inner();
+    let member = MemberService::find_by_username(&mut conn, input.username.to_string())
+        .map_err(|_| AuthError::AccountNotFound)?;
+
     // Authenticate member
-    match member.validate_password(&input.password) {
-        Ok(_) => {
-            // Attach JWT to valid login
-            match JWT::create_jwt(&member) {
-                Ok(token) => Ok(status::Custom(
-                    Status::Ok,
-                    AuthenticationResponse {
-                        member: member.into_safe(),
-                        token,
-                    },
-                )),
-                Err(e) => Err::<status::Custom<AuthenticationResponse>, status::Custom<String>>(
-                    status::Custom(
-                        Status::InternalServerError,
-                        format!("Internal server error: {}", e),
-                    ),
-                ),
-            }
-        }
-        // Invalid login
-        Err(e) => return Err(status::Custom(e.0, e.1)),
-    }
+    PasswordManager::verify(&input.password, member.password())?;
+
+    // Attach JWT to valid login
+    let token = JWT::create_jwt(&member)?;
+    Ok(status::Custom(
+        Status::Ok,
+        AuthenticationResponse {
+            member: member.into_safe(),
+            token,
+        },
+    ))
 }
 
 #[put("/password", data = "<form>")]
@@ -99,37 +74,26 @@ pub fn update_password(
     token: JWT,
     pool: &State<DbPool>,
     form: Form<Strict<RegisterInput>>,
-) -> CustomResponse<MemberSafe> {
-    let mut conn = get_db_connection(pool)?;
-    let input = form.into_inner().into_inner();
+) -> ApiResponse<MemberSafe> {
+    let mut conn = get_db_connection(pool).map_err(|e| ApiError::DatabaseError(e.1))?;
 
-    let member =
-        MemberService::find_by_username(&mut conn, input.username.to_string()).map_err(|e| {
-            status::Custom(
-                Status::NotFound,
-                format!("Error finding member to update: {}", e),
-            )
-        })?;
+    let input = form.into_inner().into_inner();
+    let member = MemberService::find_by_username(&mut conn, input.username.to_string())
+        .map_err(|e| AuthError::AccountNotFound)?;
 
     if member.id() != token.claims.member_id {
-        return Err::<status::Custom<MemberSafe>, status::Custom<String>>(status::Custom(
-            Status::Forbidden,
-            String::from("Never able to update another member"),
-        ));
+        return Err(ApiError::from(AuthError::InvalidCredentials));
+    } else if input.password.ne(&input.confirm_password) {
+        return Err(ApiError::from(AuthError::PasswordConfirmationMismatch));
     }
-    member
-        .validate_password(&input.confirm_password)
-        .map_err(|e| status::Custom(e.0, e.1))?;
+    PasswordManager::verify(&input.password, member.password())?;
 
     match MemberService::update_password(
         &mut conn,
         token.claims.member_id,
-        RegisterInput::hash_password(&input.password),
+        PasswordManager::hash(&input.password)?,
     ) {
         Ok(member) => Ok(status::Custom(Status::Ok, member.into_safe())),
-        Err(e) => Err::<status::Custom<MemberSafe>, status::Custom<String>>(status::Custom(
-            Status::InternalServerError,
-            format!("Member update error: {}", e),
-        )),
+        Err(e) => Err(ApiError::DatabaseError(e.to_string())),
     }
 }
