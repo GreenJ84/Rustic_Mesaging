@@ -29,24 +29,38 @@ pub struct RegisterInput {
     #[field(validate = contains('@').or_else(msg!("Invalid email address")))]
     pub email: String,
 }
+impl TryInto<NewMember> for RegisterInput {
+    type Error = AuthError;
+    fn try_into(self) -> Result<NewMember, AuthError> {
+        let password_hash = PasswordManager::validate(&self)?;
+        Ok(NewMember::new(
+            self.username.to_string(),
+            password_hash,
+            self.email.to_string(),
+        ))
+    }
+}
+
 impl RegisterInput {
     pub fn validate(self, conn: &mut DbConn) -> Result<NewMember, AuthError> {
         if self.password.ne(&self.confirm_password) {
-            return Err((
-                Status::BadRequest,
-                String::from("Confirm Password does not match Password"),
-            ));
+            return Err(AuthError::PasswordConfirmationMismatch);
         }
-        match MemberService::find_by_username(conn, self.username.to_string()) {
-            Ok(_) => {
-                return Err((Status::Conflict, String::from("User already exists.")));
+        match MemberService::identity_exists(
+            conn,
+            self.username.to_string(),
+            self.email.to_string(),
+        ) {
+            Err(err) => Err(AuthError::InternalError(err.to_string())),
+            Ok(Some(username)) => {
+                if username == self.username {
+                    return Err(AuthError::UsernameTaken);
+                } else {
+                    return Err(AuthError::EmailTaken);
+                }
             }
-            Err(_) => {
-                let new_member = NewMember::new(
-                    self.username.to_string(),
-                    Self::hash_password(self.password),
-                    self.email.to_string(),
-                );
+            Ok(None) => {
+                let new_member = RegisterInput::try_into(self)?;
                 Ok(new_member)
             }
         }

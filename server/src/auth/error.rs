@@ -26,6 +26,7 @@ pub enum AuthError {
     PersistenceFailure,
     TokenCreationFailure,
     HashingError,
+    InternalError(String),
 }
 impl AuthError {
     pub fn message(&self) -> String {
@@ -51,6 +52,7 @@ impl AuthError {
             Self::PersistenceFailure => "Persistence failure occurred".to_string(),
             Self::TokenCreationFailure => "Token creation failure occurred".to_string(),
             Self::HashingError => "Hashing error occurred".to_string(),
+            Self::InternalError(msg) => format!("Internal error occurred: {}", msg),
         }
     }
 }
@@ -79,6 +81,7 @@ impl From<AuthError> for ApiError {
             AuthError::PersistenceFailure => ApiError::InternalError,
             AuthError::TokenCreationFailure => ApiError::InternalError,
             AuthError::HashingError => ApiError::InternalError,
+            AuthError::InternalError(_) => ApiError::InternalError,
         }
     }
 }
