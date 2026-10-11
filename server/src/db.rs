@@ -1,13 +1,10 @@
 use dotenv::dotenv;
 use std::env;
 
-use rocket::response::status;
-
 use diesel::pg::PgConnection;
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
+pub(crate) use diesel::result::Error as DieselError;
 use std::sync::Arc;
-
-use crate::api_error::ApiError;
 
 pub type DbPool = Arc<Pool<ConnectionManager<PgConnection>>>;
 pub type DbConn = PooledConnection<ConnectionManager<PgConnection>>;
@@ -16,17 +13,7 @@ pub type DbConn = PooledConnection<ConnectionManager<PgConnection>>;
 pub enum DbError {
     ConnectionError(String),
     PoolError(String),
-}
-impl From<DbError> for ApiError {
-    fn from(err: DbError) -> Self {
-        match err {
-            DbError::ConnectionError(msg) => ApiError::InternalError,
-            DbError::PoolError(msg) => {
-                log::error!("Application state: {}", msg);
-                ApiError::InternalError
-            }
-        }
-    }
+    QueryError(DieselError),
 }
 
 pub(crate) struct Db;
@@ -59,6 +46,7 @@ impl Db {
 // Retired Db connection functions, now handled by Db struct
 // ================
 use rocket::http::Status;
+use rocket::response::status;
 use rocket::State;
 pub fn establish_db_connection() -> DbPool {
     Db::establish_pool().expect("Failed to establish database connection pool")
@@ -70,4 +58,18 @@ pub fn get_db_connection(pool: &State<DbPool>) -> Result<DbConn, status::Custom<
             String::from("Database connection error"),
         )
     })
+}
+
+use crate::api_error::ApiError;
+impl From<DbError> for ApiError {
+    fn from(err: DbError) -> Self {
+        match err {
+            DbError::PoolError(msg) => {
+                log::error!("Application state: {}", msg);
+                ApiError::InternalError
+            }
+            DbError::QueryError(err) => ApiError::InternalError,
+            DbError::ConnectionError(msg) => ApiError::InternalError,
+        }
+    }
 }
