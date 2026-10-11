@@ -1,0 +1,2 @@
+DROP IF EXISTS TABLE role;
+DROP IF EXISTS TABLE member_role;
