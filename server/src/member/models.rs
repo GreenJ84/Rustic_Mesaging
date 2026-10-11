@@ -1,10 +1,9 @@
 use crate::schema::member;
-use argon2::{Argon2, PasswordHash, PasswordVerifier};
+
 use chrono::NaiveDateTime;
 use diesel::sql_types::{Bool, Integer, Nullable, Text, Timestamp};
 use diesel::{Identifiable, Insertable, Queryable, QueryableByName, Selectable};
 use rand::seq::IteratorRandom;
-use rocket::http::Status;
 use rocket::response::Responder;
 use rocket::serde::json::Json;
 use rocket::Response;
@@ -117,22 +116,6 @@ impl Member {
         self.is_admin
     }
 
-    pub fn validate_password(&self, password: &str) -> Result<(), (Status, String)> {
-        let argon2 = Argon2::default();
-        let password_hash = PasswordHash::new(&self.password)
-            .map_err(|_| (Status::InternalServerError, String::from("Hashing error.")))?;
-
-        argon2
-            .verify_password(password.as_bytes(), &password_hash)
-            .map_err(|_| {
-                (
-                    Status::Unauthorized,
-                    String::from("Username or Password is incorrect."),
-                )
-            })?;
-
-        Ok(())
-    }
     pub fn into_safe(self) -> MemberSafe {
         MemberSafe {
             id: self.id,

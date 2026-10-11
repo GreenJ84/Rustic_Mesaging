@@ -13,10 +13,8 @@ use jsonwebtoken::{
     decode, encode, Algorithm, DecodingKey, EncodingKey, Header as JWTHeader, Validation,
 };
 
-use argon2::password_hash::rand_core::OsRng;
-use argon2::password_hash::SaltString;
-use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
-
+use super::error::*;
+use super::password::PasswordManager;
 use crate::db::DbConn;
 use crate::member::models::{Member, MemberSafe, NewMember};
 use crate::member::service::MemberService;
@@ -52,18 +50,6 @@ impl RegisterInput {
                 Ok(new_member)
             }
         }
-    }
-    pub fn hash_password(password: &str) -> String {
-        let argon2 = Argon2::default();
-        let salt = SaltString::generate(&mut OsRng);
-        return match argon2.hash_password(password.as_bytes(), &salt) {
-            Ok(hashed_password) => hashed_password.to_string(),
-            Err(e) => {
-                // Handle the error, e.g., log it or return an error response
-                eprintln!("Failed to hash password: {}", e);
-                String::new()
-            }
-        };
     }
 }
 
