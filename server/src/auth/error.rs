@@ -1,4 +1,5 @@
 use crate::api_error::ApiError;
+use crate::db::DbError;
 
 #[derive(Debug)]
 pub enum AuthError {
@@ -87,6 +88,17 @@ impl From<AuthError> for ApiError {
             AuthError::TokenCreationFailure => ApiError::InternalError,
             AuthError::HashingError => ApiError::InternalError,
             AuthError::InternalError(_) => ApiError::InternalError,
+        }
+    }
+}
+impl From<DbError> for AuthError {
+    fn from(err: DbError) -> Self {
+        match err {
+            DbError::ConnectionError(msg) => AuthError::InternalError(msg),
+            DbError::PoolError(msg) => {
+                log::error!("Auth module: {}", msg);
+                AuthError::InternalError(msg)
+            },
         }
     }
 }
