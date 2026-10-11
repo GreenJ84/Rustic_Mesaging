@@ -18,9 +18,6 @@ pub enum ApiError {
     TooManyRequests,
     InternalError,
     NotImplemented,
-
-    // Application only Errors
-    DatabaseError(String),
 }
 
 #[derive(Debug, Serialize)]
@@ -42,7 +39,6 @@ impl ApiError {
             Self::TooManyRequests => Status::TooManyRequests,
             Self::InternalError => Status::InternalServerError,
             Self::NotImplemented => Status::NotImplemented,
-            Self::DatabaseError(_) => Status::InternalServerError,
         }
     }
 
@@ -61,7 +57,6 @@ impl ApiError {
                 "not_implemented",
                 "This feature is not implemented".to_string(),
             ),
-            Self::DatabaseError(_) => ("database_error", "A database error occurred".to_string()),
         };
 
         ApiErrorBody { code, message }
