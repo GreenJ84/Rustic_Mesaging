@@ -4,6 +4,7 @@ use rocket::response::status;
 use rocket::State;
 
 use crate::auth::models::{RegisterInput, JWT};
+use crate::auth::password::PasswordManager;
 use crate::db::{get_db_connection, DbPool};
 
 use super::models::{MemberSafe, MemberShort, MultiMemberPreview, NewMember};
@@ -56,9 +57,8 @@ pub fn update(
             String::from("Username or Password incorrect"),
         ));
     }
-    member
-        .validate_password(&input.confirm_password)
-        .map_err(|e| status::Custom(e.0, e.1))?;
+    PasswordManager::verify(&input.password, member.password())
+        .map_err(|e| status::Custom(Status::Forbidden, e.message()))?;
 
     match MemberService::update(
         &mut conn,
