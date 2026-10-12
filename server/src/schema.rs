@@ -1,6 +1,22 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
+    auth_session (id) {
+        id -> Uuid,
+        family_id -> Uuid,
+        member_id -> Int4,
+        refresh_token_hash -> Text,
+        refresh_expires_at -> Timestamp,
+        user_agent -> Nullable<Text>,
+        ip_address -> Nullable<Text>,
+        created_at -> Timestamp,
+        consumed_at -> Nullable<Timestamp>,
+        replaced_by -> Nullable<Uuid>,
+        revoked_at -> Nullable<Timestamp>,
+    }
+}
+
+diesel::table! {
     channel (id) {
         id -> Int4,
         server_id -> Int4,
@@ -55,6 +71,13 @@ diesel::table! {
 }
 
 diesel::table! {
+    member_role (member_id, role_id) {
+        member_id -> Int4,
+        role_id -> Int4,
+    }
+}
+
+diesel::table! {
     message (id) {
         id -> Int4,
         content -> Text,
@@ -71,6 +94,13 @@ diesel::table! {
         author_id -> Int4,
         channel_id -> Int4,
         created_at -> Timestamp,
+    }
+}
+
+diesel::table! {
+    role (id) {
+        id -> Int4,
+        name -> Text,
     }
 }
 
@@ -93,9 +123,12 @@ diesel::table! {
     }
 }
 
+diesel::joinable!(auth_session -> member (member_id));
 diesel::joinable!(channel -> server (server_id));
 diesel::joinable!(member_chat -> chat (chat_id));
 diesel::joinable!(member_chat -> member (member_id));
+diesel::joinable!(member_role -> member (member_id));
+diesel::joinable!(member_role -> role (role_id));
 diesel::joinable!(message -> chat (chat_id));
 diesel::joinable!(message -> member (sender_id));
 diesel::joinable!(post -> channel (channel_id));
@@ -105,14 +138,17 @@ diesel::joinable!(server_membership -> member (member_id));
 diesel::joinable!(server_membership -> server (server_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
+    auth_session,
     channel,
     chat,
     friend,
     friend_request,
     member,
     member_chat,
+    member_role,
     message,
     post,
+    role,
     server,
     server_membership,
 );

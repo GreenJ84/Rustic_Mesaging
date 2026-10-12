@@ -1,3 +1,3 @@
-DELETE IF EXISTS TRIGGER check_opposite_friend_request_trigger;
-DELETE IF EXISTS FUNCTION check_opposite_friend_request;
-DELETE TABLE IF EXISTS friend;
+DROP TRIGGER IF EXISTS check_opposite_friend_request_trigger;
+DROP FUNCTION IF EXISTS check_opposite_friend_request;
+DROP TABLE IF EXISTS friend;
