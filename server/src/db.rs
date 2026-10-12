@@ -3,7 +3,7 @@ use std::env;
 
 use diesel::pg::PgConnection;
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
-pub(crate) use diesel::result::Error as DieselError;
+pub(crate) use diesel::result::{DatabaseErrorKind, Error as DieselError};
 use std::sync::Arc;
 
 pub type DbPool = Arc<Pool<ConnectionManager<PgConnection>>>;
@@ -13,7 +13,88 @@ pub type DbConn = PooledConnection<ConnectionManager<PgConnection>>;
 pub enum DbError {
     ConnectionError(String),
     PoolError(String),
-    QueryError(DieselError),
+
+    NotFound,
+    Conflict(DieselError),
+    ConstraintViolation(DieselError),
+
+    Serialization(DieselError),
+    QueryBuilder(DieselError),
+    Transaction(DieselError),
+    Database(DieselError),
+}
+impl From<DieselError> for DbError {
+    fn from(error: DieselError) -> Self {
+        match error {
+            DieselError::NotFound => Self::NotFound,
+
+            DieselError::DatabaseError(kind, _) => match kind {
+                DatabaseErrorKind::UniqueViolation => Self::Conflict(error),
+
+                DatabaseErrorKind::ForeignKeyViolation
+                | DatabaseErrorKind::UnableToSendCommand
+                | DatabaseErrorKind::SerializationFailure
+                | DatabaseErrorKind::ReadOnlyTransaction
+                | DatabaseErrorKind::NotNullViolation
+                | DatabaseErrorKind::CheckViolation => Self::ConstraintViolation(error),
+
+                DatabaseErrorKind::ClosedConnection | _ => Self::Database(error),
+            },
+
+            DieselError::SerializationError(_) | DieselError::DeserializationError(_) => {
+                Self::Serialization(error)
+            }
+
+            DieselError::QueryBuilderError(_) | DieselError::InvalidCString(_) => {
+                Self::QueryBuilder(error)
+            }
+
+            DieselError::RollbackTransaction
+            | DieselError::RollbackErrorOnCommit { .. }
+            | DieselError::AlreadyInTransaction
+            | DieselError::NotInTransaction
+            | DieselError::BrokenTransactionManager => Self::Transaction(error),
+
+            _ => Self::Database(error),
+        }
+    }
+}
+impl DbError {
+    pub(crate) fn log_query_error(&self, operation: &str) {
+        match self {
+            Self::Conflict(error) => {
+                log::warn!("Database conflict: operation={operation}, error={error:?}");
+            }
+
+            Self::ConstraintViolation(error) => {
+                log::error!(
+                    "Database constraint violation: operation={operation}, error={error:?}"
+                );
+            }
+
+            Self::Serialization(error) => {
+                log::error!(
+                    "Database serialization failure: operation={operation}, error={error:?}"
+                );
+            }
+
+            Self::QueryBuilder(error) => {
+                log::error!(
+                    "Database query construction failure: operation={operation}, error={error:?}"
+                );
+            }
+
+            Self::Transaction(error) => {
+                log::error!("Database transaction failure: operation={operation}, error={error:?}");
+            }
+
+            Self::Database(error) => {
+                log::error!("Database operation failure: operation={operation}, error={error:?}");
+            }
+
+            _ => {}
+        }
+    }
 }
 
 pub(crate) struct Db;
@@ -68,8 +149,7 @@ impl From<DbError> for ApiError {
                 log::error!("Application state: {}", msg);
                 ApiError::InternalError
             }
-            DbError::QueryError(err) => ApiError::InternalError,
-            DbError::ConnectionError(msg) => ApiError::InternalError,
+            _ => ApiError::InternalError,
         }
     }
 }
