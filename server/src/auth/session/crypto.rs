@@ -1,4 +1,5 @@
 use base64::{engine::general_purpose, Engine};
+use chrono::NaiveDateTime;
 use rand::{rngs::OsRng, RngCore};
 use rocket::http::private::cookie::Expiration::Session;
 use serde::{Deserialize, Serialize};
@@ -32,7 +33,7 @@ pub(super) struct AccessClaims {
 pub(super) struct AccessTokenCodec {
     encoding_key: EncodingKey,
     decoding_key: DecodingKey,
-    config: SessionConfig,
+    pub(super) config: SessionConfig,
 }
 
 impl AccessTokenCodec {
@@ -48,7 +49,7 @@ impl AccessTokenCodec {
         &self,
         member_id: MemberId,
         session_id: SessionId,
-    ) -> Result<(String, i64), SessionError> {
+    ) -> Result<(String, NaiveDateTime), SessionError> {
         let (now, expires_at) = SessionClock::expires_in(self.config.access_ttl);
         let claims = AccessClaims {
             sub: member_id,
@@ -60,7 +61,7 @@ impl AccessTokenCodec {
         };
 
         let token = encode(&Header::new(Algorithm::HS512), &claims, &self.encoding_key)?;
-        Ok((token, claims.exp))
+        Ok((token, expires_at.naive_utc()))
     }
 
     pub(super) fn verify(&self, token: &str) -> Result<AuthenticatedPrincipal, SessionError> {
@@ -85,7 +86,7 @@ impl AccessTokenCodec {
                 claims.iat,
                 now
             );
-            return Err(SessionError::InvalidAccessToken);
+            return Err(SessionError::ExpiredAccessToken);
         }
 
         Ok(AuthenticatedPrincipal {
