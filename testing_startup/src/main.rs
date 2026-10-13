@@ -35,7 +35,18 @@ fn main() {
         }
     }
     println!("YugabyteDB started, waiting to initialize (10 seconds)...");
-    sleep(Duration::from_secs(10));
+    loop {
+        let ready = Command::new("pg_isready")
+            .args(["-h", "127.0.0.1", "-p", "5433"])
+            .status()
+            .expect("Failed to check YugabyteDB readiness");
+        if ready.success() {
+            println!("YugabyteDB ready");
+
+            break;
+        }
+        sleep(Duration::from_secs(2));
+    }
 
     env::set_current_dir("server").expect("Failed to change directory to server");
 
@@ -43,12 +54,12 @@ fn main() {
     match Command::new("diesel").arg("database").arg("reset").status() {
         Ok(status) => {
             if !status.success() {
-                shutdown("Failed to reset Diesel database.");
+                shutdown("Not Successful: Failed to reset Diesel database.");
                 return;
             }
         }
         Err(_) => {
-            shutdown("Failed to reset Diesel database.");
+            shutdown("Error: Failed to reset Diesel database.");
             return;
         }
     }
