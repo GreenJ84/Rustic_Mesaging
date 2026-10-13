@@ -3,8 +3,8 @@ use chrono::NaiveDateTime;
 use diesel::{Identifiable, Insertable, Queryable, Selectable};
 use uuid::Uuid;
 
-use crate::schema::auth_session;
 use crate::member::models::MemberId;
+use crate::schema::auth_session;
 
 pub(crate) type SessionId = Uuid;
 pub(crate) type SessionFamilyId = Uuid;
@@ -17,7 +17,7 @@ pub(super) struct NewAuthSession {
     pub family_id: SessionFamilyId,
     pub member_id: MemberId,
     pub refresh_token_hash: String,
-    pub expires_at: NaiveDateTime,
+    pub refresh_expires_at: NaiveDateTime,
     pub user_agent: Option<String>,
     pub ip_address: Option<String>,
 }
@@ -31,13 +31,13 @@ pub(super) struct AuthSession {
     pub family_id: SessionFamilyId,
     pub member_id: MemberId,
     pub refresh_token_hash: String,
-    pub expires_at: NaiveDateTime,
-    pub revoked_at: Option<NaiveDateTime>,
-    pub replaced_by: Option<SessionId>,
+    pub refresh_expires_at: NaiveDateTime,
     pub user_agent: Option<String>,
     pub ip_address: Option<String>,
     pub created_at: NaiveDateTime,
-    pub last_used_at: NaiveDateTime,
+    pub consumed_at: Option<NaiveDateTime>,
+    pub replaced_by: Option<SessionId>,
+    pub revoked_at: Option<NaiveDateTime>,
 }
 
 /// Represents a configuration for session management, including token lifetimes and security settings
@@ -57,15 +57,6 @@ pub(crate) struct SessionMetadata {
     pub ip_address: Option<String>,
 }
 
-/// Represents a session that has been issued, including the new session ID and refresh token
-#[derive(Debug)]
-pub(crate) struct IssuedSessionData {
-    pub session_id: SessionId,
-    pub member_id: MemberId,
-    pub refresh_token: String,
-    pub expires_at: NaiveDateTime,
-}
-
 /// Trusted identity produced from a valid access token and active session.
 #[derive(Clone, Debug)]
 pub(crate) struct AuthenticatedPrincipal {
@@ -73,10 +64,14 @@ pub(crate) struct AuthenticatedPrincipal {
     pub session_id: SessionId,
 }
 
+pub(super) struct RefreshCredentials {
+    pub refresh_token: String,
+    pub refresh_token_hash: String,
+    pub refresh_expires_at: NaiveDateTime,
+}
 /// Represents an authentication token pair, including the access token, its expiration time, and the refresh token
 #[derive(Debug)]
-pub(crate) struct AuthTokens {
-    pub access_token: String,
-    pub access_expires_at: i64,
-    pub refresh_token: String,
+pub(crate) struct AuthCredentials {
+    pub access_token: String,  // JWT access token
+    pub refresh_token: String, // Refresh token
 }
