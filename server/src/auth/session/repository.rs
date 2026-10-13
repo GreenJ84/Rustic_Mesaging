@@ -29,7 +29,7 @@ impl SessionRepository {
         &self,
         member_id: MemberId,
         refresh_token_hash: String,
-        expires_at: NaiveDateTime,
+        refresh_expires_at: NaiveDateTime,
         metadata: SessionMetadata,
     ) -> Result<AuthSession, DbError> {
         let new_session = NewAuthSession {
@@ -37,7 +37,7 @@ impl SessionRepository {
             family_id: self.id_generator.generate_uuid(),
             member_id,
             refresh_token_hash,
-            expires_at,
+            refresh_expires_at,
             user_agent: metadata.user_agent,
             ip_address: metadata.ip_address,
         };
@@ -120,7 +120,7 @@ impl SessionRepository {
 
             let now = SessionClock::now_naive();
             // If the current session is expired, revoke it and return the expired result.
-            if current.expires_at <= now {
+            if current.refresh_expires_at <= now {
                 diesel::update(sessions::auth_session.find(current.id))
                     .set(sessions::revoked_at.eq(now))
                     .execute(conn)
@@ -139,7 +139,7 @@ impl SessionRepository {
                 family_id: current.family_id,
                 member_id: current.member_id,
                 refresh_token_hash: replacement_hash,
-                expires_at: expires_at,
+                refresh_expires_at: expires_at,
                 user_agent: metadata.user_agent,
                 ip_address: metadata.ip_address,
             };
@@ -157,6 +157,7 @@ impl SessionRepository {
                 .set((
                     sessions::replaced_by.eq(rotated.id),
                     sessions::revoked_at.eq(now),
+                    sessions::consumed_at.eq(now),
                 ))
                 .execute(conn)
                 .map_err(|e| {
@@ -180,7 +181,7 @@ impl SessionRepository {
                 .filter(sessions::id.eq(session_id))
                 .filter(sessions::member_id.eq(member_id))
                 .filter(sessions::revoked_at.is_null())
-                .filter(sessions::expires_at.gt(now)),
+                .filter(sessions::refresh_expires_at.gt(now)),
         ))
         .get_result(&mut conn)
         .map_err(|e| {
