@@ -6,7 +6,8 @@ mod repository;
 mod service;
 
 pub(self) use clock::SessionClock;
-pub(self) use crypto::{AccessTokenCodec, RefreshTokenCodec};
-pub(self) use error::*;
-pub(crate) use models::*;
-pub(crate) use service::SessionService;
+pub(self) use crypto::SessionTokenCodec;
+pub(super) use error::*;
+pub(super) use models::*;
+pub(self) use repository::SessionRepository;
+pub(super) use service::SessionService;

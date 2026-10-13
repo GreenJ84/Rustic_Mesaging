@@ -11,7 +11,7 @@ pub(super) enum RotationResult {
 }
 
 #[derive(Debug)]
-pub(super) enum SessionError {
+pub(in crate::auth) enum SessionError {
     InvalidAccessToken,
     ExpiredAccessToken,
 
