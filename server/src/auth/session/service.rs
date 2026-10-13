@@ -1,37 +1,23 @@
 use chrono::{NaiveDateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
-use uuid::{timestamp::Timestamp, ContextV7};
 
-use crate::member::models::MemberId;
-use super::{AccessTokenCodec, RefreshTokenCodec};
-use super::repository::SessionRepository;
 use super::{
-    AuthTokens, AuthenticatedPrincipal, IssuedSessionData, SessionConfig, SessionError, SessionId,
-    SessionMetadata, SessionClock, RotationResult
+    AuthCredentials, AuthenticatedPrincipal, RotationResult, SessionClock, SessionConfig,
+    SessionError, SessionId, SessionMetadata, SessionRepository, SessionTokenCodec,
 };
 
 use crate::db::DbPool;
 use crate::id_generator::IdGenerator;
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-struct AccessClaims {
-    sub: String,
-    sid: SessionId,
-    iss: String,
-    aud: String,
-    iat: usize,
-    exp: usize,
-}
+use crate::member::models::MemberId;
 
 #[derive(Clone)]
-pub(crate) struct SessionService {
+pub(in crate::auth) struct SessionService {
     repository: SessionRepository,
-    access_tokens: AccessTokenCodec,
+    access_tokens: SessionTokenCodec,
 }
 
 impl SessionService {
-    pub(crate) fn new(
+    pub(in crate::auth) fn new(
         pool: DbPool,
         id_generator: IdGenerator,
         jwt_secret: &[u8],
@@ -39,77 +25,74 @@ impl SessionService {
     ) -> Self {
         Self {
             repository: SessionRepository::new(pool, id_generator),
-            access_tokens: AccessTokenCodec::new(jwt_secret, config),
+            access_tokens: SessionTokenCodec::new(jwt_secret, config),
         }
     }
 
-    pub(crate) fn secure_cookies(&self) -> bool {
+    pub(in crate::auth) fn secure_cookies(&self) -> bool {
         self.access_tokens.config.cookie_secure
     }
 
-    pub(crate) fn issue(
+    pub(in crate::auth) fn issue(
         &self,
-        AuthenticatedPrincipal {
-            member_id,
-            session_id,
-        }: &AuthenticatedPrincipal,
+        member_id: MemberId,
         metadata: SessionMetadata,
-    ) -> Result<AuthTokens, SessionError> {
-        let (refresh_token, refresh_token_hash) = RefreshTokenCodec::issue();
-        let (access_token, access_expires_at) =
-            self.access_tokens.issue(*member_id, session_id.clone())?;
+    ) -> Result<AuthCredentials, SessionError> {
+        let refresh = self.access_tokens.issue_refresh();
 
-        let session = self
-            .repository
-            .create(*member_id, refresh_token_hash, access_expires_at, metadata)?;
+        let session = self.repository.create(
+            member_id,
+            refresh.refresh_token_hash,
+            refresh.refresh_expires_at,
+            metadata,
+        )?;
 
-        Ok(AuthTokens {
+        let access_token = self.access_tokens.issue_access(member_id, session.id)?;
+
+        Ok(AuthCredentials {
             access_token,
-            access_expires_at: access_expires_at.and_utc().timestamp(),
-            refresh_token,
+            refresh_token: refresh.refresh_token,
         })
     }
 
-    pub(crate) fn rotate(
+    pub(in crate::auth) fn rotate(
         &self,
         token: &str,
         metadata: SessionMetadata,
-    ) -> Result<IssuedSessionData, SessionError> {
-        let token_hash = RefreshTokenCodec::hash(token);
-        let (refresh_token, refresh_token_hash) = RefreshTokenCodec::issue();
-        let (now, expires_at) = SessionClock::expires_in_naive(self.access_tokens.config.refresh_ttl);
+    ) -> Result<AuthCredentials, SessionError> {
+        let token_hash = SessionTokenCodec::hash_refresh(token);
+        let refresh = self.access_tokens.issue_refresh();
 
-        match self.repository.rotate(token_hash, refresh_token_hash, expires_at, metadata) {
-            Ok(rotation_result) => {
-                match rotation_result {
-                    RotationResult::InvalidRotation => Err(SessionError::RotationNotAllowed),
-                    RotationResult::Reused => Err(SessionError::RefreshTokenReused),
-                    RotationResult::Expired => Err(SessionError::ExpiredRefreshToken),
-                    RotationResult::Rotated(session) => Ok(IssuedSessionData {
-                        session_id: session.id,
-                        member_id: session.member_id,
-                        refresh_token,
-                        expires_at,
-                    }),
+        match self.repository.rotate(
+            token_hash,
+            refresh.refresh_token_hash,
+            refresh.refresh_expires_at,
+            metadata,
+        ) {
+            Ok(rotation_result) => match rotation_result {
+                RotationResult::InvalidRotation => Err(SessionError::RotationNotAllowed),
+                RotationResult::Reused => Err(SessionError::RefreshTokenReused),
+                RotationResult::Expired => Err(SessionError::ExpiredRefreshToken),
+                RotationResult::Rotated(session) => {
+                    let access_token = self
+                        .access_tokens
+                        .issue_access(session.member_id, session.id)?;
+
+                    Ok(AuthCredentials {
+                        access_token,
+                        refresh_token: refresh.refresh_token,
+                    })
                 }
-            }
+            },
             Err(error) => Err(SessionError::from(error)),
         }
     }
 
-    pub(crate) fn issue_access_for_rotated(
-        &self,
-        session: &IssuedSessionData,
-    ) -> Result<(String, NaiveDateTime), SessionError> {
-        self.access_tokens
-            .issue(session.member_id, session.session_id)
-    }
-
-    pub(crate) fn authenticate_access_token(
+    pub(in crate::auth) fn authenticate_access_token(
         &self,
         token: &str,
     ) -> Result<AuthenticatedPrincipal, SessionError> {
-        let principal = self.access_tokens.verify(token)?;
+        let principal = self.access_tokens.verify_access(token)?;
         if !self
             .repository
             .is_active(principal.session_id, principal.member_id)?
@@ -119,12 +102,16 @@ impl SessionService {
         Ok(principal)
     }
 
-    pub(crate) fn revoke(&self, principal: &AuthenticatedPrincipal) -> Result<(), SessionError> {
-        Ok(self.repository
+    pub(in crate::auth) fn revoke(
+        &self,
+        principal: &AuthenticatedPrincipal,
+    ) -> Result<(), SessionError> {
+        Ok(self
+            .repository
             .revoke(principal.session_id, principal.member_id)?)
     }
 
-    pub(crate) fn revoke_all(&self, member_id: MemberId) -> Result<(), SessionError> {
+    pub(in crate::auth) fn revoke_all(&self, member_id: MemberId) -> Result<(), SessionError> {
         Ok(self.repository.revoke_all(member_id)?)
     }
 }
