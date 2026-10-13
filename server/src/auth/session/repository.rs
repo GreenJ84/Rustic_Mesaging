@@ -180,8 +180,7 @@ impl SessionRepository {
             sessions::auth_session
                 .filter(sessions::id.eq(session_id))
                 .filter(sessions::member_id.eq(member_id))
-                .filter(sessions::revoked_at.is_null())
-                .filter(sessions::refresh_expires_at.gt(now)),
+                .filter(sessions::revoked_at.is_null()),
         ))
         .get_result(&mut conn)
         .map_err(|e| {
