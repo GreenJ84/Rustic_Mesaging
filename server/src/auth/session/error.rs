@@ -4,7 +4,6 @@ use super::models::AuthSession;
 use crate::db::DbError;
 
 pub(super) enum RotationResult {
-    InvalidRotation,
     Rotated(AuthSession),
     Expired,
     Reused,
@@ -20,7 +19,6 @@ pub(in crate::auth) enum SessionError {
     SessionRevoked,
     RefreshTokenReused,
 
-    RotationNotAllowed,
     CodecFailure,
     PersistenceFailure,
 }
