@@ -49,7 +49,7 @@ impl SessionTokenCodec {
         let mut bytes = [0u8; 32];
         OsRng.fill_bytes(&mut bytes);
 
-        let token = general_purpose::URL_SAFE_NO_PAD.encode(&bytes);
+        let token = general_purpose::URL_SAFE_NO_PAD.encode(bytes);
         let hash = Self::hash_refresh(&token);
         let (_, refresh_expires_at) = SessionClock::expires_in_naive(self.config.refresh_ttl);
 
@@ -115,5 +115,51 @@ impl SessionTokenCodec {
             member_id: claims.sub,
             session_id: claims.sid,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use chrono::Duration;
+
+    use super::SessionTokenCodec;
+    use crate::auth::session::SessionConfig;
+
+    fn codec() -> SessionTokenCodec {
+        SessionTokenCodec::new(
+            b"a-test-secret-that-is-not-used-in-production",
+            SessionConfig {
+                issuer: "test-issuer".to_string(),
+                audience: "test-audience".to_string(),
+                access_ttl: Duration::minutes(5),
+                refresh_ttl: Duration::days(1),
+                cookie_secure: false,
+            },
+        )
+    }
+
+    #[test]
+    fn refresh_tokens_are_random_and_stored_as_hashes() {
+        let codec = codec();
+        let first = codec.issue_refresh();
+        let second = codec.issue_refresh();
+
+        assert_ne!(first.refresh_token, second.refresh_token);
+        assert_ne!(first.refresh_token, first.refresh_token_hash);
+        assert_eq!(
+            first.refresh_token_hash,
+            SessionTokenCodec::hash_refresh(&first.refresh_token)
+        );
+    }
+
+    #[test]
+    fn access_tokens_round_trip_the_principal() {
+        let codec = codec();
+        let session_id = uuid::Uuid::now_v7();
+        let token = codec.issue_access(42, session_id).unwrap();
+        let principal = codec.verify_access(&token).unwrap();
+
+        assert_eq!(principal.member_id, 42);
+        assert_eq!(principal.session_id, session_id);
     }
 }
