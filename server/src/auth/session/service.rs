@@ -1,54 +1,55 @@
-use chrono::{NaiveDateTime, Utc};
-use serde::{Deserialize, Serialize};
+use diesel::Connection;
+use uuid::Uuid;
 
 use super::{
     AuthCredentials, AuthenticatedPrincipal, RotationResult, SessionClock, SessionConfig,
-    SessionError, SessionId, SessionMetadata, SessionRepository, SessionTokenCodec,
+    SessionError, SessionMetadata, SessionRepository, SessionTokenCodec,
 };
 
-use crate::db::DbPool;
-use crate::id_generator::IdGenerator;
+use crate::auth::session::NewAuthSession;
+use crate::db::{DbConn, DbError};
 use crate::member::models::MemberId;
 
 #[derive(Clone)]
 pub(in crate::auth) struct SessionService {
-    repository: SessionRepository,
     access_tokens: SessionTokenCodec,
 }
 
 impl SessionService {
-    pub(in crate::auth) fn new(
-        pool: DbPool,
-        id_generator: IdGenerator,
-        jwt_secret: &[u8],
-        config: SessionConfig,
-    ) -> Self {
+    pub(in crate::auth) fn new(jwt_secret: &[u8], config: SessionConfig) -> Self {
         Self {
-            repository: SessionRepository::new(pool, id_generator),
             access_tokens: SessionTokenCodec::new(jwt_secret, config),
         }
     }
 
+    /// Returns whether the service is configured to use secure cookies for access tokens.
     pub(in crate::auth) fn secure_cookies(&self) -> bool {
         self.access_tokens.config.cookie_secure
     }
 
+    /// Issues a new session for a member, returning the access and refresh tokens.
     pub(in crate::auth) fn issue(
         &self,
+        conn: &mut DbConn,
+        new_session_id: Uuid,
+        new_family_id: Uuid,
         member_id: MemberId,
         metadata: SessionMetadata,
     ) -> Result<AuthCredentials, SessionError> {
         let refresh = self.access_tokens.issue_refresh();
-
-        let session = self.repository.create(
+        let new_session = NewAuthSession {
+            id: new_session_id,
+            family_id: new_family_id,
             member_id,
-            refresh.refresh_token_hash,
-            refresh.refresh_expires_at,
-            metadata,
-        )?;
+            refresh_token_hash: refresh.refresh_token_hash.clone(),
+            refresh_expires_at: refresh.refresh_expires_at,
+            user_agent: metadata.user_agent,
+            ip_address: metadata.ip_address,
+        };
+
+        let session = SessionRepository::create(conn, new_session)?;
 
         let access_token = self.access_tokens.issue_access(member_id, session.id)?;
-
         Ok(AuthCredentials {
             access_token,
             refresh_token: refresh.refresh_token,
@@ -57,61 +58,102 @@ impl SessionService {
 
     pub(in crate::auth) fn rotate(
         &self,
-        token: &str,
+        conn: &mut DbConn,
+        refresh_token: String,
+        new_session_id: Uuid,
         metadata: SessionMetadata,
     ) -> Result<AuthCredentials, SessionError> {
-        let token_hash = SessionTokenCodec::hash_refresh(token);
         let refresh = self.access_tokens.issue_refresh();
+        let result = conn.transaction::<RotationResult, DbError, _>(|conn| {
+            // Lock the current session row for update to prevent concurrent rotations
+            let current = SessionRepository::find_by_refresh_token_hash_for_update(
+                conn,
+                SessionTokenCodec::hash_refresh(&refresh_token),
+            )?
+            .ok_or(DbError::NotFound)?;
 
-        match self.repository.rotate(
-            token_hash,
-            refresh.refresh_token_hash,
-            refresh.refresh_expires_at,
-            metadata,
-        ) {
-            Ok(rotation_result) => match rotation_result {
-                RotationResult::InvalidRotation => Err(SessionError::RotationNotAllowed),
-                RotationResult::Reused => Err(SessionError::RefreshTokenReused),
-                RotationResult::Expired => Err(SessionError::ExpiredRefreshToken),
-                RotationResult::Rotated(session) => {
-                    let access_token = self
-                        .access_tokens
-                        .issue_access(session.member_id, session.id)?;
+            // If the current session is already revoked or replaced, revoke all sessions in the same family and return the reused result. This prevents token reuse attacks.
+            if current.consumed_at.is_some()
+                || current.revoked_at.is_some()
+                || current.replaced_by.is_some()
+            {
+                SessionRepository::revoke_family(conn, current.family_id)?;
+                return Ok(RotationResult::Reused);
+            }
+            // If the current session is expired, prevent rotation. Access tokens live until their expiration.
+            else if current.refresh_expires_at <= SessionClock::now_naive() {
+                return Ok(RotationResult::Expired);
+            }
 
-                    Ok(AuthCredentials {
-                        access_token,
-                        refresh_token: refresh.refresh_token,
-                    })
-                }
-            },
-            Err(error) => Err(SessionError::from(error)),
+            let new_session = NewAuthSession {
+                id: new_session_id,
+                family_id: current.family_id,
+                member_id: current.member_id,
+                refresh_token_hash: refresh.refresh_token_hash.clone(),
+                refresh_expires_at: current.refresh_expires_at,
+                user_agent: metadata.user_agent,
+                ip_address: metadata.ip_address,
+            };
+            // Insert the replacement session
+            let rotated = SessionRepository::create(conn, new_session)?;
+
+            // Mark the current session as replaced and revoked
+            SessionRepository::consume_and_replace(conn, current.id, rotated.id)?;
+
+            Ok(RotationResult::Rotated(rotated))
+        })?;
+
+        match result {
+            RotationResult::Rotated(rotated) => {
+                let access_token = self
+                    .access_tokens
+                    .issue_access(rotated.member_id, rotated.id)?;
+                Ok(AuthCredentials {
+                    access_token,
+                    refresh_token: refresh.refresh_token,
+                })
+            }
+            RotationResult::Expired => Err(SessionError::ExpiredRefreshToken),
+            RotationResult::Reused => Err(SessionError::RefreshTokenReused),
         }
     }
 
     pub(in crate::auth) fn authenticate_access_token(
         &self,
+        conn: &mut DbConn,
         token: &str,
     ) -> Result<AuthenticatedPrincipal, SessionError> {
         let principal = self.access_tokens.verify_access(token)?;
-        if !self
-            .repository
-            .is_active(principal.session_id, principal.member_id)?
-        {
+        if !SessionRepository::is_active(conn, principal.session_id, principal.member_id)? {
             return Err(SessionError::SessionRevoked);
         }
         Ok(principal)
     }
 
-    pub(in crate::auth) fn revoke(
+    pub(in crate::auth) fn logout(
         &self,
-        principal: &AuthenticatedPrincipal,
+        conn: &mut DbConn,
+        token: &str,
     ) -> Result<(), SessionError> {
-        Ok(self
-            .repository
-            .revoke(principal.session_id, principal.member_id)?)
+        conn.transaction::<(), DbError, _>(|conn| {
+            let Some(session) = SessionRepository::find_by_refresh_token_hash_for_update(
+                conn,
+                SessionTokenCodec::hash_refresh(token),
+            )?
+            else {
+                return Ok(());
+            };
+
+            SessionRepository::revoke_family(conn, session.family_id)
+        })
+        .map_err(SessionError::from)
     }
 
-    pub(in crate::auth) fn revoke_all(&self, member_id: MemberId) -> Result<(), SessionError> {
-        Ok(self.repository.revoke_all(member_id)?)
+    pub(in crate::auth) fn logout_all(
+        &self,
+        conn: &mut DbConn,
+        member_id: MemberId,
+    ) -> Result<(), SessionError> {
+        Ok(SessionRepository::revoke_all(conn, member_id)?)
     }
 }
