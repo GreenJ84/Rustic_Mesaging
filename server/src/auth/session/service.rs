@@ -6,6 +6,7 @@ use super::{
     SessionError, SessionMetadata, SessionRepository, SessionTokenCodec,
 };
 
+use crate::auth::error::AuthError;
 use crate::auth::session::NewAuthSession;
 use crate::db::{DbConn, DbError};
 use crate::member::models::MemberId;
@@ -35,24 +36,26 @@ impl SessionService {
         new_family_id: Uuid,
         member_id: MemberId,
         metadata: SessionMetadata,
-    ) -> Result<AuthCredentials, SessionError> {
-        let refresh = self.access_tokens.issue_refresh();
-        let new_session = NewAuthSession {
-            id: new_session_id,
-            family_id: new_family_id,
-            member_id,
-            refresh_token_hash: refresh.refresh_token_hash.clone(),
-            refresh_expires_at: refresh.refresh_expires_at,
-            user_agent: metadata.user_agent,
-            ip_address: metadata.ip_address,
-        };
+    ) -> Result<AuthCredentials, AuthError> {
+        conn.transaction::<AuthCredentials, AuthError, _>(|conn| {
+            let refresh = self.access_tokens.issue_refresh();
+            let new_session = NewAuthSession {
+                id: new_session_id,
+                family_id: new_family_id,
+                member_id,
+                refresh_token_hash: refresh.refresh_token_hash.clone(),
+                refresh_expires_at: refresh.refresh_expires_at,
+                user_agent: metadata.user_agent,
+                ip_address: metadata.ip_address,
+            };
 
-        let session = SessionRepository::create(conn, new_session)?;
+            let session = SessionRepository::create(conn, new_session)?;
 
-        let access_token = self.access_tokens.issue_access(member_id, session.id)?;
-        Ok(AuthCredentials {
-            access_token,
-            refresh_token: refresh.refresh_token,
+            let access_token = self.access_tokens.issue_access(member_id, session.id)?;
+            Ok(AuthCredentials {
+                access_token,
+                refresh_token: refresh.refresh_token,
+            })
         })
     }
 
@@ -62,9 +65,9 @@ impl SessionService {
         refresh_token: String,
         new_session_id: Uuid,
         metadata: SessionMetadata,
-    ) -> Result<AuthCredentials, SessionError> {
+    ) -> Result<AuthCredentials, AuthError> {
         let refresh = self.access_tokens.issue_refresh();
-        let result = conn.transaction::<RotationResult, DbError, _>(|conn| {
+        let result = conn.transaction::<RotationResult, AuthError, _>(|conn| {
             // Lock the current session row for update to prevent concurrent rotations
             let current = SessionRepository::find_by_refresh_token_hash_for_update(
                 conn,
@@ -99,22 +102,21 @@ impl SessionService {
 
             // Mark the current session as replaced and revoked
             SessionRepository::consume_and_replace(conn, current.id, rotated.id)?;
-
-            Ok(RotationResult::Rotated(rotated))
+            let access_token = self
+                .access_tokens
+                .issue_access(rotated.member_id, rotated.id)?;
+            Ok(RotationResult::Rotated(AuthCredentials {
+                access_token,
+                refresh_token: refresh.refresh_token,
+            }))
         })?;
 
         match result {
             RotationResult::Rotated(rotated) => {
-                let access_token = self
-                    .access_tokens
-                    .issue_access(rotated.member_id, rotated.id)?;
-                Ok(AuthCredentials {
-                    access_token,
-                    refresh_token: refresh.refresh_token,
-                })
+                Ok(rotated)
             }
-            RotationResult::Expired => Err(SessionError::ExpiredRefreshToken),
-            RotationResult::Reused => Err(SessionError::RefreshTokenReused),
+            RotationResult::Expired => Err(AuthError::from(SessionError::ExpiredRefreshToken)),
+            RotationResult::Reused => Err(AuthError::from(SessionError::RefreshTokenReused)),
         }
     }
 
@@ -122,19 +124,15 @@ impl SessionService {
         &self,
         conn: &mut DbConn,
         token: &str,
-    ) -> Result<AuthenticatedPrincipal, SessionError> {
+    ) -> Result<AuthenticatedPrincipal, AuthError> {
         let principal = self.access_tokens.verify_access(token)?;
         if !SessionRepository::is_active(conn, principal.session_id, principal.member_id)? {
-            return Err(SessionError::SessionRevoked);
+            return Err(AuthError::from(SessionError::SessionRevoked));
         }
         Ok(principal)
     }
 
-    pub(in crate::auth) fn logout(
-        &self,
-        conn: &mut DbConn,
-        token: &str,
-    ) -> Result<(), SessionError> {
+    pub(in crate::auth) fn logout(&self, conn: &mut DbConn, token: &str) -> Result<(), AuthError> {
         conn.transaction::<(), DbError, _>(|conn| {
             let Some(session) = SessionRepository::find_by_refresh_token_hash_for_update(
                 conn,
@@ -146,14 +144,14 @@ impl SessionService {
 
             SessionRepository::revoke_family(conn, session.family_id)
         })
-        .map_err(SessionError::from)
+        .map_err(|e| AuthError::from(SessionError::from(e)))
     }
 
     pub(in crate::auth) fn logout_all(
         &self,
         conn: &mut DbConn,
         member_id: MemberId,
-    ) -> Result<(), SessionError> {
+    ) -> Result<(), AuthError> {
         Ok(SessionRepository::revoke_all(conn, member_id)?)
     }
 }
