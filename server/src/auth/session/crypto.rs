@@ -15,7 +15,7 @@ use crate::member::models::MemberId;
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub(super) struct AccessClaims {
     /// The subject of the token, typically the member ID
-    pub(super) sub: MemberId,
+    pub(super) sub: String,
     /// The session ID associated with the access token
     pub(super) sid: SessionId,
     /// The issuer of the token, typically the application name or URL
@@ -71,7 +71,7 @@ impl SessionTokenCodec {
     ) -> Result<String, SessionError> {
         let (now, access_expires_at) = SessionClock::expires_in(self.config.access_ttl);
         let claims = AccessClaims {
-            sub: member_id,
+            sub: member_id.to_string(),
             sid: session_id,
             iss: self.config.issuer.clone(),
             aud: self.config.audience.clone(),
@@ -110,9 +110,13 @@ impl SessionTokenCodec {
             );
             return Err(SessionError::CodecFailure);
         }
+        let member_id = claims
+            .sub
+            .parse::<MemberId>()
+            .map_err(|_| SessionError::InvalidAccessToken)?;
 
         Ok(AuthenticatedPrincipal {
-            member_id: claims.sub,
+            member_id,
             session_id: claims.sid,
         })
     }
