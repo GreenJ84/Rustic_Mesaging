@@ -92,6 +92,16 @@ impl SystemRoleService {
         Ok(())
     }
 
+    pub(crate) fn get_member_role(
+        conn: &mut DbConn,
+        member_id: MemberId,
+    ) -> Result<SystemRole, SystemRoleError> {
+        match SystemRoleRepository::get_member_role(conn, member_id)? {
+            Some(role) => Ok(role),
+            None => Err(SystemRoleError::AssignmentNotFound),
+        }
+    }
+
     pub(crate) fn attest_authorization(
         conn: &mut DbConn,
         member_id: MemberId,
