@@ -171,6 +171,17 @@ impl SystemRoleService {
             Ok(())
         })
     }
+
+    pub(crate) fn reset_role(
+        conn: &mut DbConn,
+        actor_id: MemberId,
+        member_id: MemberId,
+    ) -> Result<(), SystemRoleError> {
+        let Some(role_id) = SystemRoleRepository::get_role_id(conn, "user")? else {
+            return Err(SystemRoleError::ConfigurationFailure);
+        };
+        Self::assign_role(conn, actor_id, member_id, role_id)
+    }
 }
 
 fn validate_custom_role(
