@@ -1,5 +1,6 @@
+!**/*env.example
 **/*.env
-**/*.env.prod
+**/*.env.*
 
 # Local database volume and generated client bundle
 /data/*
