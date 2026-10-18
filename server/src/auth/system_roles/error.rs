@@ -1,7 +1,7 @@
 use crate::api_error::ApiError;
 use crate::db::{DbError, DieselError};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum SystemRoleError {
     InsufficientPrivileges,
 

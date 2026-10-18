@@ -1,12 +1,16 @@
 use crate::api_error::ApiError;
-use crate::db::DbError;
+use crate::auth::password::PasswordError;
+use crate::auth::session::SessionError;
+use crate::auth::system_roles::SystemRoleError;
+use crate::db::{DbError, DieselError};
+use rocket::http::Status;
 
 #[derive(Debug)]
 pub enum AuthError {
     // Registration Errors
     UsernameTaken,
     EmailTaken,
-    PasswordRejected(PasswordViolation),
+    PasswordRejected(PasswordError),
     PasswordConfirmationMismatch,
 
     // Login Errors
@@ -17,17 +21,15 @@ pub enum AuthError {
     // Token Errors
     MissingAuthorization,
     MalformedAuthorization,
-    InvalidAccessToken,
-    ExpiredAccessToken,
-    InvalidRefreshToken,
-    ExpiredRefreshToken,
-    SessionRevoked,
-    RefreshTokenReused,
+    FailedAuthorization,
+    InsufficientPrivileges,
+
+    // Subdomain Errors
+    Session(SessionError),
+    SystemRole(SystemRoleError),
 
     // Internal Errors
     PersistenceFailure,
-    TokenCreationFailure,
-    HashingError,
     InternalError(String),
 }
 impl AuthError {
@@ -46,19 +48,73 @@ impl AuthError {
 
             Self::MissingAuthorization => "Missing authorization header.".to_string(),
             Self::MalformedAuthorization => "Malformed authorization header.".to_string(),
-            Self::InvalidAccessToken => "Invalid access token.".to_string(),
-            Self::ExpiredAccessToken => "Access token has expired.".to_string(),
+            Self::FailedAuthorization => "Failed to authorize request.".to_string(),
+            Self::InsufficientPrivileges => {
+                "You do not have permission to perform this operation.".to_string()
+            }
 
-            Self::InvalidRefreshToken => "Invalid refresh token.".to_string(),
-            Self::ExpiredRefreshToken => "Refresh token has expired.".to_string(),
-            Self::SessionRevoked => "Session has been revoked.".to_string(),
-            Self::RefreshTokenReused => "Refresh token has been reused.".to_string(),
-
+            Self::Session(session_error) => session_error.message(),
+            Self::SystemRole(system_role_error) => system_role_error.message(),
             Self::PersistenceFailure => "Persistence failure occurred".to_string(),
-            Self::TokenCreationFailure => "Token creation failure occurred".to_string(),
-            Self::HashingError => "Hashing error occurred".to_string(),
             Self::InternalError(msg) => format!("Internal error occurred: {}", msg),
         }
+    }
+
+    pub(crate) fn status(&self) -> Status {
+        match self {
+            Self::UsernameTaken | Self::EmailTaken => Status::Conflict,
+            Self::PasswordRejected(_) | Self::PasswordConfirmationMismatch => Status::BadRequest,
+            Self::InvalidCredentials
+            | Self::MissingAuthorization
+            | Self::MalformedAuthorization
+            | Self::FailedAuthorization => Status::Unauthorized,
+            Self::InsufficientPrivileges => Status::Forbidden,
+            Self::AccountNotFound => Status::NotFound,
+            Self::AccountDisabled => Status::Forbidden,
+            Self::SystemRole(e) => ApiError::from(e.to_owned()).status(),
+            Self::Session(e) => ApiError::from(e.to_owned()).status(),
+            Self::PersistenceFailure | Self::InternalError(_) => Status::InternalServerError,
+        }
+    }
+}
+
+impl From<PasswordError> for AuthError {
+    fn from(err: PasswordError) -> Self {
+        match err {
+            PasswordError::InvalidLength => AuthError::PasswordRejected(err),
+            PasswordError::CommonPassword => AuthError::PasswordRejected(err),
+            PasswordError::ContainsIdentity => AuthError::PasswordRejected(err),
+            PasswordError::HashingError => AuthError::InternalError(err.message()),
+            PasswordError::PasswordMismatch => AuthError::InvalidCredentials,
+        }
+    }
+}
+
+impl From<SessionError> for AuthError {
+    fn from(error: SessionError) -> Self {
+        match error {
+            SessionError::InvalidAccessToken
+            | SessionError::ExpiredAccessToken
+            | SessionError::InvalidRefreshToken
+            | SessionError::ExpiredRefreshToken
+            | SessionError::SessionRevoked
+            | SessionError::RefreshTokenReused => Self::FailedAuthorization,
+            SessionError::CodecFailure | SessionError::PersistenceFailure => {
+                Self::PersistenceFailure
+            }
+        }
+    }
+}
+
+impl From<DbError> for AuthError {
+    fn from(_error: DbError) -> Self {
+        Self::PersistenceFailure
+    }
+}
+
+impl From<DieselError> for AuthError {
+    fn from(error: DieselError) -> Self {
+        Self::from(DbError::from(error))
     }
 }
 
@@ -74,50 +130,16 @@ impl From<AuthError> for ApiError {
             AuthError::InvalidCredentials => ApiError::Unauthorized(err.message()),
             AuthError::AccountDisabled => ApiError::Forbidden(err.message()),
 
-            AuthError::MissingAuthorization => ApiError::BadRequest(err.message()),
-            AuthError::MalformedAuthorization => ApiError::BadRequest(err.message()),
-            AuthError::InvalidAccessToken => ApiError::Unauthorized(err.message()),
-            AuthError::ExpiredAccessToken => ApiError::Unauthorized(err.message()),
+            AuthError::MissingAuthorization => ApiError::Unauthorized(err.message()),
+            AuthError::MalformedAuthorization => ApiError::Unauthorized(err.message()),
+            AuthError::FailedAuthorization => ApiError::Unauthorized(err.message()),
+            AuthError::InsufficientPrivileges => ApiError::Forbidden(err.message()),
 
-            AuthError::InvalidRefreshToken => ApiError::Unauthorized(err.message()),
-            AuthError::ExpiredRefreshToken => ApiError::Unauthorized(err.message()),
-            AuthError::SessionRevoked => ApiError::Unauthorized(err.message()),
-            AuthError::RefreshTokenReused => ApiError::Unauthorized(err.message()),
+            AuthError::Session(session_error) => ApiError::from(session_error),
+            AuthError::SystemRole(system_role_error) => ApiError::from(system_role_error),
 
             AuthError::PersistenceFailure => ApiError::InternalError,
-            AuthError::TokenCreationFailure => ApiError::InternalError,
-            AuthError::HashingError => ApiError::InternalError,
             AuthError::InternalError(_) => ApiError::InternalError,
-        }
-    }
-}
-impl From<DbError> for AuthError {
-    fn from(err: DbError) -> Self {
-        match err {
-            DbError::ConnectionError(msg) => AuthError::InternalError(msg),
-            DbError::PoolError(msg) => {
-                log::error!("Auth module: {}", msg);
-                AuthError::InternalError(msg)
-            },
-        }
-    }
-}
-
-/// Password violation rules
-pub const MIN_PASSWORD_LENGTH: usize = 15;
-pub const MAX_PASSWORD_LENGTH: usize = 128;
-#[derive(Debug)]
-pub(crate) enum PasswordViolation {
-    CommonPassword,
-    ContainsIdentity,
-}
-impl PasswordViolation {
-    pub fn message(&self) -> String {
-        match self {
-            Self::CommonPassword => "Password is too common.".to_string(),
-            Self::ContainsIdentity => {
-                "Password must not contain your username or email.".to_string()
-            }
         }
     }
 }
