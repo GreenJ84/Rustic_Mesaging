@@ -87,3 +87,25 @@ impl From<DieselError> for SystemRoleError {
     }
 }
 
+impl From<SystemRoleError> for ApiError {
+    fn from(error: SystemRoleError) -> Self {
+        match error {
+            SystemRoleError::InvalidRoleName => ApiError::BadRequest(error.message()),
+            SystemRoleError::InvalidAuthorityLevel(_) => ApiError::BadRequest(error.message()),
+            SystemRoleError::InsufficientPrivileges => ApiError::Forbidden(error.message()),
+
+            SystemRoleError::MemberNotFound
+            | SystemRoleError::RoleNotFound
+            | SystemRoleError::AssignmentNotFound => ApiError::NotFound(error.message()),
+
+            SystemRoleError::RoleAlreadyExists
+            | SystemRoleError::AssignmentAlreadyExists
+            | SystemRoleError::CannotModifyBuiltInRole
+            | SystemRoleError::CannotDeleteBuiltInRole
+            | SystemRoleError::CannotRevokeLastAdministrator => ApiError::Conflict(error.message()),
+            SystemRoleError::ConfigurationFailure | SystemRoleError::PersistenceFailure => {
+                ApiError::InternalError
+            }
+        }
+    }
+}
