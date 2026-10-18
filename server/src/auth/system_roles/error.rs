@@ -70,6 +70,7 @@ impl From<DbError> for SystemRoleError {
             DbError::NotFound => Self::RoleNotFound,
             DbError::Conflict(_)
             | DbError::ConstraintViolation(_)
+            | DbError::RetryableTransaction(_)
             | DbError::Serialization(_)
             | DbError::QueryBuilder(_)
             | DbError::Transaction(_)

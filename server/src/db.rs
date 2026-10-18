@@ -17,6 +17,7 @@ pub enum DbError {
     NotFound,
     Conflict(DieselError),
     ConstraintViolation(DieselError),
+    RetryableTransaction(DieselError),
 
     Serialization(DieselError),
     QueryBuilder(DieselError),
@@ -32,11 +33,14 @@ impl From<DieselError> for DbError {
                 DatabaseErrorKind::UniqueViolation => Self::Conflict(error),
 
                 DatabaseErrorKind::ForeignKeyViolation
-                | DatabaseErrorKind::UnableToSendCommand
-                | DatabaseErrorKind::SerializationFailure
-                | DatabaseErrorKind::ReadOnlyTransaction
                 | DatabaseErrorKind::NotNullViolation
                 | DatabaseErrorKind::CheckViolation => Self::ConstraintViolation(error),
+
+                DatabaseErrorKind::SerializationFailure => Self::RetryableTransaction(error),
+
+                DatabaseErrorKind::UnableToSendCommand | DatabaseErrorKind::ReadOnlyTransaction => {
+                    Self::Transaction(error)
+                }
 
                 DatabaseErrorKind::ClosedConnection | _ => Self::Database(error),
             },
