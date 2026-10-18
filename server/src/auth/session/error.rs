@@ -1,16 +1,16 @@
 use jsonwebtoken::errors::{Error as JwtError, ErrorKind};
 
 use super::models::AuthSession;
-use crate::{api_error::ApiError, db::DbError};
+use crate::{api_error::ApiError, auth::session::AuthCredentials, db::DbError};
 
 pub(super) enum RotationResult {
-    Rotated(AuthSession),
+    Rotated(AuthCredentials),
     Expired,
     Reused,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(in crate::auth) enum SessionError {
+pub(crate) enum SessionError {
     InvalidAccessToken,
     ExpiredAccessToken,
 
