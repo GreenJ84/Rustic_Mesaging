@@ -60,7 +60,7 @@ impl SessionRepository {
             sessions::auth_session
                 .filter(sessions::id.eq(session_id))
                 .filter(sessions::member_id.eq(member_id))
-                .filter(sessions::revoked_at.is_null())
+                .filter(sessions::revoked_at.is_null()),
         ))
         .get_result(conn)
         .map_err(|e| {
