@@ -1,99 +1,139 @@
 use rocket::form::{Form, Strict};
-use rocket::http::Status;
+use rocket::http::{Cookie, CookieJar, SameSite, Status};
 use rocket::response::status;
-use rocket::{Request, State};
+use rocket::State;
 
-use crate::auth::password::PasswordManager;
-use crate::db::{get_db_connection, DbPool};
-
-use super::error::AuthError;
-use super::models::*;
-
+use super::service::AuthService;
 use crate::api_error::ApiError;
-use crate::member::models::MemberSafe;
-use crate::member::service::MemberService;
-use crate::routes::{ApiResponse, CustomResponse};
-use crate::service::CrudOps;
+use crate::auth::guards::{ClientMetadata, RegistrationRole};
+use crate::auth::models::{
+    AuthOutcome, AuthenticationResponse, ChangePasswordInput, LoginInput, RegisterInput,
+};
+use crate::auth::session::AuthenticatedPrincipal;
+use crate::member::models::{MemberId, MemberSafe};
+
+const REFRESH_COOKIE: &str = "refresh_token";
 
 #[post("/register", data = "<form>")]
-pub fn register(
-    pool: &State<DbPool>,
+pub(crate) fn register(
+    service: &State<AuthService>,
+    cookies: &CookieJar<'_>,
+    metadata: ClientMetadata,
+    registration_role: RegistrationRole,
     form: Form<Strict<RegisterInput>>,
-    admin: AdminKey,
-) -> ApiResponse<AuthenticationResponse> {
-    let mut conn = get_db_connection(pool).map_err(|e| ApiError::DatabaseError(e.1))?;
-
-    let input = form.into_inner().into_inner();
-    let mut new_user = input.validate(&mut conn)?;
-    if admin.passkey {
-        new_user.set_admin();
-    }
-
-    let user = MemberService::create(&mut conn, new_user).map_err(|e| ApiError::InternalError)?;
-
-    // Send new MemberSafe with JWT
-    match JWT::create_jwt(&user) {
-        Ok(token) => Ok(status::Custom(
-            Status::Created,
-            AuthenticationResponse {
-                member: user.into_safe(),
-                token,
-            },
-        )),
-        Err(_) => Err(ApiError::InternalError),
-    }
+) -> Result<status::Custom<AuthenticationResponse>, ApiError> {
+    let outcome = service.register(
+        form.into_inner().into_inner(),
+        registration_role.kind(),
+        metadata.0,
+    )?;
+    let response = into_response(cookies, service, outcome);
+    Ok(status::Custom(Status::Created, response))
 }
 
 #[post("/login", data = "<form>")]
-pub fn login(
-    pool: &State<DbPool>,
+pub(crate) fn login(
+    service: &State<AuthService>,
+    cookies: &CookieJar<'_>,
+    metadata: ClientMetadata,
     form: Form<Strict<LoginInput>>,
-) -> ApiResponse<AuthenticationResponse> {
-    let mut conn = get_db_connection(pool).map_err(|e| ApiError::DatabaseError(e.1))?;
+) -> Result<AuthenticationResponse, ApiError> {
+    let outcome = service.login(form.into_inner().into_inner(), metadata.0)?;
+    Ok(into_response(cookies, service, outcome))
+}
 
-    let input = form.into_inner().into_inner();
-    let member = MemberService::find_by_username(&mut conn, input.username.to_string())
-        .map_err(|_| AuthError::AccountNotFound)?;
+#[post("/refresh/<member_id>")]
+pub(crate) fn refresh(
+    service: &State<AuthService>,
+    cookies: &CookieJar<'_>,
+    metadata: ClientMetadata,
+    member_id: MemberId,
+) -> Result<AuthenticationResponse, ApiError> {
+    let refresh_token = cookies
+        .get(REFRESH_COOKIE)
+        .map(|cookie| cookie.value().to_owned())
+        .ok_or_else(|| ApiError::Unauthorized("A refresh credential is required.".to_string()))?;
 
-    // Authenticate member
-    PasswordManager::verify(&input.password, member.password())?;
+    match service.refresh(member_id, refresh_token, metadata.0) {
+        Ok(outcome) => Ok(into_response(cookies, service, outcome)),
+        Err(error) => {
+            clear_refresh_cookie(cookies);
+            Err(error.into())
+        }
+    }
+}
 
-    // Attach JWT to valid login
-    let token = JWT::create_jwt(&member)?;
-    Ok(status::Custom(
-        Status::Ok,
-        AuthenticationResponse {
-            member: member.into_safe(),
-            token,
-        },
-    ))
+#[post("/logout")]
+pub(crate) fn logout(
+    service: &State<AuthService>,
+    cookies: &CookieJar<'_>,
+) -> Result<status::NoContent, ApiError> {
+    let result = match cookies.get(REFRESH_COOKIE) {
+        Some(cookie) => service.logout(cookie.value()),
+        None => Ok(()),
+    }?;
+    clear_refresh_cookie(cookies);
+    Ok(status::NoContent)
+}
+
+#[post("/logout-all")]
+pub(crate) fn logout_all(
+    service: &State<AuthService>,
+    cookies: &CookieJar<'_>,
+    principal: AuthenticatedPrincipal,
+) -> Result<status::NoContent, ApiError> {
+    service.logout_all(principal.member_id)?;
+    clear_refresh_cookie(cookies);
+    Ok(status::NoContent)
 }
 
 #[put("/password", data = "<form>")]
-pub fn update_password(
-    token: JWT,
-    pool: &State<DbPool>,
-    form: Form<Strict<RegisterInput>>,
-) -> ApiResponse<MemberSafe> {
-    let mut conn = get_db_connection(pool).map_err(|e| ApiError::DatabaseError(e.1))?;
+pub(crate) fn update_password(
+    service: &State<AuthService>,
+    cookies: &CookieJar<'_>,
+    principal: AuthenticatedPrincipal,
+    form: Form<Strict<ChangePasswordInput>>,
+) -> Result<status::NoContent, ApiError> {
+    service.change_password(&principal, form.into_inner().into_inner())?;
+    clear_refresh_cookie(cookies);
+    Ok(status::NoContent)
+}
 
-    let input = form.into_inner().into_inner();
-    let member = MemberService::find_by_username(&mut conn, input.username.to_string())
-        .map_err(|e| AuthError::AccountNotFound)?;
+#[get("/member")]
+pub(crate) fn current_member(
+    service: &State<AuthService>,
+    principal: AuthenticatedPrincipal,
+) -> Result<MemberSafe, ApiError> {
+    service.current_member(&principal).map_err(ApiError::from)
+}
 
-    if member.id() != token.claims.member_id {
-        return Err(ApiError::from(AuthError::InvalidCredentials));
-    } else if input.password.ne(&input.confirm_password) {
-        return Err(ApiError::from(AuthError::PasswordConfirmationMismatch));
+fn into_response(
+    cookies: &CookieJar<'_>,
+    service: &AuthService,
+    outcome: AuthOutcome,
+) -> AuthenticationResponse {
+    set_refresh_cookie(
+        cookies,
+        outcome.credentials.refresh_token,
+        service.secure_cookies(),
+    );
+    AuthenticationResponse {
+        member: outcome.member,
+        token: outcome.credentials.access_token,
     }
-    PasswordManager::verify(&input.password, member.password())?;
+}
 
-    match MemberService::update_password(
-        &mut conn,
-        token.claims.member_id,
-        PasswordManager::hash(&input.password)?,
-    ) {
-        Ok(member) => Ok(status::Custom(Status::Ok, member.into_safe())),
-        Err(e) => Err(ApiError::DatabaseError(e.to_string())),
-    }
+fn set_refresh_cookie(cookies: &CookieJar<'_>, token: String, secure: bool) {
+    cookies.add(
+        Cookie::build((REFRESH_COOKIE, token))
+            .http_only(true)
+            .secure(secure)
+            .same_site(SameSite::Strict)
+            .path("/")
+            .build(),
+    );
+}
+
+fn clear_refresh_cookie(cookies: &CookieJar<'_>) {
+    cookies.remove(Cookie::build(REFRESH_COOKIE).path("/").build());
 }
