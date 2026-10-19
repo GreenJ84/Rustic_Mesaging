@@ -7,16 +7,17 @@ INSERT INTO system_role (name, authority_level, system_managed) VALUES
     ('banned', 0, TRUE);
 
 INSERT INTO member_system_role (member_id, role_id, assigned_by)
-SELECT member.id, system_role.id, member.id AS assigner
-FROM member
-CROSS JOIN system_role
-WHERE system_role.name = 'user'
-ON CONFLICT DO NOTHING;
-
-INSERT INTO member_system_role (member_id, role_id, assigned_by)
-SELECT member.id, system_role.id, member.id AS assigner
+SELECT member.id, system_role.id AS assigner, (SELECT id FROM member WHERE username = 'SYSTEM' LIMIT 1)
 FROM member
 CROSS JOIN system_role
 WHERE system_role.name = 'admin'
-  AND member.is_admin = TRUE
+  AND member.username = 'GreenJ'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO member_system_role (member_id, role_id, assigned_by)
+SELECT
+    m.id,
+    (SELECT sr.id FROM system_role sr WHERE sr.name = 'user'),
+    (SELECT id FROM member WHERE username = 'SYSTEM' LIMIT 1)
+FROM member m
 ON CONFLICT DO NOTHING;

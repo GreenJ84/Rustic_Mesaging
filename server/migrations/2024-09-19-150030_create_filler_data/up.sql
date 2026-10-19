@@ -1,21 +1,22 @@
 -- Create 16 members
-INSERT INTO member (username, password, email, avatar, is_admin, created_at) VALUES
-('USER DELETED','not_available', 'deleted@deleted.deleted', '', false, '1997-08-04 10:00:00'),
-('FireSloth', '$argon2id$v=19$m=19456,t=2,p=1$vJmdrzcO9rD6q0IdN8Fj9g$uY/Ov/6HsPSE8+cr5BVNAstEjv5rYaecQpbnX8Uj6rw', 'firesloth@example.com', 'cat', false, '2024-01-01 10:00:00'),
-('CyberPanda', '$argon2id$v=19$m=19456,t=2,p=1$vJmdrzcO9rD6q0IdN8Fj9g$uY/Ov/6HsPSE8+cr5BVNAstEjv5rYaecQpbnX8Uj6rw', 'cyberpanda@example.com', 'mouse', false, '2024-01-02 11:00:00'),
-('ShadowFox', '$argon2id$v=19$m=19456,t=2,p=1$vJmdrzcO9rD6q0IdN8Fj9g$uY/Ov/6HsPSE8+cr5BVNAstEjv5rYaecQpbnX8Uj6rw', 'shadowfox@example.com', 'dog', true, '2024-01-03 12:00:00'),
-('MoonWolf', '$argon2id$v=19$m=19456,t=2,p=1$vJmdrzcO9rD6q0IdN8Fj9g$uY/Ov/6HsPSE8+cr5BVNAstEjv5rYaecQpbnX8Uj6rw', 'moonwolf@example.com', 'bear', false, '2024-01-04 13:00:00'),
-('IronHawk', '$argon2id$v=19$m=19456,t=2,p=1$vJmdrzcO9rD6q0IdN8Fj9g$uY/Ov/6HsPSE8+cr5BVNAstEjv5rYaecQpbnX8Uj6rw', 'ironhawk@example.com', 'bunny', false, '2024-01-05 14:00:00'),
-('StormBear', '$argon2id$v=19$m=19456,t=2,p=1$vJmdrzcO9rD6q0IdN8Fj9g$uY/Ov/6HsPSE8+cr5BVNAstEjv5rYaecQpbnX8Uj6rw', 'stormbear@example.com', 'astronaut', false, '2024-01-06 15:00:00'),
-('QuantumTiger', '$argon2id$v=19$m=19456,t=2,p=1$vJmdrzcO9rD6q0IdN8Fj9g$uY/Ov/6HsPSE8+cr5BVNAstEjv5rYaecQpbnX8Uj6rw', 'quantumtiger@example.com', 'bear', false, '2024-01-07 16:00:00'),
-('BlazeFalcon', '$argon2id$v=19$m=19456,t=2,p=1$vJmdrzcO9rD6q0IdN8Fj9g$uY/Ov/6HsPSE8+cr5BVNAstEjv5rYaecQpbnX8Uj6rw', 'blazefalcon@example.com', 'gorilla', false, '2024-01-08 17:00:00'),
-('NebulaEagle', '$argon2id$v=19$m=19456,t=2,p=1$vJmdrzcO9rD6q0IdN8Fj9g$uY/Ov/6HsPSE8+cr5BVNAstEjv5rYaecQpbnX8Uj6rw', 'nebulaeagle@example.com', 'gorilla', false, '2024-01-09 18:00:00'),
-('AquaDragon', '$argon2id$v=19$m=19456,t=2,p=1$vJmdrzcO9rD6q0IdN8Fj9g$uY/Ov/6HsPSE8+cr5BVNAstEjv5rYaecQpbnX8Uj6rw', 'aquadragon@example.com', 'eagle', false, '2024-01-10 19:00:00'),
-('CrimsonLynx', '$argon2id$v=19$m=19456,t=2,p=1$vJmdrzcO9rD6q0IdN8Fj9g$uY/Ov/6HsPSE8+cr5BVNAstEjv5rYaecQpbnX8Uj6rw', 'crimsonlynx@example.com', 'astronaut', true, '2024-01-11 20:00:00'),
-('SilverPhoenix', '$argon2id$v=19$m=19456,t=2,p=1$vJmdrzcO9rD6q0IdN8Fj9g$uY/Ov/6HsPSE8+cr5BVNAstEjv5rYaecQpbnX8Uj6rw', 'silverphoenix@example.com', NULL, false, '2024-01-12 21:00:00'),
-('VortexRaven', '$argon2id$v=19$m=19456,t=2,p=1$vJmdrzcO9rD6q0IdN8Fj9g$uY/Ov/6HsPSE8+cr5BVNAstEjv5rYaecQpbnX8Uj6rw', 'vortexraven@example.com', 'mouse', false, '2024-01-13 22:00:00'),
-('GreenJ', '$argon2id$v=19$m=19456,t=2,p=1$vJmdrzcO9rD6q0IdN8Fj9g$uY/Ov/6HsPSE8+cr5BVNAstEjv5rYaecQpbnX8Uj6rw', 'jg@gmail.com', 'panda', True, '2024-01-16 10:00:00'),
-('EclipseLion', '$argon2id$v=19$m=19456,t=2,p=1$vJmdrzcO9rD6q0IdN8Fj9g$uY/Ov/6HsPSE8+cr5BVNAstEjv5rYaecQpbnX8Uj6rw', 'eclipselion@example.com', 'robot', false, '2024-01-14 23:00:00');
+INSERT INTO member (username, password_hash, email, avatar, created_at) VALUES
+('SYSTEM','not_available', 'system@system.system', '', '1997-08-04 10:00:00'),
+('USER DELETED','not_available', 'deleted@deleted.deleted', '', '1997-08-04 10:00:00'),
+('FireSloth', '$argon2id$v=19$m=19456,t=2,p=1$vJmdrzcO9rD6q0IdN8Fj9g$uY/Ov/6HsPSE8+cr5BVNAstEjv5rYaecQpbnX8Uj6rw', 'firesloth@example.com', 'cat', '2024-01-01 10:00:00'),
+('CyberPanda', '$argon2id$v=19$m=19456,t=2,p=1$vJmdrzcO9rD6q0IdN8Fj9g$uY/Ov/6HsPSE8+cr5BVNAstEjv5rYaecQpbnX8Uj6rw', 'cyberpanda@example.com', 'mouse', '2024-01-02 11:00:00'),
+('ShadowFox', '$argon2id$v=19$m=19456,t=2,p=1$vJmdrzcO9rD6q0IdN8Fj9g$uY/Ov/6HsPSE8+cr5BVNAstEjv5rYaecQpbnX8Uj6rw', 'shadowfox@example.com', 'dog', '2024-01-03 12:00:00'),
+('MoonWolf', '$argon2id$v=19$m=19456,t=2,p=1$vJmdrzcO9rD6q0IdN8Fj9g$uY/Ov/6HsPSE8+cr5BVNAstEjv5rYaecQpbnX8Uj6rw', 'moonwolf@example.com', 'bear', '2024-01-04 13:00:00'),
+('IronHawk', '$argon2id$v=19$m=19456,t=2,p=1$vJmdrzcO9rD6q0IdN8Fj9g$uY/Ov/6HsPSE8+cr5BVNAstEjv5rYaecQpbnX8Uj6rw', 'ironhawk@example.com', 'bunny', '2024-01-05 14:00:00'),
+('StormBear', '$argon2id$v=19$m=19456,t=2,p=1$vJmdrzcO9rD6q0IdN8Fj9g$uY/Ov/6HsPSE8+cr5BVNAstEjv5rYaecQpbnX8Uj6rw', 'stormbear@example.com', 'astronaut', '2024-01-06 15:00:00'),
+('QuantumTiger', '$argon2id$v=19$m=19456,t=2,p=1$vJmdrzcO9rD6q0IdN8Fj9g$uY/Ov/6HsPSE8+cr5BVNAstEjv5rYaecQpbnX8Uj6rw', 'quantumtiger@example.com', 'bear', '2024-01-07 16:00:00'),
+('BlazeFalcon', '$argon2id$v=19$m=19456,t=2,p=1$vJmdrzcO9rD6q0IdN8Fj9g$uY/Ov/6HsPSE8+cr5BVNAstEjv5rYaecQpbnX8Uj6rw', 'blazefalcon@example.com', 'gorilla', '2024-01-08 17:00:00'),
+('NebulaEagle', '$argon2id$v=19$m=19456,t=2,p=1$vJmdrzcO9rD6q0IdN8Fj9g$uY/Ov/6HsPSE8+cr5BVNAstEjv5rYaecQpbnX8Uj6rw', 'nebulaeagle@example.com', 'gorilla', '2024-01-09 18:00:00'),
+('AquaDragon', '$argon2id$v=19$m=19456,t=2,p=1$vJmdrzcO9rD6q0IdN8Fj9g$uY/Ov/6HsPSE8+cr5BVNAstEjv5rYaecQpbnX8Uj6rw', 'aquadragon@example.com', 'eagle', '2024-01-10 19:00:00'),
+('CrimsonLynx', '$argon2id$v=19$m=19456,t=2,p=1$vJmdrzcO9rD6q0IdN8Fj9g$uY/Ov/6HsPSE8+cr5BVNAstEjv5rYaecQpbnX8Uj6rw', 'crimsonlynx@example.com', 'astronaut', '2024-01-11 20:00:00'),
+('SilverPhoenix', '$argon2id$v=19$m=19456,t=2,p=1$vJmdrzcO9rD6q0IdN8Fj9g$uY/Ov/6HsPSE8+cr5BVNAstEjv5rYaecQpbnX8Uj6rw', 'silverphoenix@example.com', NULL, '2024-01-12 21:00:00'),
+('VortexRaven', '$argon2id$v=19$m=19456,t=2,p=1$vJmdrzcO9rD6q0IdN8Fj9g$uY/Ov/6HsPSE8+cr5BVNAstEjv5rYaecQpbnX8Uj6rw', 'vortexraven@example.com', 'mouse', '2024-01-13 22:00:00'),
+('GreenJ', '$argon2id$v=19$m=19456,t=2,p=1$vJmdrzcO9rD6q0IdN8Fj9g$uY/Ov/6HsPSE8+cr5BVNAstEjv5rYaecQpbnX8Uj6rw', 'jg@gmail.com', 'panda', '2024-01-16 10:00:00'),
+('EclipseLion', '$argon2id$v=19$m=19456,t=2,p=1$vJmdrzcO9rD6q0IdN8Fj9g$uY/Ov/6HsPSE8+cr5BVNAstEjv5rYaecQpbnX8Uj6rw', 'eclipselion@example.com', 'robot', '2024-01-14 23:00:00');
 
 -- Create 8 Server
 INSERT INTO server (name, description, icon, owner_id, created_at) VALUES
