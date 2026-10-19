@@ -5,6 +5,7 @@ use crate::{api_error::ApiError, auth::session::AuthCredentials, db::DbError};
 
 pub(super) enum RotationResult {
     Rotated(AuthCredentials),
+    Invalid,
     Expired,
     Reused,
 }

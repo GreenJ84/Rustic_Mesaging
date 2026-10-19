@@ -62,6 +62,7 @@ impl SessionService {
     pub(in crate::auth) fn rotate(
         &self,
         conn: &mut DbConn,
+        member_id: MemberId,
         refresh_token: String,
         new_session_id: Uuid,
         metadata: SessionMetadata,
@@ -82,6 +83,9 @@ impl SessionService {
             {
                 SessionRepository::revoke_family(conn, current.family_id)?;
                 return Ok(RotationResult::Reused);
+            }
+            if current.member_id != member_id {
+                return Ok(RotationResult::Invalid);
             }
             // If the current session is expired, prevent rotation. Access tokens live until their expiration.
             else if current.refresh_expires_at <= SessionClock::now_naive() {
@@ -112,9 +116,8 @@ impl SessionService {
         })?;
 
         match result {
-            RotationResult::Rotated(rotated) => {
-                Ok(rotated)
-            }
+            RotationResult::Rotated(rotated) => Ok(rotated),
+            RotationResult::Invalid => Err(AuthError::from(SessionError::InvalidRefreshToken)),
             RotationResult::Expired => Err(AuthError::from(SessionError::ExpiredRefreshToken)),
             RotationResult::Reused => Err(AuthError::from(SessionError::RefreshTokenReused)),
         }
