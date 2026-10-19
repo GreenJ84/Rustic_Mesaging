@@ -12,6 +12,7 @@ pub enum AuthError {
     EmailTaken,
     PasswordRejected(PasswordError),
     PasswordConfirmationMismatch,
+    InvalidAdministrationKey,
 
     // Login Errors
     InvalidCredentials,
@@ -41,6 +42,7 @@ impl AuthError {
             Self::PasswordConfirmationMismatch => {
                 "Password confirmation does not match.".to_string()
             }
+            Self::InvalidAdministrationKey => "Invalid administration key.".to_string(),
 
             Self::AccountNotFound => "Account not found.".to_string(),
             Self::InvalidCredentials => "Invalid username or password.".to_string(),
@@ -64,6 +66,7 @@ impl AuthError {
         match self {
             Self::UsernameTaken | Self::EmailTaken => Status::Conflict,
             Self::PasswordRejected(_) | Self::PasswordConfirmationMismatch => Status::BadRequest,
+            Self::InvalidAdministrationKey => Status::Unauthorized,
             Self::InvalidCredentials
             | Self::MissingAuthorization
             | Self::MalformedAuthorization
@@ -89,32 +92,24 @@ impl From<PasswordError> for AuthError {
         }
     }
 }
-
-impl From<SessionError> for AuthError {
-    fn from(error: SessionError) -> Self {
-        match error {
-            SessionError::InvalidAccessToken
-            | SessionError::ExpiredAccessToken
-            | SessionError::InvalidRefreshToken
-            | SessionError::ExpiredRefreshToken
-            | SessionError::SessionRevoked
-            | SessionError::RefreshTokenReused => Self::FailedAuthorization,
-            SessionError::CodecFailure | SessionError::PersistenceFailure => {
-                Self::PersistenceFailure
-            }
-        }
-    }
-}
-
 impl From<DbError> for AuthError {
     fn from(_error: DbError) -> Self {
         Self::PersistenceFailure
     }
 }
-
 impl From<DieselError> for AuthError {
     fn from(error: DieselError) -> Self {
         Self::from(DbError::from(error))
+    }
+}
+impl From<SessionError> for AuthError {
+    fn from(error: SessionError) -> Self {
+        Self::Session(error)
+    }
+}
+impl From<SystemRoleError> for AuthError {
+    fn from(error: SystemRoleError) -> Self {
+        Self::SystemRole(error)
     }
 }
 
@@ -124,6 +119,7 @@ impl From<AuthError> for ApiError {
             AuthError::UsernameTaken => ApiError::Conflict(err.message()),
             AuthError::EmailTaken => ApiError::Conflict(err.message()),
             AuthError::PasswordRejected(violation) => ApiError::BadRequest(violation.message()),
+            AuthError::InvalidAdministrationKey => ApiError::Unauthorized(err.message()),
             AuthError::PasswordConfirmationMismatch => ApiError::BadRequest(err.message()),
 
             AuthError::AccountNotFound => ApiError::NotFound(err.message()),
