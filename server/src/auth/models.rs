@@ -1,23 +1,18 @@
 use rocket::http::Header;
-use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome};
-use rocket::response::{status, Responder};
+use rocket::response::Responder;
 use rocket::serde::json::Json;
 use rocket::Request;
 use rocket::Response;
-use std::env;
-
 use serde::{Deserialize, Serialize};
 
-use jsonwebtoken::{
-    decode, encode, Algorithm, DecodingKey, EncodingKey, Header as JWTHeader, Validation,
-};
-
 use super::error::*;
-use super::password::PasswordManager;
+use super::password::{PasswordManager, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH};
+use super::service::AuthService;
+use crate::auth::session::{AuthCredentials, AuthenticatedPrincipal};
 use crate::db::DbConn;
-use crate::member::models::{Member, MemberSafe, NewMember};
-use crate::member::service::MemberService;
+use crate::member::models::{MemberSafe, NewMember};
+use crate::member::repository::MemberRepository;
 
 #[derive(Serialize, Deserialize, Debug, FromForm)]
 pub struct RegisterInput {
@@ -46,17 +41,17 @@ impl RegisterInput {
         if self.password.ne(&self.confirm_password) {
             return Err(AuthError::PasswordConfirmationMismatch);
         }
-        match MemberService::identity_exists(
+        match MemberRepository::identity_exists(
             conn,
             self.username.to_string(),
             self.email.to_string(),
         ) {
-            Err(err) => Err(AuthError::InternalError(err.to_string())),
+            Err(err) => Err(AuthError::InternalError(format!("{err:?}"))),
             Ok(Some(username)) => {
                 if username == self.username {
-                    return Err(AuthError::UsernameTaken);
+                    Err(AuthError::UsernameTaken)
                 } else {
-                    return Err(AuthError::EmailTaken);
+                    Err(AuthError::EmailTaken)
                 }
             }
             Ok(None) => {
@@ -71,9 +66,32 @@ impl RegisterInput {
 pub struct LoginInput {
     #[field(validate = len(3..=125).or_else(msg!("Usernames are between 3 and 125 characters long.")))]
     pub username: String,
-    #[field(validate = len(MIN_PASSWORD_LENGTH..=MAX_PASSWORD_LENGTH).or_else(msg!(format!("Password are between {MIN_PASSWORD_LENGTH} and {MAX_PASSWORD_LENGTH} characters long."))))]
     pub password: String,
 }
+
+#[derive(Serialize, Deserialize, Debug, FromForm)]
+pub struct ChangePasswordInput {
+    pub current_password: String,
+    #[field(validate = len(MIN_PASSWORD_LENGTH..=MAX_PASSWORD_LENGTH).or_else(msg!(format!("Password must be between {MIN_PASSWORD_LENGTH} and {MAX_PASSWORD_LENGTH} characters long."))))]
+    pub new_password: String,
+    pub confirm_password: String,
+}
+
+pub(crate) struct AuthOutcome {
+    pub member: MemberSafe,
+    pub credentials: AuthCredentials,
+}
+
+// ======================================================
+// Old Implementations
+// ======================================================
+use rocket::http::Status;
+use rocket::response::status;
+use std::env;
+use jsonwebtoken::{
+    decode, encode, Algorithm, DecodingKey, EncodingKey, Header as JWTHeader, Validation,
+};
+use crate::member::models::Member;
 
 // JWT Member Authentication
 #[derive(Debug, Serialize, Deserialize)]
@@ -139,7 +157,7 @@ impl JWT {
         };
         encode(&JWTHeader::new(Algorithm::HS512), &claims, &encoding_key).map_err(|e| {
             log::error!("Error creating JWT token: {}", e);
-            AuthError::TokenCreationFailure
+            AuthError::InternalError("Token creation failure".to_string())
         })
     }
 
