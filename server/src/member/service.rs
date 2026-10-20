@@ -1,194 +1,150 @@
-use chrono::NaiveDateTime;
-use diesel::result::Error;
-use diesel::{
-    BoolExpressionMethods, ExpressionMethods, JoinOnDsl, OptionalExtension,
-    PgTextExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper, TextExpressionMethods,
-};
-use std::collections::HashSet;
+use diesel::Connection;
 
-use crate::chat::models::Chat;
+use crate::auth::system_roles::SystemRoleService;
 use crate::db::DbConn;
-use crate::member::models::{Member, MemberShort, NewMember};
-use crate::models::friend_request::{MultiFriendRequest, RequestDetailed};
-use crate::schema::{
-    chat::dsl as c_dsl, friend::dsl as f_dsl, friend_request::dsl as fr_dsl, member::dsl as m_dsl,
-    member_chat::dsl as mc_dsl, server::dsl as s_dsl, server_membership::dsl as sm_dsl,
-};
-use crate::server::models::Server;
-use crate::service::CrudOps;
+
+use super::error::MemberError;
+use super::models::{MemberChangeset, MemberId, MemberProfile, MemberShort, MultiMemberPreview};
+use super::repository::MemberRepository;
+
+use crate::chat::models::MultiChatPreview;
+use crate::models::friend::FullFriend;
+use crate::models::friend_request::RequestDetailed;
+use crate::models::{friend::MultiFriend, friend_request::MultiFriendRequest};
+use crate::server::models::MultiServer;
 
 pub struct MemberService;
-
-impl CrudOps<NewMember, Member> for MemberService {
-    fn create(conn: &mut DbConn, new_member: NewMember) -> Result<Member, Error> {
-        diesel::insert_into(m_dsl::member)
-            .values(&new_member)
-            .get_result::<Member>(conn)
-    }
-
-    fn read(conn: &mut DbConn, id: i32) -> Result<Member, Error> {
-        let user = m_dsl::member.find(id).first::<Member>(conn).optional()?;
-
-        match user {
-            Some(user) => Ok(user),
-            None => Err(Error::NotFound),
+impl MemberService {
+    /// Member creation ONLY through authenticating Registration route
+    pub fn get(conn: &mut DbConn, member_id: MemberId) -> Result<MemberProfile, MemberError> {
+        if let Some(member) = MemberRepository::find_by_id(conn, member_id)? {
+            Ok(member.into_profile())
+        } else {
+            Err(MemberError::NotFound)
         }
     }
-
-    fn update(conn: &mut DbConn, id: i32, entity: NewMember) -> Result<Member, Error> {
-        let updated_fields = (
-            m_dsl::username.eq(entity.username().to_owned()),
-            m_dsl::email.eq(entity.email().to_owned()),
-        );
-
-        // Update member details by id
-        diesel::update(m_dsl::member.filter(m_dsl::id.eq(id)))
-            .set(updated_fields)
-            .get_result::<Member>(conn)
+    pub fn find_by_id(conn: &mut DbConn, id: MemberId) -> Result<Option<MemberShort>, MemberError> {
+        if let Some(member) = MemberRepository::find_by_id(conn, id)? {
+            Ok(Some(member.into_short()))
+        } else {
+            Ok(None)
+        }
     }
-
-    fn delete(conn: &mut DbConn, id: i32) -> Result<usize, Error> {
-        diesel::delete(m_dsl::member.find(id)).execute(conn)
-    }
-}
-
-impl MemberService {
-    pub fn identity_exists(
+    pub fn find_by_username(
         conn: &mut DbConn,
         username: String,
-        email: String,
-    ) -> Result<Option<String>, Error> {
-        let exists = m_dsl::member
-            .filter(
-                m_dsl::username.eq(username).or(m_dsl::email.eq(email)), // Check if either username or email matches
-            )
-            .select(m_dsl::username)
-            .first::<String>(conn)
-            .optional()?;
-
-        Ok(exists)
-    }
-
-    pub fn search_usernames(
-        conn: &mut DbConn,
-        search_term: String,
-    ) -> Result<Vec<MemberShort>, Error> {
-        let mut unique_members = HashSet::new();
-
-        let mut match_high: Vec<MemberShort> = m_dsl::member
-            .filter(m_dsl::username.like(format!("{}%", search_term)))
-            .select(Member::as_select())
-            .load::<Member>(conn)?
-            .into_iter()
-            .map(|member| member.into_short())
-            .filter(|member| unique_members.insert(member.username.clone())) // Insert into HashSet
-            .collect();
-
-        let match_med: Vec<MemberShort> = m_dsl::member
-            .filter(m_dsl::username.ilike(format!("{}%", search_term)))
-            .select(Member::as_select())
-            .load::<Member>(conn)?
-            .into_iter()
-            .map(|member| member.into_short())
-            .filter(|member| unique_members.insert(member.username.clone())) // Insert into HashSet
-            .collect();
-
-        let match_low: Vec<MemberShort> = m_dsl::member
-            .filter(m_dsl::username.ilike(format!("%{}%", search_term)))
-            .select(Member::as_select())
-            .load::<Member>(conn)?
-            .into_iter()
-            .map(|member| member.into_short())
-            .filter(|member| unique_members.insert(member.username.clone())) // Insert into HashSet
-            .collect();
-
-        match_high.extend(match_med);
-        match_high.extend(match_low);
-        Ok(match_high)
-    }
-    pub fn find_by_username(conn: &mut DbConn, username: String) -> Result<Member, Error> {
-        let member = m_dsl::member
-            .filter(m_dsl::username.eq(username))
-            .first::<Member>(conn)
-            .optional()?;
-
-        match member {
-            Some(user) => Ok(user),
-            None => Err(Error::NotFound),
+    ) -> Result<Option<MemberShort>, MemberError> {
+        if let Some(member) = MemberRepository::find_by_username(conn, &username)? {
+            Ok(Some(member.into_short()))
+        } else {
+            Ok(None)
         }
     }
-    pub fn get_member_servers(conn: &mut DbConn, member_id: i32) -> Result<Vec<Server>, Error> {
-        sm_dsl::server_membership
-            .filter(sm_dsl::member_id.eq(member_id))
-            .inner_join(s_dsl::server.on(sm_dsl::server_id.eq(s_dsl::id)))
-            .select(Server::as_select()) // Select server ID and name
-            .load::<Server>(conn)
+    pub fn search_members(
+        conn: &mut DbConn,
+        search_term: String,
+    ) -> Result<MultiMemberPreview, MemberError> {
+        let search_term = search_term.trim();
+        if search_term.is_empty() {
+            return Err(MemberError::InvalidSearchTerm(
+                "Search term cannot be empty".to_string(),
+            ));
+        }
+        Ok(MultiMemberPreview {
+            members: MemberRepository::search_usernames(conn, search_term.to_owned())?,
+        })
     }
 
-    pub fn get_member_chats(conn: &mut DbConn, member_id: i32) -> Result<Vec<Chat>, Error> {
-        mc_dsl::member_chat
-            .filter(mc_dsl::member_id.eq(member_id))
-            .inner_join(c_dsl::chat.on(mc_dsl::chat_id.eq(c_dsl::id)))
-            .select(Chat::as_select())
-            .load::<Chat>(conn)
+    pub fn update(
+        conn: &mut DbConn,
+        member_id: MemberId,
+        input: MemberChangeset,
+    ) -> Result<MemberProfile, MemberError> {
+        let input = input.normalize_and_validate()?;
+        conn.transaction(|conn| {
+            if let Some(username) = MemberRepository::identity_exists_excluding(
+                conn,
+                member_id,
+                input.username.as_deref().unwrap_or(""),
+                input.email.as_deref().unwrap_or(""),
+            )? {
+                if username == input.username.as_deref().unwrap_or("") {
+                    return Err(MemberError::UsernameTaken);
+                } else {
+                    return Err(MemberError::EmailTaken);
+                }
+            };
+            let updated_member = MemberRepository::update(conn, member_id, input)?;
+            Ok(updated_member.into_profile())
+        })
+    }
+
+    pub fn delete(conn: &mut DbConn, member_id: MemberId) -> Result<(), MemberError> {
+        conn.transaction::<(), MemberError, _>(|conn| {
+            if !SystemRoleService::validate_member_deletion(conn, member_id)? {
+                return Err(MemberError::CannotDeleteLastAdministrator);
+            }
+            if MemberRepository::delete(conn, member_id)? {
+                Ok(())
+            } else {
+                Err(MemberError::NotFound)
+            }
+        })
+    }
+
+    // TODO: Migrate into associated service for chats, servers, and friends
+    pub fn get_member_chats(
+        conn: &mut DbConn,
+        member_id: MemberId,
+    ) -> Result<MultiChatPreview, MemberError> {
+        Ok(MultiChatPreview {
+            chat_previews: MemberRepository::get_member_chats(conn, member_id)?,
+        })
+    }
+
+    pub fn get_all_member_servers(
+        conn: &mut DbConn,
+        member_id: MemberId,
+    ) -> Result<MultiServer, MemberError> {
+        Ok(MultiServer {
+            servers: MemberRepository::get_member_servers(conn, member_id)?,
+        })
     }
 
     pub fn get_member_friends(
         conn: &mut DbConn,
-        member_id: i32,
-    ) -> Result<Vec<(NaiveDateTime, Member)>, Error> {
-        f_dsl::friend
-            .filter(
-                f_dsl::member_id.eq(member_id)
-                    .or(f_dsl::friend_id.eq(member_id))  // Find all friend relationships
-            )
-            .inner_join(m_dsl::member.on(
-                // Join with the member table on the friend’s ID
-                diesel::dsl::sql::<diesel::sql_types::Bool>("CASE WHEN friend.member_id = $1 THEN friend.friend_id = member.id ELSE friend.member_id = member.id END")
-            ))
-            .select((f_dsl::created_at, Member::as_select()))  // Select server ID and name
-            .load::<(NaiveDateTime, Member)>(conn)
+        member_id: MemberId,
+    ) -> Result<MultiFriend, MemberError> {
+        Ok(MultiFriend {
+            friends: MemberRepository::get_member_friends(conn, member_id)?
+                .into_iter()
+                .map(|(created_at, member)| FullFriend { member, created_at })
+                .collect::<Vec<FullFriend>>(),
+        })
     }
 
-    pub fn get_member_requests(
+    pub fn get_friend_requests(
         conn: &mut DbConn,
-        member_id: i32,
-    ) -> Result<MultiFriendRequest, Error> {
-        let incoming: Vec<RequestDetailed> = fr_dsl::friend_request
-            .filter(fr_dsl::receiver_id.eq(member_id))
-            .inner_join(m_dsl::member.on(m_dsl::id.eq(fr_dsl::sender_id)))
-            .select((fr_dsl::created_at, fr_dsl::note, Member::as_select()))
-            .load::<(NaiveDateTime, Option<String>, Member)>(conn)?
-            .into_iter()
-            .map(|entry| RequestDetailed {
-                member: entry.2,
-                note: entry.1,
-                created_at: entry.0,
-            })
-            .collect::<Vec<RequestDetailed>>();
-
-        let outgoing: Vec<RequestDetailed> = fr_dsl::friend_request
-            .filter(fr_dsl::sender_id.eq(member_id))
-            .inner_join(m_dsl::member.on(m_dsl::id.eq(fr_dsl::receiver_id)))
-            .select((fr_dsl::created_at, fr_dsl::note, Member::as_select()))
-            .load::<(NaiveDateTime, Option<String>, Member)>(conn)?
-            .into_iter()
-            .map(|entry| RequestDetailed {
-                member: entry.2,
-                note: entry.1,
-                created_at: entry.0,
-            })
-            .collect::<Vec<RequestDetailed>>();
-
-        Ok(MultiFriendRequest { incoming, outgoing })
-    }
-
-    pub fn update_password(conn: &mut DbConn, id: i32, new_pass: String) -> Result<Member, Error> {
-        let updated_fields = (m_dsl::password.eq(new_pass.to_owned()),);
-
-        // Update member details by id
-        diesel::update(m_dsl::member.filter(m_dsl::id.eq(id)))
-            .set(updated_fields)
-            .get_result::<Member>(conn)
+        member_id: MemberId,
+    ) -> Result<MultiFriendRequest, MemberError> {
+        let (incoming, outgoing) = MemberRepository::get_member_requests(conn, member_id)?;
+        Ok(MultiFriendRequest {
+            incoming: incoming
+                .into_iter()
+                .map(|entry| RequestDetailed {
+                    member: entry.2,
+                    note: entry.1,
+                    created_at: entry.0,
+                })
+                .collect::<Vec<RequestDetailed>>(),
+            outgoing: outgoing
+                .into_iter()
+                .map(|entry| RequestDetailed {
+                    member: entry.2,
+                    note: entry.1,
+                    created_at: entry.0,
+                })
+                .collect::<Vec<RequestDetailed>>(),
+        })
     }
 }

@@ -37,6 +37,23 @@ impl MemberRepository {
             .optional()
             .map_err(DbError::from)
     }
+    pub(crate) fn identity_exists_excluding(
+        conn: &mut DbConn,
+        member_id: MemberId,
+        username: &str,
+        email: &str,
+    ) -> Result<Option<String>, DbError> {
+        m_dsl::member
+            .filter(
+                m_dsl::id
+                    .ne(member_id)
+                    .and(m_dsl::username.eq(username).or(m_dsl::email.eq(email))), // Check if either username or email matches, excluding the current member
+            )
+            .select(m_dsl::username)
+            .first::<String>(conn)
+            .optional()
+            .map_err(DbError::from)
+    }
     pub(crate) fn create(conn: &mut DbConn, new_member: NewMember) -> Result<Member, DbError> {
         diesel::insert_into(m_dsl::member)
             .values(&new_member)

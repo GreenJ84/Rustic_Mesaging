@@ -15,6 +15,7 @@ use super::repository::SystemRoleRepository;
 /// Business policy for the platform's single-role hierarchy.
 pub(crate) struct SystemRoleService;
 
+// Role Management Operations ==========================
 impl SystemRoleService {
     pub(crate) fn create_role(
         conn: &mut DbConn,
@@ -72,7 +73,9 @@ impl SystemRoleService {
             Ok(())
         })
     }
-
+}
+// Role Assignment Operations ==========================
+impl SystemRoleService {
     pub(crate) fn issue_registration_role(
         conn: &mut DbConn,
         member_id: MemberId,
@@ -181,6 +184,21 @@ impl SystemRoleService {
             return Err(SystemRoleError::ConfigurationFailure);
         };
         Self::assign_role(conn, actor_id, member_id, role_id)
+    }
+
+    pub(crate) fn validate_member_deletion(
+        conn: &mut DbConn,
+        member_id: MemberId,
+    ) -> Result<bool, SystemRoleError> {
+        SystemRoleRepository::lock_member_assignment(conn, member_id)?;
+        let member_role = SystemRoleRepository::get_member_role(conn, member_id)?
+            .ok_or(SystemRoleError::AssignmentNotFound)?;
+        if member_role.authority_level == BuiltInSystemRole::Admin.authority_level()
+            && SystemRoleRepository::last_admin_check(conn)?
+        {
+            return Ok(false);
+        }
+        Ok(true)
     }
 }
 
