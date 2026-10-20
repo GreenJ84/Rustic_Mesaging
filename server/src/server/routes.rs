@@ -9,7 +9,7 @@ use super::models::{MultiServer, NewServer, Server};
 use super::service::ServerService;
 use crate::auth::models::JWT;
 use crate::db::{get_db_connection, DbConn, DbPool};
-use crate::member::models::{MemberSafe, MultiMember};
+use crate::member::models::{MemberProfile, MultiMember};
 use crate::models::channel::MultiChannel;
 use crate::models::server_membership::NewServerMembership;
 use crate::routes::CustomResponse;
@@ -178,8 +178,8 @@ pub fn get_server_members(
         Ok(members) => {
             let safe_members = members
                 .into_iter()
-                .map(|member| member.into_safe())
-                .collect::<Vec<MemberSafe>>();
+                .map(|member| member.into_profile())
+                .collect::<Vec<MemberProfile>>();
             Ok(status::Custom(
                 Status::Ok,
                 MultiMember {

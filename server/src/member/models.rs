@@ -101,7 +101,7 @@ pub(crate) struct MemberChangeset {
 }
 
 // Data Transfer Objects ==========================
-#[derive(Serialize, Deserialize, QueryableByName, Debug, Clone)]
+#[derive(Serialize, Deserialize, Queryable, Selectable, Debug, Clone)]
 #[diesel(table_name = member)]
 pub struct MemberProfile {
     pub id: MemberId,

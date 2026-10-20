@@ -78,7 +78,7 @@ impl AuthService {
         metadata: SessionMetadata,
     ) -> Result<AuthOutcome, AuthError> {
         let mut conn = Db::connect(&self.pool)?;
-        let member = MemberRepository::find_by_username(&mut conn, input.username)?
+        let member = MemberRepository::find_by_username(&mut conn, &input.username)?
             .ok_or(AuthError::InvalidCredentials)?;
         PasswordManager::verify(&input.password, member.password_hash())?;
         Self::require_role(&mut conn, member.id(), BuiltInSystemRole::User)?;

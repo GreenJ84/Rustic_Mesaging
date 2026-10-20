@@ -43,8 +43,8 @@ impl RegisterInput {
         }
         match MemberRepository::identity_exists(
             conn,
-            self.username.to_string(),
-            self.email.to_string(),
+            &self.username,
+            &self.email,
         ) {
             Err(err) => Err(AuthError::InternalError(format!("{err:?}"))),
             Ok(Some(username)) => {
