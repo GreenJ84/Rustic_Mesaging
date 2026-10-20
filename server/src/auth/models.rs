@@ -11,7 +11,7 @@ use super::password::{PasswordManager, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH}
 use super::service::AuthService;
 use crate::auth::session::{AuthCredentials, AuthenticatedPrincipal};
 use crate::db::DbConn;
-use crate::member::models::{MemberSafe, NewMember};
+use crate::member::models::{MemberProfile, NewMember};
 use crate::member::repository::MemberRepository;
 
 #[derive(Serialize, Deserialize, Debug, FromForm)]
@@ -78,7 +78,7 @@ pub struct ChangePasswordInput {
 }
 
 pub(crate) struct AuthOutcome {
-    pub member: MemberSafe,
+    pub member: MemberProfile,
     pub credentials: AuthCredentials,
 }
 
@@ -152,7 +152,7 @@ impl JWT {
 
         let claims = JwtClaims {
             member_id: member.id(),
-            is_admin: member.is_admin(),
+            is_admin: false,
             exp: (chrono::Utc::now() + chrono::Duration::days(1)).timestamp() as usize,
         };
         encode(&JWTHeader::new(Algorithm::HS512), &claims, &encoding_key).map_err(|e| {
@@ -202,7 +202,7 @@ impl<'r> FromRequest<'r> for AdminKey {
 // Response
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AuthenticationResponse {
-    pub member: MemberSafe,
+    pub member: MemberProfile,
     pub token: String, // String JWT encoding
 }
 impl<'r> Responder<'r, 'r> for AuthenticationResponse {

@@ -34,9 +34,9 @@ pub fn create(
             ResponseMessage {
                 id: message.id(),
                 content: message.content().to_string(),
-                sender: MemberService::read(&mut conn, token.claims.member_id)
+                sender: MemberService::find_by_id(&mut conn, token.claims.member_id)
                     .unwrap()
-                    .into_short(),
+                    .unwrap(),
                 created_at: message.created_at(),
             },
         )),
@@ -75,9 +75,9 @@ pub fn get(token: JWT, pool: &State<DbPool>, message_id: i32) -> CustomResponse<
             ResponseMessage {
                 id: message.id(),
                 content: message.content().to_string(),
-                sender: MemberService::read(&mut conn, token.claims.member_id)
+                sender: MemberService::find_by_id(&mut conn, token.claims.member_id)
                     .unwrap()
-                    .into_short(),
+                    .unwrap(),
                 created_at: message.created_at(),
             },
         )),
@@ -120,9 +120,9 @@ pub fn update(
             ResponseMessage {
                 id: message.id(),
                 content: message.content().to_string(),
-                sender: MemberService::read(&mut conn, token.claims.member_id)
+                sender: MemberService::find_by_id(&mut conn, token.claims.member_id)
                     .unwrap()
-                    .into_short(),
+                    .unwrap(),
                 created_at: message.created_at(),
             },
         )),

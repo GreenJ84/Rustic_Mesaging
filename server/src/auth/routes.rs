@@ -1,6 +1,7 @@
 use rocket::form::{Form, Strict};
 use rocket::http::{Cookie, CookieJar, SameSite, Status};
 use rocket::response::status;
+use rocket::serde::json::Json;
 use rocket::State;
 
 use super::service::AuthService;
@@ -10,7 +11,7 @@ use crate::auth::models::{
     AuthOutcome, AuthenticationResponse, ChangePasswordInput, LoginInput, RegisterInput,
 };
 use crate::auth::session::AuthenticatedPrincipal;
-use crate::member::models::{MemberId, MemberSafe};
+use crate::member::models::{MemberId, MemberProfile};
 
 const REFRESH_COOKIE: &str = "refresh_token";
 
@@ -103,7 +104,7 @@ pub(crate) fn update_password(
 pub(crate) fn current_member(
     service: &State<AuthService>,
     principal: AuthenticatedPrincipal,
-) -> Result<MemberSafe, ApiError> {
+) -> Result<MemberProfile, ApiError> {
     service.current_member(&principal).map_err(ApiError::from)
 }
 

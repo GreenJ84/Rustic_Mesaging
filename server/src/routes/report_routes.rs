@@ -7,7 +7,6 @@ use rocket::State;
 
 use crate::auth::models::JWT;
 use crate::db::{get_db_connection, DbConn, DbPool};
-use crate::member::models::MemberSafe;
 use crate::member::service::MemberService;
 use crate::models::report::{
     ActivityReportItem, CsvDownload, ServerMemberReportCsv, ServerMemberReportItem,

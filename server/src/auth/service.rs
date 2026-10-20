@@ -2,7 +2,7 @@ use diesel::Connection;
 
 use crate::db::{Db, DbError, DbPool, DieselError};
 use crate::id_generator::IdGenerator;
-use crate::member::models::{MemberId, MemberSafe};
+use crate::member::models::{MemberId, MemberProfile};
 use crate::member::repository::MemberRepository;
 
 use super::error::AuthError;
@@ -66,7 +66,7 @@ impl AuthService {
                 self.sessions
                     .issue(conn, session_id, family_id, member.id(), metadata)?;
             Ok(AuthOutcome {
-                member: member.into_safe(),
+                member: member.into_profile(),
                 credentials,
             })
         })
@@ -80,7 +80,7 @@ impl AuthService {
         let mut conn = Db::connect(&self.pool)?;
         let member = MemberRepository::find_by_username(&mut conn, input.username)?
             .ok_or(AuthError::InvalidCredentials)?;
-        PasswordManager::verify(&input.password, member.password())?;
+        PasswordManager::verify(&input.password, member.password_hash())?;
         Self::require_role(&mut conn, member.id(), BuiltInSystemRole::User)?;
 
         let credentials = self.sessions.issue(
@@ -91,7 +91,7 @@ impl AuthService {
             metadata,
         )?;
         Ok(AuthOutcome {
-            member: member.into_safe(),
+            member: member.into_profile(),
             credentials,
         })
     }
@@ -115,7 +115,7 @@ impl AuthService {
         )?;
 
         Ok(AuthOutcome {
-            member: member.into_safe(),
+            member: member.into_profile(),
             credentials,
         })
     }
@@ -174,7 +174,7 @@ impl AuthService {
         let mut conn = Db::connect(&self.pool)?;
         let member = MemberRepository::find_by_id(&mut conn, principal.member_id)?
             .ok_or(AuthError::AccountNotFound)?;
-        PasswordManager::verify(&input.current_password, member.password())?;
+        PasswordManager::verify(&input.current_password, member.password_hash())?;
         PasswordManager::validate_candidate(
             &input.new_password,
             member.username(),
@@ -183,10 +183,10 @@ impl AuthService {
         let password_hash = PasswordManager::hash(&input.new_password)?;
 
         conn.transaction(|conn| {
-            if !MemberRepository::update_password_if_current(
+            if !MemberRepository::update_password(
                 conn,
                 principal.member_id,
-                member.password(),
+                member.password_hash(),
                 password_hash,
             )? {
                 return Err(AuthError::InvalidCredentials);
@@ -199,11 +199,11 @@ impl AuthService {
     pub(crate) fn current_member(
         &self,
         principal: &AuthenticatedPrincipal,
-    ) -> Result<MemberSafe, AuthError> {
+    ) -> Result<MemberProfile, AuthError> {
         let mut conn = Db::connect(&self.pool)?;
         Self::require_role(&mut conn, principal.member_id, BuiltInSystemRole::User)?;
         MemberRepository::find_by_id(&mut conn, principal.member_id)?
-            .map(|member| member.into_safe())
+            .map(|member| member.into_profile())
             .ok_or(AuthError::AccountNotFound)
     }
 

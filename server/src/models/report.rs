@@ -1,4 +1,4 @@
-use crate::member::models::{MemberSafe, MemberShort};
+use crate::member::models::{MemberProfile, MemberShort};
 use chrono::NaiveDateTime;
 use diesel::sql_types::{Text, Timestamp};
 use diesel::{Queryable, QueryableByName};
@@ -28,7 +28,7 @@ pub(crate) struct ActivityReportItem {
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub(crate) struct ServerMemberReportItem {
     #[diesel(embed)]
-    pub(crate) member: MemberSafe,
+    pub(crate) member: MemberProfile,
     #[sql_type = "Timestamp"]
     pub(crate) timestamp: NaiveDateTime,
 }
@@ -39,20 +39,18 @@ pub struct ServerMemberReportCsv {
     username: String,
     email: String,
     avatar: Option<String>,
-    is_admin: bool,
     created_at: NaiveDateTime,
     joined_at: NaiveDateTime,
 }
 impl ServerMemberReportCsv {
     pub fn from_report_item(item: ServerMemberReportItem) -> Self {
         Self {
-            id: item.member.id(),
-            username: item.member.username().to_string(),
-            email: item.member.email().to_string(),
-            avatar: item.member.avatar().clone(),
-            is_admin: item.member.is_admin(),
-            created_at: item.member.created_at(),
-            joined_at: Default::default(),
+            id: item.member.id,
+            username: item.member.username,
+            email: item.member.email,
+            avatar: item.member.avatar,
+            created_at: item.member.created_at,
+            joined_at: item.timestamp,
         }
     }
 }
