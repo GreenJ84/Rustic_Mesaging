@@ -54,7 +54,7 @@ impl ChatService {
                 ms_dsl::created_at,
             ))
             .order_by(ms_dsl::created_at.desc())
-            .load::<(i32, String, (i32, String, Option<String>), NaiveDateTime)>(conn)?
+            .load::<(i32, String, (i32, String, String), NaiveDateTime)>(conn)?
             .into_iter()
             .map(
                 |(id, content, (sender_id, username, avatar), created_at)| ResponseMessage {
@@ -79,7 +79,7 @@ impl ChatService {
             .inner_join(m_dsl::member.on(mc_dsl::member_id.eq(m_dsl::id)))
             .select((m_dsl::id, m_dsl::username, m_dsl::avatar, mc_dsl::joined_at))
             .order_by(mc_dsl::joined_at.asc())
-            .load::<(i32, String, Option<String>, NaiveDateTime)>(conn)?
+            .load::<(i32, String, String, NaiveDateTime)>(conn)?
             .into_iter()
             .map(|(id, username, avatar, _)| MemberShort {
                 id,

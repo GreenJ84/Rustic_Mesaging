@@ -38,7 +38,7 @@ pub struct ServerMemberReportCsv {
     id: i32,
     username: String,
     email: String,
-    avatar: Option<String>,
+    avatar: String,
     created_at: NaiveDateTime,
     joined_at: NaiveDateTime,
 }

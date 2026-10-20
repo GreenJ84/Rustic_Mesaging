@@ -80,7 +80,6 @@ impl ReportService {
                 m.username as username,
                 m.email as email,
                 m.avatar as avatar,
-                m.is_admin as is_admin,
                 m.created_at as created_at,
                 sm.joined_at as timestamp
             FROM

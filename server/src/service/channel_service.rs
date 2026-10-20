@@ -75,7 +75,7 @@ impl ChannelService {
             .load::<(
                 i32,
                 String,
-                (i32, String, Option<String>),
+                (i32, String, String),
                 i32,
                 NaiveDateTime,
             )>(conn)?
