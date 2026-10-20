@@ -1,208 +1,141 @@
-use crate::schema::member;
-
 use chrono::NaiveDateTime;
-use diesel::sql_types::{Bool, Integer, Nullable, Text, Timestamp};
+use diesel::sql_types::{Integer, Nullable, Text, Timestamp};
+use diesel::AsChangeset;
 use diesel::{Identifiable, Insertable, Queryable, QueryableByName, Selectable};
-use rand::seq::IteratorRandom;
 use rocket::response::Responder;
 use rocket::serde::json::Json;
 use rocket::Response;
 use serde::{Deserialize, Serialize};
 
-#[derive(Insertable, Serialize, Deserialize, Debug, FromForm)]
+use crate::schema::member;
+
+// Data Models ==========================
+#[derive(Insertable)]
 #[diesel(table_name = member)]
-pub struct NewMember {
+pub(crate) struct NewMember {
     username: String,
-    password: String,
+    password_hash: String,
     email: String,
-    avatar: Option<String>,
-    is_admin: bool,
 }
 impl NewMember {
     pub fn username(&self) -> &str {
         &self.username
     }
-    pub fn password(&self) -> &str {
-        &self.password
+    pub fn password_hash(&self) -> &str {
+        &self.password_hash
     }
     pub fn email(&self) -> &str {
         &self.email
     }
-    pub fn avatar(&self) -> &Option<String> {
-        &self.avatar
-    }
-    pub fn is_admin(&self) -> &bool {
-        &self.is_admin
-    }
-    pub fn set_admin(&mut self) {
-        self.is_admin = true;
-    }
 
-    pub fn new(username: String, password: String, email: String) -> Self {
-        let avatar = vec![
-            "mouse",
-            "panda",
-            "bear",
-            "bunny",
-            "dog",
-            "gorilla",
-            "koala",
-            "robot",
-            "astronaut",
-            "cat",
-            "eagle",
-            "pikachu",
-            "default",
-        ]
-        .into_iter()
-        .map(|i| i.to_string())
-        // .collect::<Vec<String>>()
-        .choose(&mut rand::thread_rng())
-        .unwrap_or(String::from("default"))
-        .to_owned();
-
+    pub fn new(username: String, password_hash: String, email: String) -> Self {
         Self {
             username,
-            password,
+            password_hash,
             email,
-            avatar: Some(avatar),
-            is_admin: false,
         }
     }
 }
 
-#[derive(Identifiable, Queryable, Selectable, Serialize, Deserialize, Debug)]
+pub type MemberId = i32;
+
+#[derive(Identifiable, Queryable, Selectable)]
 #[diesel(table_name = member)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct Member {
+pub(crate) struct Member {
     #[diesel(sql_type = Int4)]
-    id: i32,
+    id: MemberId,
     #[diesel(sql_type = Text)]
     username: String,
     #[diesel(sql_type = Text)]
-    password: String,
+    password_hash: String,
     #[diesel(sql_type = Text)]
     email: String,
     #[diesel(sql_type = Nullable<Text>)]
     avatar: Option<String>,
-    #[diesel(sql_type = Bool)]
-    is_admin: bool,
     #[diesel(sql_type = Timestamp)]
     created_at: NaiveDateTime,
 }
-impl<'r> Responder<'r, 'r> for Member {
-    fn respond_to(self, req: &'r rocket::Request<'_>) -> rocket::response::Result<'r> {
-        Response::build_from(Json(self).respond_to(req)?).ok()
-    }
-}
 impl Member {
     // Encapsulation (Getter for id)
-    pub fn id(&self) -> i32 {
+    pub fn id(&self) -> MemberId {
         self.id
     }
     pub fn username(&self) -> &str {
         &self.username
     }
-    pub fn password(&self) -> &str {
-        &self.password
+    pub fn password_hash(&self) -> &str {
+        &self.password_hash
     }
     pub fn email(&self) -> &str {
         &self.email
     }
-    pub fn avatar(&self) -> &Option<String> {
-        &self.avatar
-    }
-    pub fn is_admin(&self) -> bool {
-        self.is_admin
+    pub fn avatar(&self) -> Option<&str> {
+        self.avatar.as_deref()
     }
 
-    pub fn into_safe(self) -> MemberSafe {
-        MemberSafe {
+    pub fn into_profile(self) -> MemberProfile {
+        MemberProfile {
             id: self.id,
-            username: self.username.clone(),
-            email: self.email.clone(),
-            avatar: self.avatar.clone(),
-            is_admin: self.is_admin,
+            username: self.username,
+            email: self.email,
+            avatar: self.avatar,
             created_at: self.created_at,
         }
     }
     pub fn into_short(self) -> MemberShort {
         MemberShort {
             id: self.id,
-            username: self.username.clone(),
-            avatar: self.avatar.clone(),
+            username: self.username,
+            avatar: self.avatar,
         }
     }
 }
 
-// API Response Types
-#[derive(Serialize, QueryableByName, Deserialize, Debug, Clone)]
-pub struct MemberSafe {
-    #[diesel(sql_type = Integer)]
-    pub(crate) id: i32,
-    #[diesel(sql_type = Text)]
-    username: String,
-    #[diesel(sql_type = Text)]
-    email: String,
-    #[diesel(sql_type = Nullable<Text>)]
-    avatar: Option<String>,
-    #[diesel(sql_type = Bool)]
-    is_admin: bool,
-    #[diesel(sql_type = Timestamp)]
-    created_at: NaiveDateTime,
+#[derive(AsChangeset, Debug, FromForm)]
+#[diesel(table_name = member)]
+pub(crate) struct MemberChangeset {
+    pub username: Option<String>,
+    pub email: Option<String>,
+    pub avatar: Option<String>,
 }
-impl MemberSafe {
-    pub fn id(&self) -> i32 {
-        self.id
-    }
-    pub fn username(&self) -> &str {
-        &self.username
-    }
-    pub fn email(&self) -> &str {
-        &self.email
-    }
-    pub fn avatar(&self) -> &Option<String> {
-        &self.avatar
-    }
-    pub fn is_admin(&self) -> bool {
-        self.is_admin
-    }
-    pub fn created_at(&self) -> NaiveDateTime {
-        self.created_at
-    }
+
+// Data Transfer Objects ==========================
+#[derive(Serialize, Deserialize, QueryableByName, Debug, Clone)]
+#[diesel(table_name = member)]
+pub struct MemberProfile {
+    pub id: MemberId,
+    pub username: String,
+    pub email: String,
+    pub avatar: Option<String>,
+    pub created_at: NaiveDateTime,
 }
-impl<'r> Responder<'r, 'r> for MemberSafe {
+impl<'r> Responder<'r, 'r> for MemberProfile {
     fn respond_to(self, req: &'r rocket::Request<'_>) -> rocket::response::Result<'r> {
         Response::build_from(Json(self).respond_to(req)?).ok()
     }
 }
-#[derive(Serialize, Debug)]
-pub struct MultiMember {
-    pub(crate) members: Vec<MemberSafe>,
-}
-impl<'r> Responder<'r, 'r> for MultiMember {
-    fn respond_to(self, req: &'r rocket::Request<'_>) -> rocket::response::Result<'static> {
-        Response::build_from(Json(self).respond_to(req)?).ok()
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Queryable, Selectable, Debug, Clone)]
+#[diesel(table_name = member)]
 pub struct MemberShort {
-    pub(crate) id: i32,
-    pub(crate) username: String,
-    pub(crate) avatar: Option<String>,
+    pub id: MemberId,
+    pub username: String,
+    pub avatar: Option<String>,
 }
 impl<'r> Responder<'r, 'r> for MemberShort {
     fn respond_to(self, req: &'r rocket::Request<'_>) -> rocket::response::Result<'r> {
         Response::build_from(Json(self).respond_to(req)?).ok()
     }
 }
-#[derive(Serialize, Debug)]
-pub struct MultiMemberPreview {
-    pub(crate) members: Vec<MemberShort>,
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct MemberList<T> {
+    pub members: Vec<T>,
 }
-impl<'r> Responder<'r, 'r> for MultiMemberPreview {
+impl<'r, T: Serialize> Responder<'r, 'r> for MemberList<T> {
     fn respond_to(self, req: &'r rocket::Request<'_>) -> rocket::response::Result<'static> {
         Response::build_from(Json(self).respond_to(req)?).ok()
     }
 }
+pub type MultiMember = MemberList<MemberProfile>;
+pub type MultiMemberPreview = MemberList<MemberShort>;
