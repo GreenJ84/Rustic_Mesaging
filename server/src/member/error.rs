@@ -1,4 +1,7 @@
-use crate::db::{DbError, DieselError};
+use crate::{
+    auth::system_roles::SystemRoleError,
+    db::{DbError, DieselError},
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MemberError {
@@ -9,6 +12,7 @@ pub enum MemberError {
     InvalidChangeset(String),
     InvalidSearchTerm(String),
 
+    SystemRoleError(SystemRoleError),
     CannotDeleteLastAdministrator,
     DeletionBlocked,
 
@@ -29,5 +33,15 @@ impl From<DbError> for MemberError {
 
             _ => Self::PersistenceFailure,
         }
+    }
+}
+impl From<SystemRoleError> for MemberError {
+    fn from(error: SystemRoleError) -> Self {
+        Self::SystemRoleError(error)
+    }
+}
+impl From<DieselError> for MemberError {
+    fn from(error: DieselError) -> Self {
+        DbError::from(error).into()
     }
 }
