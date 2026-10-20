@@ -13,7 +13,7 @@ INSERT INTO member (username, password_hash, email, avatar, created_at) VALUES
 ('NebulaEagle', '$argon2id$v=19$m=19456,t=2,p=1$vJmdrzcO9rD6q0IdN8Fj9g$uY/Ov/6HsPSE8+cr5BVNAstEjv5rYaecQpbnX8Uj6rw', 'nebulaeagle@example.com', 'gorilla', '2024-01-09 18:00:00'),
 ('AquaDragon', '$argon2id$v=19$m=19456,t=2,p=1$vJmdrzcO9rD6q0IdN8Fj9g$uY/Ov/6HsPSE8+cr5BVNAstEjv5rYaecQpbnX8Uj6rw', 'aquadragon@example.com', 'eagle', '2024-01-10 19:00:00'),
 ('CrimsonLynx', '$argon2id$v=19$m=19456,t=2,p=1$vJmdrzcO9rD6q0IdN8Fj9g$uY/Ov/6HsPSE8+cr5BVNAstEjv5rYaecQpbnX8Uj6rw', 'crimsonlynx@example.com', 'astronaut', '2024-01-11 20:00:00'),
-('SilverPhoenix', '$argon2id$v=19$m=19456,t=2,p=1$vJmdrzcO9rD6q0IdN8Fj9g$uY/Ov/6HsPSE8+cr5BVNAstEjv5rYaecQpbnX8Uj6rw', 'silverphoenix@example.com', NULL, '2024-01-12 21:00:00'),
+('SilverPhoenix', '$argon2id$v=19$m=19456,t=2,p=1$vJmdrzcO9rD6q0IdN8Fj9g$uY/Ov/6HsPSE8+cr5BVNAstEjv5rYaecQpbnX8Uj6rw', 'silverphoenix@example.com', 'default', '2024-01-12 21:00:00'),
 ('VortexRaven', '$argon2id$v=19$m=19456,t=2,p=1$vJmdrzcO9rD6q0IdN8Fj9g$uY/Ov/6HsPSE8+cr5BVNAstEjv5rYaecQpbnX8Uj6rw', 'vortexraven@example.com', 'mouse', '2024-01-13 22:00:00'),
 ('GreenJ', '$argon2id$v=19$m=19456,t=2,p=1$vJmdrzcO9rD6q0IdN8Fj9g$uY/Ov/6HsPSE8+cr5BVNAstEjv5rYaecQpbnX8Uj6rw', 'jg@gmail.com', 'panda', '2024-01-16 10:00:00'),
 ('EclipseLion', '$argon2id$v=19$m=19456,t=2,p=1$vJmdrzcO9rD6q0IdN8Fj9g$uY/Ov/6HsPSE8+cr5BVNAstEjv5rYaecQpbnX8Uj6rw', 'eclipselion@example.com', 'robot', '2024-01-14 23:00:00');
