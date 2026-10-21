@@ -195,23 +195,41 @@ impl MemberRepository {
         member_id: i32,
     ) -> Result<
         (
-            Vec<(NaiveDateTime, Option<String>, MemberProfile)>,
-            Vec<(NaiveDateTime, Option<String>, MemberProfile)>,
+            Vec<(NaiveDateTime, Option<String>, MemberShort)>,
+            Vec<(NaiveDateTime, Option<String>, MemberShort)>,
         ),
         DbError,
     > {
         let incoming = fr_dsl::friend_request
             .filter(fr_dsl::receiver_id.eq(member_id))
             .inner_join(m_dsl::member.on(m_dsl::id.eq(fr_dsl::sender_id)))
-            .select((fr_dsl::created_at, fr_dsl::note, MemberProfile::as_select()))
-            .load::<(NaiveDateTime, Option<String>, MemberProfile)>(conn)?;
+            .select((fr_dsl::created_at, fr_dsl::note, MemberShort::as_select()))
+            .load::<(NaiveDateTime, Option<String>, MemberShort)>(conn)?;
 
         let outgoing = fr_dsl::friend_request
             .filter(fr_dsl::sender_id.eq(member_id))
             .inner_join(m_dsl::member.on(m_dsl::id.eq(fr_dsl::receiver_id)))
-            .select((fr_dsl::created_at, fr_dsl::note, MemberProfile::as_select()))
-            .load::<(NaiveDateTime, Option<String>, MemberProfile)>(conn)?;
+            .select((fr_dsl::created_at, fr_dsl::note, MemberShort::as_select()))
+            .load::<(NaiveDateTime, Option<String>, MemberShort)>(conn)?;
 
         Ok((incoming, outgoing))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::MemberRepository;
+
+    #[test]
+    fn escapes_like_wildcards_and_escape_characters() {
+        assert_eq!(
+            MemberRepository::escape_like_pattern(r"50%_off\today"),
+            r"50\%\_off\\today"
+        );
+    }
+
+    #[test]
+    fn leaves_plain_search_terms_unchanged() {
+        assert_eq!(MemberRepository::escape_like_pattern("alice"), "alice");
     }
 }
