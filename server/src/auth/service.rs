@@ -1,5 +1,6 @@
-use diesel::Connection;
+use diesel::{Connection, connection};
 
+use crate::auth::system_roles::SystemRoleId;
 use crate::database::{Database, DbError, DbConn, DieselError};
 use crate::id_generator::IdGenerator;
 use crate::member::models::{MemberId, MemberProfile};
@@ -10,7 +11,7 @@ use super::models::{AuthOutcome, ChangePasswordInput, LoginInput, RegisterInput}
 use super::password::PasswordManager;
 use super::session::{AuthenticatedPrincipal, SessionConfig, SessionMetadata, SessionService};
 use super::system_roles::{
-    BuiltInSystemRole, RegistrationRoleKind, SystemRoleError, SystemRoleService,
+    BuiltInSystemRole, RegistrationRoleKind, SystemRoleError, SystemRoleService, SystemRole
 };
 
 /// Top-level authentication service. It owns connection acquisition and
@@ -241,4 +242,99 @@ fn map_registration_write_error(error: DbError) -> AuthError {
         };
     }
     AuthError::PersistenceFailure
+}
+
+impl AuthService {
+    pub(crate) fn create_role(
+        &self,
+        requested_name: &str,
+        authority_level: i32,
+    ) -> Result<SystemRole, SystemRoleError> {
+        let mut conn = self.database.get_connection()?;
+        Ok(SystemRoleService::create_role(&mut conn, requested_name, authority_level)?)
+    }
+
+    pub(crate) fn get_roles(&self) -> Result<Vec<SystemRole>, SystemRoleError> {
+        let mut conn = self.database.get_connection()?;
+        Ok(SystemRoleService::get_roles(&mut conn)?)
+    }
+    
+    pub(crate) fn update_role(
+        &self,
+        role_id: SystemRoleId,
+        requested_name: &str,
+        authority_level: i32,
+    ) -> Result<SystemRole, SystemRoleError> {
+        let mut conn = self.database.get_connection()?;
+        Ok(SystemRoleService::update_role(
+            &mut conn,
+            role_id,
+            requested_name,
+            authority_level,
+        )?)
+    }
+
+    pub(crate) fn delete_role(
+        &self,
+        actor_id: MemberId,
+        role_id: SystemRoleId,
+    ) -> Result<(), SystemRoleError> {
+        let mut conn = self.database.get_connection()?;
+        SystemRoleService::delete_role(&mut conn, actor_id, role_id)
+    }
+}
+// Role Assignment Operations ==========================
+impl AuthService {
+    pub(crate) fn issue_registration_role(
+        &self,
+        member_id: MemberId,
+        kind: RegistrationRoleKind,
+    ) -> Result<(), SystemRoleError> {
+        let mut conn = self.database.get_connection()?;
+        SystemRoleService::issue_registration_role(&mut conn, member_id, kind)
+    }
+
+    pub(crate) fn get_member_role(
+        &self,
+        member_id: MemberId,
+    ) -> Result<SystemRole, SystemRoleError> {
+        let mut conn = self.database.get_connection()?;
+        SystemRoleService::get_member_role(&mut conn, member_id)
+    }
+
+    pub(crate) fn attest_authorization(
+        &self,
+        member_id: MemberId,
+        required_role: BuiltInSystemRole,
+    ) -> Result<(), SystemRoleError> {
+        let mut conn = self.database.get_connection()?;
+        SystemRoleService::attest_authorization(&mut conn, member_id, required_role)
+    }
+
+    pub(crate) fn assign_role(
+        &self,
+        actor_id: MemberId,
+        member_id: MemberId,
+        new_role_id: SystemRoleId,
+    ) -> Result<(), SystemRoleError> {
+        let mut conn = self.database.get_connection()?;
+        SystemRoleService::assign_role(&mut conn, actor_id, member_id, new_role_id)
+    }
+
+    pub(crate) fn reset_role(
+        &self,
+        actor_id: MemberId,
+        member_id: MemberId,
+    ) -> Result<(), SystemRoleError> {
+        let mut conn = self.database.get_connection()?;
+        SystemRoleService::reset_role(&mut conn, actor_id, member_id)
+    }
+
+    pub(crate) fn validate_member_deletion(
+        &self,
+        member_id: MemberId,
+    ) -> Result<bool, SystemRoleError> {
+        let mut conn = self.database.get_connection()?;
+        SystemRoleService::validate_member_deletion(&mut conn, member_id)
+    }
 }
