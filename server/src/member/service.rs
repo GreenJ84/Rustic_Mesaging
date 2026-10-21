@@ -50,15 +50,10 @@ impl MemberService {
         }
     }
     pub fn search_members(&self, search_term: String) -> Result<MultiMemberPreview, MemberError> {
-        let search_term = search_term.trim();
-        if search_term.is_empty() {
-            return Err(MemberError::InvalidSearchTerm(
-                "Search term cannot be empty".to_string(),
-            ));
-        }
+        let search_term = normalize_search_term(&search_term)?;
         let mut conn = Db::connect(&self.pool)?;
         Ok(MultiMemberPreview {
-            members: MemberRepository::search_usernames(&mut conn, search_term.to_owned())?,
+            members: MemberRepository::search_usernames(&mut conn, search_term)?,
         })
     }
 
@@ -152,5 +147,48 @@ impl MemberService {
                 })
                 .collect::<Vec<RequestDetailed>>(),
         })
+    }
+}
+
+fn normalize_search_term(search_term: &str) -> Result<String, MemberError> {
+    let search_term = search_term.trim();
+    if search_term.is_empty() {
+        return Err(MemberError::InvalidSearchTerm(
+            "Search term cannot be empty".to_string(),
+        ));
+    }
+    if search_term.chars().count() > 125 {
+        return Err(MemberError::InvalidSearchTerm(
+            "Search term cannot exceed 125 characters".to_string(),
+        ));
+    }
+    Ok(search_term.to_owned())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::normalize_search_term;
+    use crate::member::error::MemberError;
+
+    #[test]
+    fn normalizes_search_terms() {
+        assert_eq!(normalize_search_term("  Alice  ").unwrap(), "Alice");
+    }
+
+    #[test]
+    fn rejects_empty_search_terms() {
+        assert!(matches!(
+            normalize_search_term(" \t\n "),
+            Err(MemberError::InvalidSearchTerm(_))
+        ));
+    }
+
+    #[test]
+    fn limits_search_terms_by_character_count() {
+        assert!(normalize_search_term(&"é".repeat(125)).is_ok());
+        assert!(matches!(
+            normalize_search_term(&"é".repeat(126)),
+            Err(MemberError::InvalidSearchTerm(_))
+        ));
     }
 }
