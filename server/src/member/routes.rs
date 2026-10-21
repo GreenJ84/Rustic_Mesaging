@@ -28,7 +28,7 @@ pub fn get(user: SystemUser, member_service: &State<MemberService>) -> ApiRespon
         .map_err(ApiError::from)
 }
 
-#[put("/", data = "<form>")]
+#[patch("/", data = "<form>")]
 pub fn update(
     user: SystemUser,
     member_service: &State<MemberService>,
@@ -37,7 +37,7 @@ pub fn update(
     let input = form.into_inner().into_inner();
     member_service
         .update(user.member_id(), input)
-        .map(|member| status::Custom(Status::Created, member))
+        .map(|member| status::Custom(Status::Ok, member))
         .map_err(ApiError::from)
 }
 
