@@ -3,213 +3,113 @@ use rocket::http::Status;
 use rocket::response::status;
 use rocket::State;
 
-use crate::auth::models::{RegisterInput, JWT};
-use crate::auth::password::PasswordManager;
-use crate::db::{get_db_connection, DbPool};
+use crate::api_error::ApiError;
+use crate::auth::SystemUser;
+use crate::member::models::MemberChangeset;
 
-use super::models::{MemberSafe, MemberShort, MultiMemberPreview, NewMember};
+use super::models::{MemberProfile, MemberShort, MultiMemberPreview};
 use super::service::MemberService;
 
 use crate::chat::models::MultiChatPreview;
-use crate::models::friend::FullFriend;
 use crate::models::{friend::MultiFriend, friend_request::MultiFriendRequest};
-use crate::routes::CustomResponse;
+use crate::routes::ApiResponse;
 use crate::server::models::MultiServer;
-use crate::service::CrudOps;
 
 #[head("/")]
-pub fn head(_token: JWT) -> CustomResponse<()> {
+pub fn head(_principal: SystemUser) -> ApiResponse<()> {
     Ok(status::Custom(Status::Ok, ()))
 }
 
 /// Member creation ONLY through authenticating Registration route
 #[get("/")]
-pub fn get(token: JWT, pool: &State<DbPool>) -> CustomResponse<MemberSafe> {
-    let mut conn = get_db_connection(pool)?;
-
-    match MemberService::read(&mut conn, token.claims.member_id) {
-        Ok(member) => Ok(status::Custom(Status::Ok, member.into_safe())),
-        Err(e) => Err::<status::Custom<MemberSafe>, status::Custom<String>>(status::Custom(
-            Status::NotFound,
-            format!("Member lookup error: {}", e),
-        )),
-    }
+pub fn get(user: SystemUser, member_service: &State<MemberService>) -> ApiResponse<MemberProfile> {
+    member_service
+        .get(user.member_id())
+        .map(|member| status::Custom(Status::Ok, member))
+        .map_err(ApiError::from)
 }
 
 #[put("/", data = "<form>")]
 pub fn update(
-    token: JWT,
-    pool: &State<DbPool>,
-    form: Form<Strict<RegisterInput>>,
-) -> CustomResponse<MemberSafe> {
-    let mut conn = get_db_connection(pool)?;
+    user: SystemUser,
+    member_service: &State<MemberService>,
+    form: Form<Strict<MemberChangeset>>,
+) -> ApiResponse<MemberProfile> {
     let input = form.into_inner().into_inner();
-    let member = MemberService::read(&mut conn, token.claims.member_id).map_err(|e| {
-        status::Custom(
-            Status::NotFound,
-            format!("Error finding member to update: {}", e),
-        )
-    })?;
-
-    if input.password.ne(&input.confirm_password) {
-        return Err::<status::Custom<MemberSafe>, status::Custom<String>>(status::Custom(
-            Status::Unauthorized,
-            String::from("Username or Password incorrect"),
-        ));
-    }
-    PasswordManager::verify(&input.password, member.password())
-        .map_err(|e| status::Custom(Status::Forbidden, e.message()))?;
-
-    match MemberService::update(
-        &mut conn,
-        token.claims.member_id,
-        NewMember::new(
-            input.username.to_string(),
-            member.password().to_string(),
-            input.email.to_string(),
-        ),
-    ) {
-        Ok(member) => Ok(status::Custom(Status::Ok, member.into_safe())),
-        Err(e) => {
-            return Err::<status::Custom<MemberSafe>, status::Custom<String>>(status::Custom(
-                Status::InternalServerError,
-                format!("Member update error: {}", e),
-            ))
-        }
-    }
+    member_service
+        .update(user.member_id(), input)
+        .map(|member| status::Custom(Status::Created, member))
+        .map_err(ApiError::from)
 }
 
 #[delete("/")]
-pub fn delete(token: JWT, pool: &State<DbPool>) -> CustomResponse<String> {
-    let mut conn = get_db_connection(pool)?;
-
-    match MemberService::delete(&mut conn, token.claims.member_id) {
-        Ok(size) => {
-            if size > 1 {
-                eprint!("{} number of documents were deleted", size);
-            }
-            Ok(status::Custom(
+pub fn delete(user: SystemUser, member_service: &State<MemberService>) -> ApiResponse<String> {
+    let member_id = user.member_id();
+    member_service
+        .delete(member_id)
+        .map_err(ApiError::from)
+        .map(|_| {
+            status::Custom(
                 Status::Ok,
-                format!("Member number {} has been deleted.", token.claims.member_id),
-            ))
-        }
-        Err(e) => {
-            return Err::<status::Custom<String>, status::Custom<String>>(status::Custom(
-                Status::InternalServerError,
-                format!("Member deletion error: {}", e),
-            ))
-        }
-    }
+                format!("Member number {member_id} has been deleted."),
+            )
+        })
 }
 
 #[get("/<username>")]
 pub fn get_by_username(
-    _token: JWT,
-    pool: &State<DbPool>,
+    _user: SystemUser,
+    member_service: &State<MemberService>,
     username: String,
-) -> CustomResponse<MemberShort> {
-    let mut conn = get_db_connection(pool)?;
-
-    match MemberService::find_by_username(&mut conn, username) {
-        Ok(member) => Ok(status::Custom(Status::Ok, member.into_short())),
-        Err(e) => {
-            return Err::<status::Custom<MemberShort>, status::Custom<String>>(status::Custom(
-                Status::InternalServerError,
-                format!("Member search error: {}", e),
-            ))
-        }
+) -> ApiResponse<MemberShort> {
+    match member_service.find_by_username(username)? {
+        Some(member) => Ok(status::Custom(Status::Ok, member)),
+        None => Err(ApiError::NotFound("Member not found".to_string())),
     }
 }
 
 #[get("/search?<search_term>")]
 pub fn search_members(
-    _token: JWT,
-    pool: &State<DbPool>,
+    _user: SystemUser,
+    member_service: &State<MemberService>,
     search_term: String,
-) -> CustomResponse<MultiMemberPreview> {
-    let mut conn = get_db_connection(pool)?;
-
-    match MemberService::search_usernames(&mut conn, search_term) {
-        Ok(members) => Ok(status::Custom(Status::Ok, MultiMemberPreview { members })),
-        Err(e) => {
-            return Err::<status::Custom<MultiMemberPreview>, status::Custom<String>>(
-                status::Custom(
-                    Status::InternalServerError,
-                    format!("Member search error: {}", e),
-                ),
-            )
-        }
-    }
+) -> ApiResponse<MultiMemberPreview> {
+    let members = member_service.search_members(search_term)?;
+    Ok(status::Custom(Status::Ok, members))
 }
 
 #[get("/chats")]
-pub fn get_all_member_chats(token: JWT, pool: &State<DbPool>) -> CustomResponse<MultiChatPreview> {
-    let mut conn = get_db_connection(pool)?;
-
-    match MemberService::get_member_chats(&mut conn, token.claims.member_id) {
-        Ok(chats) => Ok(status::Custom(
-            Status::Ok,
-            MultiChatPreview {
-                chat_previews: chats,
-            },
-        )),
-        Err(e) => {
-            return Err::<status::Custom<MultiChatPreview>, status::Custom<String>>(status::Custom(
-                Status::NotFound,
-                format!("Member messages lookup error: {}", e),
-            ))
-        }
-    }
+pub fn get_all_member_chats(
+    user: SystemUser,
+    member_service: &State<MemberService>,
+) -> ApiResponse<MultiChatPreview> {
+    let chats = member_service.get_member_chats(user.member_id())?;
+    Ok(status::Custom(Status::Ok, chats))
 }
 
 #[get("/servers")]
-pub fn get_all_member_servers(token: JWT, pool: &State<DbPool>) -> CustomResponse<MultiServer> {
-    let mut conn = get_db_connection(pool)?;
-
-    match MemberService::get_member_servers(&mut conn, token.claims.member_id) {
-        Ok(servers) => Ok(status::Custom(Status::Ok, MultiServer { servers })),
-        Err(e) => Err::<status::Custom<MultiServer>, status::Custom<String>>(status::Custom(
-            Status::NotFound,
-            format!("Member servers lookup error: {}", e),
-        )),
-    }
+pub fn get_all_member_servers(
+    user: SystemUser,
+    member_service: &State<MemberService>,
+) -> ApiResponse<MultiServer> {
+    let servers = member_service.get_all_member_servers(user.member_id())?;
+    Ok(status::Custom(Status::Ok, servers))
 }
 
 #[get("/friends")]
-pub fn get_all_friends(token: JWT, pool: &State<DbPool>) -> CustomResponse<MultiFriend> {
-    let mut conn = get_db_connection(pool)?;
-
-    match MemberService::get_member_friends(&mut conn, token.claims.member_id) {
-        Ok(friends) => Ok(status::Custom(
-            Status::Ok,
-            MultiFriend {
-                friends: friends
-                    .into_iter()
-                    .map(|(created_at, member)| FullFriend {
-                        member: member.into_short(),
-                        created_at,
-                    })
-                    .collect::<Vec<FullFriend>>(),
-            },
-        )),
-        Err(e) => Err::<status::Custom<MultiFriend>, status::Custom<String>>(status::Custom(
-            Status::NotFound,
-            format!("Member servers lookup error: {}", e),
-        )),
-    }
+pub fn get_all_friends(
+    user: SystemUser,
+    member_service: &State<MemberService>,
+) -> ApiResponse<MultiFriend> {
+    let friends = member_service.get_member_friends(user.member_id())?;
+    Ok(status::Custom(Status::Ok, friends))
 }
 
 #[get("/requests")]
-pub fn get_friend_requests(token: JWT, pool: &State<DbPool>) -> CustomResponse<MultiFriendRequest> {
-    let mut conn = get_db_connection(pool)?;
-
-    match MemberService::get_member_requests(&mut conn, token.claims.member_id) {
-        Ok(requests) => Ok(status::Custom(Status::Ok, requests)),
-        Err(e) => {
-            Err::<status::Custom<MultiFriendRequest>, status::Custom<String>>(status::Custom(
-                Status::NotFound,
-                format!("Member friend requests lookup error: {}", e),
-            ))
-        }
-    }
+pub fn get_friend_requests(
+    user: SystemUser,
+    member_service: &State<MemberService>,
+) -> ApiResponse<MultiFriendRequest> {
+    let requests = member_service.get_friend_requests(user.member_id())?;
+    Ok(status::Custom(Status::Ok, requests))
 }
