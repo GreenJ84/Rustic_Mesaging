@@ -108,16 +108,13 @@ const ALLOWED_AVATARS: &[&str] = &[
     "pikachu",
     "default",
 ];
-#[derive(AsChangeset, Debug, FromForm)]
-#[diesel(table_name = member)]
-pub(crate) struct MemberChangeset {
-    #[field(validate = len(3..=125).or_else(msg!("Username must be between 3 and 125 characters long.")))]
+#[derive(FromForm)]
+pub(crate) struct MemberUpdateInput {
     pub username: Option<String>,
-    #[field(validate = contains('@').or_else(msg!("Invalid email address")))]
     pub email: Option<String>,
     pub avatar: Option<String>,
 }
-impl MemberChangeset {
+impl MemberUpdateInput {
     pub fn is_empty(&self) -> bool {
         self.username.is_none() && self.email.is_none() && self.avatar.is_none()
     }
@@ -158,7 +155,25 @@ impl MemberChangeset {
         Ok(self)
     }
 }
+#[derive(AsChangeset, Debug)]
+#[diesel(table_name = member)]
+pub(crate) struct MemberChangeset {
+    pub username: Option<String>,
+    pub email: Option<String>,
+    pub avatar: Option<String>,
+}
+impl TryFrom<MemberUpdateInput> for MemberChangeset {
+    type Error = MemberError;
 
+    fn try_from(input: MemberUpdateInput) -> Result<MemberChangeset, Self::Error> {
+        let changeset = input.normalize_and_validate()?;
+        Ok(MemberChangeset {
+            username: changeset.username,
+            email: changeset.email,
+            avatar: changeset.avatar,
+        })
+    }
+}
 // Data Transfer Objects ==========================
 #[derive(Serialize, Deserialize, Queryable, Selectable, Debug, Clone)]
 #[diesel(table_name = member)]

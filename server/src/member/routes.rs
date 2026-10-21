@@ -5,9 +5,8 @@ use rocket::State;
 
 use crate::api_error::ApiError;
 use crate::auth::SystemUser;
-use crate::member::models::MemberChangeset;
 
-use super::models::{MemberProfile, MemberShort, MultiMemberPreview};
+use super::models::{MemberProfile, MemberShort, MemberUpdateInput, MultiMemberPreview};
 use super::service::MemberService;
 
 use crate::chat::models::MultiChatPreview;
@@ -33,7 +32,7 @@ pub fn get(user: SystemUser, member_service: &State<MemberService>) -> ApiRespon
 pub fn update(
     user: SystemUser,
     member_service: &State<MemberService>,
-    form: Form<Strict<MemberChangeset>>,
+    form: Form<Strict<MemberUpdateInput>>,
 ) -> ApiResponse<MemberProfile> {
     let input = form.into_inner().into_inner();
     member_service

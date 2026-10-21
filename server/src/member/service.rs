@@ -3,6 +3,7 @@ use diesel::Connection;
 use crate::auth::system_roles::SystemRoleService;
 use crate::db::{Db, DbPool};
 use crate::member::error::DeletionBlock;
+use crate::member::models::MemberUpdateInput;
 
 use super::error::MemberError;
 use super::models::{MemberChangeset, MemberId, MemberProfile, MemberShort, MultiMemberPreview};
@@ -64,9 +65,9 @@ impl MemberService {
     pub fn update(
         &self,
         member_id: MemberId,
-        input: MemberChangeset,
+        input: MemberUpdateInput,
     ) -> Result<MemberProfile, MemberError> {
-        let input = input.normalize_and_validate()?;
+        let input = MemberChangeset::try_from(input)?;
         let mut conn = Db::connect(&self.pool)?;
         conn.transaction(|conn| {
             if let Some(username) = MemberRepository::identity_exists_excluding(
