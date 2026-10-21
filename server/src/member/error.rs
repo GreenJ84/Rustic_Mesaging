@@ -5,6 +5,18 @@ use crate::{
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DeletionBlock {
+    LastAdministrator,
+}
+impl DeletionBlock {
+    pub fn message(&self) -> &str {
+        match self {
+            DeletionBlock::LastAdministrator => "Cannot delete the last administrator",
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MemberError {
     NotFound,
 
@@ -14,8 +26,7 @@ pub enum MemberError {
     InvalidSearchTerm(String),
 
     SystemRoleError(SystemRoleError),
-    CannotDeleteLastAdministrator,
-    DeletionBlocked,
+    DeletionBlocked(DeletionBlock),
 
     PersistenceFailure,
 }
@@ -55,13 +66,37 @@ impl From<MemberError> for ApiError {
             MemberError::InvalidChangeset(msg) => ApiError::BadRequest(msg),
             MemberError::InvalidSearchTerm(msg) => ApiError::BadRequest(msg),
             MemberError::SystemRoleError(e) => e.into(),
-            MemberError::CannotDeleteLastAdministrator => {
-                ApiError::BadRequest("Cannot delete the last administrator".to_string())
-            }
-            MemberError::DeletionBlocked => {
-                ApiError::BadRequest("Member deletion is blocked".to_string())
-            }
+            MemberError::DeletionBlocked(block) => ApiError::Conflict(block.message().to_string()),
             MemberError::PersistenceFailure => ApiError::InternalError,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{DeletionBlock, MemberError};
+    use crate::api_error::ApiError;
+    use crate::db::DbError;
+    use rocket::http::Status;
+
+    #[test]
+    fn deletion_blocks_have_stable_messages() {
+        assert_eq!(
+            DeletionBlock::LastAdministrator.message(),
+            "Cannot delete the last administrator"
+        );
+    }
+
+    #[test]
+    fn deletion_blocks_map_to_conflict() {
+        let error = ApiError::from(MemberError::DeletionBlocked(
+            DeletionBlock::LastAdministrator,
+        ));
+        assert_eq!(error.status(), Status::Conflict);
+    }
+
+    #[test]
+    fn missing_database_rows_map_to_member_not_found() {
+        assert_eq!(MemberError::from(DbError::NotFound), MemberError::NotFound);
     }
 }

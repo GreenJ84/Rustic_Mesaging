@@ -2,6 +2,7 @@ use diesel::Connection;
 
 use crate::auth::system_roles::SystemRoleService;
 use crate::db::{Db, DbPool};
+use crate::member::error::DeletionBlock;
 
 use super::error::MemberError;
 use super::models::{MemberChangeset, MemberId, MemberProfile, MemberShort, MultiMemberPreview};
@@ -89,7 +90,9 @@ impl MemberService {
         let mut conn = Db::connect(&self.pool)?;
         conn.transaction::<(), MemberError, _>(|conn| {
             if !SystemRoleService::validate_member_deletion(conn, member_id)? {
-                return Err(MemberError::CannotDeleteLastAdministrator);
+                return Err(MemberError::DeletionBlocked(
+                    DeletionBlock::LastAdministrator,
+                ));
             }
             if MemberRepository::delete(conn, member_id)? {
                 Ok(())
