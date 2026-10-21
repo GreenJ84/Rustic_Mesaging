@@ -6,8 +6,8 @@ use std::collections::HashSet;
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 
 use super::{
-    AuthCredentials, AuthenticatedPrincipal, RefreshCredentials, SessionClock, SessionConfig,
-    SessionError, SessionId,
+    AuthenticatedPrincipal, RefreshCredentials, SessionClock, SessionConfig, SessionError,
+    SessionId,
 };
 use crate::member::models::MemberId;
 

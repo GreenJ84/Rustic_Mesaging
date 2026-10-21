@@ -8,8 +8,7 @@ use crate::api_error::ApiError;
 use crate::auth::guards::SystemAdmin;
 use crate::member::models::MemberId;
 
-use super::models::{RoleIdentifier, SystemRole, SystemRoleId};
-use super::service::SystemRoleService;
+use super::models::{SystemRole, SystemRoleId};
 use crate::auth::service::AuthService;
 
 #[derive(Deserialize)]

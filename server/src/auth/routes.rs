@@ -1,7 +1,6 @@
 use rocket::form::{Form, Strict};
 use rocket::http::{Cookie, CookieJar, SameSite, Status};
 use rocket::response::status;
-use rocket::serde::json::Json;
 use rocket::State;
 
 use super::service::AuthService;
@@ -69,7 +68,7 @@ pub(crate) fn logout(
     service: &State<AuthService>,
     cookies: &CookieJar<'_>,
 ) -> Result<status::NoContent, ApiError> {
-    let result = match cookies.get(REFRESH_COOKIE) {
+    match cookies.get(REFRESH_COOKIE) {
         Some(cookie) => service.logout(cookie.value()),
         None => Ok(()),
     }?;

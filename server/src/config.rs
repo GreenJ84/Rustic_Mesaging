@@ -1,12 +1,11 @@
-use std::env;
 use dotenv::dotenv;
+use std::env;
 
 #[derive(Debug)]
 pub enum ConfigError {
     Missing(String),
     Invalid(String),
 }
-
 
 #[derive(Clone, Debug)]
 pub struct AppConfig {
@@ -35,8 +34,7 @@ impl AppConfig {
 }
 
 fn required(name: &str) -> Result<String, ConfigError> {
-    let value = env::var(name)
-        .map_err(|_| ConfigError::Missing(name.to_string()))?;
+    let value = env::var(name).map_err(|_| ConfigError::Missing(name.to_string()))?;
 
     if value.trim().is_empty() {
         return Err(ConfigError::Missing(name.to_string()));

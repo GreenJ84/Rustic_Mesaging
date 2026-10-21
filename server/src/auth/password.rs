@@ -84,6 +84,6 @@ impl PasswordManager {
         let parsed = PasswordHash::new(hash).map_err(|_| PasswordError::HashingError)?;
         Argon2::default()
             .verify_password(password.as_bytes(), &parsed)
-            .map_err(|er| PasswordError::PasswordMismatch)
+            .map_err(|_| PasswordError::PasswordMismatch)
     }
 }

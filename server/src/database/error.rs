@@ -1,6 +1,5 @@
 pub(crate) use diesel::result::{DatabaseErrorKind, Error as DieselError};
 
-
 #[derive(Debug)]
 pub enum DbError {
     ConnectionError(String),

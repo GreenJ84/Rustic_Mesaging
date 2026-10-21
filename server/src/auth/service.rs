@@ -1,7 +1,7 @@
-use diesel::{Connection, connection};
+use diesel::Connection;
 
 use crate::auth::system_roles::SystemRoleId;
-use crate::database::{Database, DbError, DbConn, DieselError};
+use crate::database::{Database, DbConn, DbError, DieselError};
 use crate::id_generator::IdGenerator;
 use crate::member::models::{MemberId, MemberProfile};
 use crate::member::repository::MemberRepository;
@@ -11,7 +11,7 @@ use super::models::{AuthOutcome, ChangePasswordInput, LoginInput, RegisterInput}
 use super::password::PasswordManager;
 use super::session::{AuthenticatedPrincipal, SessionConfig, SessionMetadata, SessionService};
 use super::system_roles::{
-    BuiltInSystemRole, RegistrationRoleKind, SystemRoleError, SystemRoleService, SystemRole
+    BuiltInSystemRole, RegistrationRoleKind, SystemRole, SystemRoleError, SystemRoleService,
 };
 
 /// Top-level authentication service. It owns connection acquisition and
@@ -251,14 +251,18 @@ impl AuthService {
         authority_level: i32,
     ) -> Result<SystemRole, SystemRoleError> {
         let mut conn = self.database.get_connection()?;
-        Ok(SystemRoleService::create_role(&mut conn, requested_name, authority_level)?)
+        Ok(SystemRoleService::create_role(
+            &mut conn,
+            requested_name,
+            authority_level,
+        )?)
     }
 
     pub(crate) fn get_roles(&self) -> Result<Vec<SystemRole>, SystemRoleError> {
         let mut conn = self.database.get_connection()?;
         Ok(SystemRoleService::get_roles(&mut conn)?)
     }
-    
+
     pub(crate) fn update_role(
         &self,
         role_id: SystemRoleId,

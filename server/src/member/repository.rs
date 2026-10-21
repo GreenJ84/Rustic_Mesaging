@@ -5,9 +5,7 @@ use diesel::sql_types::Integer;
 
 use crate::chat::models::Chat;
 use crate::database::{DbConn, DbError};
-use crate::member::models::{
-    Member, MemberChangeset, MemberId, MemberProfile, MemberShort, NewMember,
-};
+use crate::member::models::{Member, MemberChangeset, MemberId, MemberShort, NewMember};
 use crate::schema::{
     chat::dsl as c_dsl, friend::dsl as f_dsl, friend_request::dsl as fr_dsl, member::dsl as m_dsl,
     member_chat::dsl as mc_dsl, server::dsl as s_dsl, server_membership::dsl as sm_dsl,

@@ -1,6 +1,6 @@
 use diesel::query_builder::AsChangeset;
 use diesel::{Identifiable, Insertable, Queryable, Selectable};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 use crate::member::models::MemberId;
 use crate::schema::{member_system_role, system_role};

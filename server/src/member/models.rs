@@ -1,7 +1,6 @@
 use chrono::NaiveDateTime;
-use diesel::sql_types::{Integer, Nullable, Text, Timestamp};
 use diesel::AsChangeset;
-use diesel::{Identifiable, Insertable, Queryable, QueryableByName, Selectable};
+use diesel::{Identifiable, Insertable, Queryable, Selectable};
 use rocket::response::Responder;
 use rocket::serde::json::Json;
 use rocket::Response;
@@ -217,7 +216,7 @@ pub type MultiMemberPreview = MemberList<MemberShort>;
 #[cfg(test)]
 mod tests {
     use super::{MemberChangeset, NewMember};
-    use crate::member::{error::MemberError, models::{Member, MemberUpdateInput}};
+    use crate::member::{error::MemberError, models::MemberUpdateInput};
 
     #[test]
     fn new_member_exposes_its_registration_values() {

@@ -8,8 +8,8 @@ use serde::{Deserialize, Serialize};
 
 use super::error::*;
 use super::password::{PasswordManager, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH};
-use super::service::AuthService;
-use crate::auth::session::{AuthCredentials, AuthenticatedPrincipal};
+
+use crate::auth::session::AuthCredentials;
 use crate::database::DbConn;
 use crate::member::models::{MemberProfile, NewMember};
 use crate::member::repository::MemberRepository;
