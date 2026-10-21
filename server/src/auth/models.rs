@@ -41,11 +41,7 @@ impl RegisterInput {
         if self.password.ne(&self.confirm_password) {
             return Err(AuthError::PasswordConfirmationMismatch);
         }
-        match MemberRepository::identity_exists(
-            conn,
-            &self.username,
-            &self.email,
-        ) {
+        match MemberRepository::identity_exists(conn, &self.username, &self.email) {
             Err(err) => Err(AuthError::InternalError(format!("{err:?}"))),
             Ok(Some(username)) => {
                 if username == self.username {
@@ -85,13 +81,13 @@ pub(crate) struct AuthOutcome {
 // ======================================================
 // Old Implementations
 // ======================================================
-use rocket::http::Status;
-use rocket::response::status;
-use std::env;
+use crate::member::models::Member;
 use jsonwebtoken::{
     decode, encode, Algorithm, DecodingKey, EncodingKey, Header as JWTHeader, Validation,
 };
-use crate::member::models::Member;
+use rocket::http::Status;
+use rocket::response::status;
+use std::env;
 
 // JWT Member Authentication
 #[derive(Debug, Serialize, Deserialize)]

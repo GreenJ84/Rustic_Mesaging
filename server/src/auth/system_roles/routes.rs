@@ -25,11 +25,7 @@ pub(super) fn create_role(
     input: Json<RoleInput>,
 ) -> Result<status::Custom<Json<SystemRole>>, ApiError> {
     let mut conn = Db::connect(pool)?;
-    let role = SystemRoleService::create_role(
-        &mut conn,
-        &input.name,
-        input.authority_level,
-    )?;
+    let role = SystemRoleService::create_role(&mut conn, &input.name, input.authority_level)?;
     Ok(status::Custom(Status::Created, Json(role)))
 }
 

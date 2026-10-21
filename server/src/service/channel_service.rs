@@ -72,13 +72,7 @@ impl ChannelService {
                 p_dsl::created_at,
             ))
             .order_by(p_dsl::created_at.desc()) // Select member ID and username
-            .load::<(
-                i32,
-                String,
-                (i32, String, String),
-                i32,
-                NaiveDateTime,
-            )>(conn)?
+            .load::<(i32, String, (i32, String, String), i32, NaiveDateTime)>(conn)?
             .into_iter()
             .map(
                 |(id, content, (member_id, username, avatar), channel_id, timestamp)| {

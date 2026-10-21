@@ -1,4 +1,5 @@
 use crate::{
+    api_error::ApiError,
     auth::system_roles::SystemRoleError,
     db::{DbError, DieselError},
 };
@@ -43,5 +44,24 @@ impl From<SystemRoleError> for MemberError {
 impl From<DieselError> for MemberError {
     fn from(error: DieselError) -> Self {
         DbError::from(error).into()
+    }
+}
+impl From<MemberError> for ApiError {
+    fn from(error: MemberError) -> Self {
+        match error {
+            MemberError::NotFound => ApiError::NotFound("Member not found".to_string()),
+            MemberError::UsernameTaken => ApiError::Conflict("Username already taken".to_string()),
+            MemberError::EmailTaken => ApiError::Conflict("Email already taken".to_string()),
+            MemberError::InvalidChangeset(msg) => ApiError::BadRequest(msg),
+            MemberError::InvalidSearchTerm(msg) => ApiError::BadRequest(msg),
+            MemberError::SystemRoleError(e) => e.into(),
+            MemberError::CannotDeleteLastAdministrator => {
+                ApiError::BadRequest("Cannot delete the last administrator".to_string())
+            }
+            MemberError::DeletionBlocked => {
+                ApiError::BadRequest("Member deletion is blocked".to_string())
+            }
+            MemberError::PersistenceFailure => ApiError::InternalError,
+        }
     }
 }

@@ -63,13 +63,7 @@ impl PostService {
                 p_dsl::channel_id,
                 p_dsl::created_at,
             ))
-            .first::<(
-                i32,
-                String,
-                (i32, String, String),
-                i32,
-                NaiveDateTime,
-            )>(conn)
+            .first::<(i32, String, (i32, String, String), i32, NaiveDateTime)>(conn)
             .map(
                 |(id, content, (member_id, username, avatar), channel_id, timestamp)| {
                     PostDetail::new(
