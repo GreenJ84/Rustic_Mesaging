@@ -1,26 +1,4 @@
-#![allow(unused)]
-#![recursion_limit = "256"]
 
-#[macro_use]
-extern crate rocket;
-extern crate diesel;
-extern crate dotenv;
-extern crate tokio;
-
-pub(crate) mod api_error;
-pub(crate) mod db;
-pub(crate) mod schema;
-
-pub(crate) mod auth;
-pub(crate) mod chat;
-pub(crate) mod member;
-pub(crate) mod server;
-
-pub(crate) mod models;
-pub(crate) mod routes;
-pub(crate) mod service;
-#[cfg(test)]
-pub(crate) mod tests;
 
 use std::collections::HashSet;
 use std::str::FromStr;
