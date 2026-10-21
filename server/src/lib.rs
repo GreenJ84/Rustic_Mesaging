@@ -6,7 +6,7 @@ extern crate rocket;
 pub(crate) mod api_error;
 pub(crate) mod app;
 pub(crate) mod config;
-pub(crate) mod db;
+pub(crate) mod database;
 pub(crate) mod id_generator;
 pub(crate) mod schema;
 
