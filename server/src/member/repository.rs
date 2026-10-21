@@ -4,7 +4,7 @@ use diesel::prelude::*;
 use diesel::sql_types::Integer;
 
 use crate::chat::models::Chat;
-use crate::db::{DbConn, DbError};
+use crate::database::{DbConn, DbError};
 use crate::member::models::{
     Member, MemberChangeset, MemberId, MemberProfile, MemberShort, NewMember,
 };

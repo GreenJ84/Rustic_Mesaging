@@ -1,6 +1,6 @@
 use diesel::Connection;
 
-use crate::db::{Db, DbError, DbPool, DieselError};
+use crate::database::{Database, DbError, DbConn, DieselError};
 use crate::id_generator::IdGenerator;
 use crate::member::models::{MemberId, MemberProfile};
 use crate::member::repository::MemberRepository;
@@ -17,14 +17,14 @@ use super::system_roles::{
 /// coordinates member, role, and session work in one transaction where the
 /// complete use case must be atomic.
 pub struct AuthService {
-    pool: DbPool,
+    database: Database,
     id_generator: IdGenerator,
     sessions: SessionService,
 }
 
 impl AuthService {
     pub fn new(
-        pool: DbPool,
+        database: Database,
         id_generator: IdGenerator,
         jwt_secret: &[u8],
         cookie_secure: bool,
@@ -40,7 +40,7 @@ impl AuthService {
             },
         );
         Self {
-            pool,
+            database,
             id_generator,
             sessions,
         }
@@ -52,12 +52,12 @@ impl AuthService {
         registration_role: RegistrationRoleKind,
         metadata: SessionMetadata,
     ) -> Result<AuthOutcome, AuthError> {
-        let mut conn = Db::connect(&self.pool)?;
+        let mut conn = self.database.get_connection()?;
         let session_id = self.id_generator.generate_uuid();
         let family_id = self.id_generator.generate_uuid();
 
         conn.transaction(|conn| {
-            let mut new_member = input.validate(conn)?;
+            let new_member = input.validate(conn)?;
             let member =
                 MemberRepository::create(conn, new_member).map_err(map_registration_write_error)?;
             SystemRoleService::issue_registration_role(conn, member.id(), registration_role)
@@ -77,7 +77,7 @@ impl AuthService {
         input: LoginInput,
         metadata: SessionMetadata,
     ) -> Result<AuthOutcome, AuthError> {
-        let mut conn = Db::connect(&self.pool)?;
+        let mut conn = self.database.get_connection()?;
         let member = MemberRepository::find_by_username(&mut conn, &input.username)?
             .ok_or(AuthError::InvalidCredentials)?;
         PasswordManager::verify(&input.password, member.password_hash())?;
@@ -102,7 +102,7 @@ impl AuthService {
         refresh_token: String,
         metadata: SessionMetadata,
     ) -> Result<AuthOutcome, AuthError> {
-        let mut conn = Db::connect(&self.pool)?;
+        let mut conn = self.database.get_connection()?;
         let member = MemberRepository::find_by_id(&mut conn, member_id)?
             .ok_or(AuthError::InvalidCredentials)?;
         Self::require_role(&mut conn, member.id(), BuiltInSystemRole::User)?;
@@ -124,7 +124,7 @@ impl AuthService {
         &self,
         access_token: &str,
     ) -> Result<AuthenticatedPrincipal, AuthError> {
-        let mut conn = Db::connect(&self.pool)?;
+        let mut conn = self.database.get_connection()?;
         self.sessions
             .authenticate_access_token(&mut conn, access_token)
             .map_err(AuthError::from)
@@ -135,7 +135,7 @@ impl AuthService {
         member_id: MemberId,
         minimum: BuiltInSystemRole,
     ) -> Result<(), AuthError> {
-        let mut conn = Db::connect(&self.pool)?;
+        let mut conn = self.database.get_connection()?;
         match SystemRoleService::attest_authorization(&mut conn, member_id, minimum) {
             Ok(()) => Ok(()),
             Err(SystemRoleError::InsufficientPrivileges) => Err(AuthError::InsufficientPrivileges),
@@ -144,20 +144,20 @@ impl AuthService {
     }
 
     pub(crate) fn is_administrator(&self, member_id: MemberId) -> Result<bool, AuthError> {
-        let mut conn = Db::connect(&self.pool)?;
+        let mut conn = self.database.get_connection()?;
         let role = SystemRoleService::get_member_role(&mut conn, member_id)
             .map_err(map_role_auth_error)?;
         Ok(role.authority_level >= BuiltInSystemRole::Admin.authority_level())
     }
 
     pub(crate) fn logout(&self, refresh_token: &str) -> Result<(), AuthError> {
-        let mut conn = Db::connect(&self.pool)?;
+        let mut conn = self.database.get_connection()?;
         self.sessions.logout(&mut conn, refresh_token)?;
         Ok(())
     }
 
     pub(crate) fn logout_all(&self, member_id: MemberId) -> Result<(), AuthError> {
-        let mut conn = Db::connect(&self.pool)?;
+        let mut conn = self.database.get_connection()?;
         self.sessions.logout_all(&mut conn, member_id)?;
         Ok(())
     }
@@ -171,7 +171,7 @@ impl AuthService {
             return Err(AuthError::PasswordConfirmationMismatch);
         }
 
-        let mut conn = Db::connect(&self.pool)?;
+        let mut conn = self.database.get_connection()?;
         let member = MemberRepository::find_by_id(&mut conn, principal.member_id)?
             .ok_or(AuthError::AccountNotFound)?;
         PasswordManager::verify(&input.current_password, member.password_hash())?;
@@ -200,7 +200,7 @@ impl AuthService {
         &self,
         principal: &AuthenticatedPrincipal,
     ) -> Result<MemberProfile, AuthError> {
-        let mut conn = Db::connect(&self.pool)?;
+        let mut conn = self.database.get_connection()?;
         Self::require_role(&mut conn, principal.member_id, BuiltInSystemRole::User)?;
         MemberRepository::find_by_id(&mut conn, principal.member_id)?
             .map(|member| member.into_profile())
@@ -212,7 +212,7 @@ impl AuthService {
     }
 
     fn require_role(
-        conn: &mut crate::db::DbConn,
+        conn: &mut DbConn,
         member_id: MemberId,
         minimum: BuiltInSystemRole,
     ) -> Result<(), AuthError> {

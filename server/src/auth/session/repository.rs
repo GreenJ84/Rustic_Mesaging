@@ -1,6 +1,6 @@
 use diesel::prelude::*;
 
-use crate::db::{DbConn, DbError};
+use crate::database::{DbConn, DbError};
 use crate::member::models::MemberId;
 use crate::schema::auth_session::dsl as sessions;
 

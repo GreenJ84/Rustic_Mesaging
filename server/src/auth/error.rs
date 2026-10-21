@@ -2,7 +2,7 @@ use crate::api_error::ApiError;
 use crate::auth::password::PasswordError;
 use crate::auth::session::SessionError;
 use crate::auth::system_roles::SystemRoleError;
-use crate::db::{DbError, DieselError};
+use crate::database::{DbError, DieselError};
 use rocket::http::Status;
 
 #[derive(Debug)]

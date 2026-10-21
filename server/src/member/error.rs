@@ -1,7 +1,7 @@
 use crate::{
     api_error::ApiError,
     auth::system_roles::SystemRoleError,
-    db::{DbError, DieselError},
+    database::{DbError, DieselError},
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -76,7 +76,7 @@ impl From<MemberError> for ApiError {
 mod tests {
     use super::{DeletionBlock, MemberError};
     use crate::api_error::ApiError;
-    use crate::db::DbError;
+    use crate::database::DbError;
     use rocket::http::Status;
 
     #[test]

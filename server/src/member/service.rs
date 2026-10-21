@@ -1,7 +1,7 @@
 use diesel::Connection;
 
 use crate::auth::system_roles::SystemRoleService;
-use crate::db::{Db, DbPool};
+use crate::database::Database;
 use crate::member::error::DeletionBlock;
 use crate::member::models::MemberUpdateInput;
 
@@ -16,17 +16,17 @@ use crate::models::{friend::MultiFriend, friend_request::MultiFriendRequest};
 use crate::server::models::MultiServer;
 
 pub struct MemberService {
-    pool: DbPool,
+    database: Database,
 }
 
 impl MemberService {
-    pub fn new(pool: DbPool) -> Self {
-        Self { pool }
+    pub fn new(database: Database) -> Self {
+        Self { database }
     }
 
     /// Member creation ONLY through authenticating Registration route
     pub fn get(&self, member_id: MemberId) -> Result<MemberProfile, MemberError> {
-        let mut conn = Db::connect(&self.pool)?;
+        let mut conn = self.database.get_connection()?;
         if let Some(member) = MemberRepository::find_by_id(&mut conn, member_id)? {
             Ok(member.into_profile())
         } else {
@@ -34,7 +34,7 @@ impl MemberService {
         }
     }
     pub fn find_by_id(&self, id: MemberId) -> Result<Option<MemberShort>, MemberError> {
-        let mut conn = Db::connect(&self.pool)?;
+        let mut conn = self.database.get_connection()?;
         if let Some(member) = MemberRepository::find_by_id(&mut conn, id)? {
             Ok(Some(member.into_short()))
         } else {
@@ -42,7 +42,7 @@ impl MemberService {
         }
     }
     pub fn find_by_username(&self, username: String) -> Result<Option<MemberShort>, MemberError> {
-        let mut conn = Db::connect(&self.pool)?;
+        let mut conn = self.database.get_connection()?;
         if let Some(member) = MemberRepository::find_by_username(&mut conn, &username)? {
             Ok(Some(member.into_short()))
         } else {
@@ -51,7 +51,7 @@ impl MemberService {
     }
     pub fn search_members(&self, search_term: String) -> Result<MultiMemberPreview, MemberError> {
         let search_term = normalize_search_term(&search_term)?;
-        let mut conn = Db::connect(&self.pool)?;
+        let mut conn = self.database.get_connection()?;
         Ok(MultiMemberPreview {
             members: MemberRepository::search_usernames(&mut conn, search_term)?,
         })
@@ -63,7 +63,7 @@ impl MemberService {
         input: MemberUpdateInput,
     ) -> Result<MemberProfile, MemberError> {
         let input = MemberChangeset::try_from(input)?;
-        let mut conn = Db::connect(&self.pool)?;
+        let mut conn = self.database.get_connection()?;
         conn.transaction(|conn| {
             if let Some(username) = MemberRepository::identity_exists_excluding(
                 conn,
@@ -83,7 +83,7 @@ impl MemberService {
     }
 
     pub fn delete(&self, member_id: MemberId) -> Result<(), MemberError> {
-        let mut conn = Db::connect(&self.pool)?;
+        let mut conn = self.database.get_connection()?;
         conn.transaction::<(), MemberError, _>(|conn| {
             if !SystemRoleService::validate_member_deletion(conn, member_id)? {
                 return Err(MemberError::DeletionBlocked(
@@ -100,21 +100,21 @@ impl MemberService {
 
     // TODO: Migrate into associated service for chats, servers, and friends
     pub fn get_member_chats(&self, member_id: MemberId) -> Result<MultiChatPreview, MemberError> {
-        let mut conn = Db::connect(&self.pool)?;
+        let mut conn = self.database.get_connection()?;
         Ok(MultiChatPreview {
             chat_previews: MemberRepository::get_member_chats(&mut conn, member_id)?,
         })
     }
 
     pub fn get_all_member_servers(&self, member_id: MemberId) -> Result<MultiServer, MemberError> {
-        let mut conn = Db::connect(&self.pool)?;
+        let mut conn = self.database.get_connection()?;
         Ok(MultiServer {
             servers: MemberRepository::get_member_servers(&mut conn, member_id)?,
         })
     }
 
     pub fn get_member_friends(&self, member_id: MemberId) -> Result<MultiFriend, MemberError> {
-        let mut conn = Db::connect(&self.pool)?;
+        let mut conn = self.database.get_connection()?;
         Ok(MultiFriend {
             friends: MemberRepository::get_member_friends(&mut conn, member_id)?
                 .into_iter()
@@ -127,7 +127,7 @@ impl MemberService {
         &self,
         member_id: MemberId,
     ) -> Result<MultiFriendRequest, MemberError> {
-        let mut conn = Db::connect(&self.pool)?;
+        let mut conn = self.database.get_connection()?;
         let (incoming, outgoing) = MemberRepository::get_member_requests(&mut conn, member_id)?;
         Ok(MultiFriendRequest {
             incoming: incoming
