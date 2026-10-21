@@ -213,3 +213,76 @@ impl<'r, T: Serialize> Responder<'r, 'r> for MemberList<T> {
 }
 pub type MultiMember = MemberList<MemberProfile>;
 pub type MultiMemberPreview = MemberList<MemberShort>;
+
+#[cfg(test)]
+mod tests {
+    use super::{MemberChangeset, NewMember};
+    use crate::member::{error::MemberError, models::{Member, MemberUpdateInput}};
+
+    #[test]
+    fn new_member_exposes_its_registration_values() {
+        let member = NewMember::new(
+            "Alice".to_string(),
+            "password-hash".to_string(),
+            "alice@example.com".to_string(),
+        );
+
+        assert_eq!(member.username(), "Alice");
+        assert_eq!(member.password_hash(), "password-hash");
+        assert_eq!(member.email(), "alice@example.com");
+    }
+
+    #[test]
+    fn changesets_are_trimmed_without_changing_case() {
+        let changeset: MemberChangeset = MemberUpdateInput {
+            username: Some("  Alice  ".to_string()),
+            email: Some("  Alice@Example.com  ".to_string()),
+            avatar: Some("  robot  ".to_string()),
+        }
+        .try_into()
+        .unwrap();
+
+        assert_eq!(changeset.username.as_deref(), Some("Alice"));
+        assert_eq!(changeset.email.as_deref(), Some("Alice@Example.com"));
+        assert_eq!(changeset.avatar.as_deref(), Some("robot"));
+    }
+
+    #[test]
+    fn rejects_empty_changesets() {
+        let result: Result<MemberChangeset, MemberError> = MemberUpdateInput {
+            username: None,
+            email: None,
+            avatar: None,
+        }
+        .try_into();
+
+        assert!(matches!(result, Err(MemberError::InvalidChangeset(_))));
+    }
+
+    #[test]
+    fn rejects_invalid_member_values() {
+        for changeset in [
+            MemberUpdateInput {
+                username: Some("ab".to_string()),
+                email: None,
+                avatar: None,
+            },
+            MemberUpdateInput {
+                username: None,
+                email: Some("invalid".to_string()),
+                avatar: None,
+            },
+            MemberUpdateInput {
+                username: None,
+                email: None,
+                avatar: Some("unknown".to_string()),
+            },
+        ] {
+            let change_set_result: Result<MemberChangeset, MemberError> = changeset.try_into();
+            assert!(matches!(
+                change_set_result,
+                Err(MemberError::InvalidChangeset(_))
+            ));
+        }
+    }
+}
