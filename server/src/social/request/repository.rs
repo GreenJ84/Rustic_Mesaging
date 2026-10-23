@@ -1,98 +1,116 @@
-use diesel::result::Error;
-use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
-use rocket::response::Responder;
-use rocket::serde::json::Json;
-use rocket::Response;
+use chrono::NaiveDateTime;
+use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SelectableHelper};
 
-use crate::db::DbConn;
-use crate::models::friend::{Friend, NewFriend};
-use crate::models::friend_request::{FriendRequest, NewFriendRequest};
-use crate::schema::friend_request::dsl;
-use crate::service::friend_service::FriendService;
+use super::models::{FriendRequest, NewFriendRequest};
+use crate::database::{DbConn, DbError};
+use crate::member::models::{MemberId, MemberShort};
+use crate::schema::{friend_request::dsl as f_dsl, member::dsl as m_dsl};
+use crate::social::request::models::{
+    IncomingRequests, OutgoingRequests, RequestDetails,
+};
 
-pub struct FriendRequestService;
-
-impl FriendRequestService {
+pub struct FriendRequestRepository;
+impl FriendRequestRepository {
+    // Create
     pub fn create_request(
         conn: &mut DbConn,
         new_request: NewFriendRequest,
-    ) -> Result<RequestResolve, Error> {
-        match diesel::insert_into(dsl::friend_request)
+    ) -> Result<FriendRequest, DbError> {
+        diesel::insert_into(f_dsl::friend_request)
             .values(&new_request)
             .get_result::<FriendRequest>(conn)
-        {
-            Ok(friend_request) => Ok(RequestResolve::NotResolved(friend_request)), // Successfully inserted friend request
-            Err(Error::NotFound) => {
-                let new_friend = NewFriend::new(new_request.sender_id(), new_request.receiver_id());
-                let friend =
-                    FriendService::read(conn, new_friend.member_id(), new_friend.friend_id())?;
-                Ok(RequestResolve::Resolved(friend))
-            } // Trigger returned NULL, friendship was resolved
-            Err(e) => Err(e),
-        }
+            .map_err(DbError::from)
     }
 
-    pub fn is_requested(conn: &mut DbConn, sender_id: i32, receiver_id: i32) -> bool {
-        Self::get_request(conn, sender_id, receiver_id).is_ok()
+    // Get
+    pub fn is_requested(
+        conn: &mut DbConn,
+        sender_id: MemberId,
+        receiver_id: MemberId,
+    ) -> Result<bool, DbError> {
+        diesel::dsl::select(diesel::dsl::exists(
+            f_dsl::friend_request.find((sender_id, receiver_id)),
+        ))
+        .get_result::<bool>(conn)
+        .map_err(DbError::from)
     }
     pub fn get_request(
         conn: &mut DbConn,
-        sender_id: i32,
-        receiver_id: i32,
-    ) -> Result<FriendRequest, Error> {
-        let friend = dsl::friend_request
+        sender_id: MemberId,
+        receiver_id: MemberId,
+    ) -> Result<FriendRequest, DbError> {
+        f_dsl::friend_request
             .find((sender_id, receiver_id))
             .first::<FriendRequest>(conn)
-            .optional()?;
-        match friend {
-            Some(friend) => Ok(friend),
-            None => Err(Error::NotFound),
-        }
+            .map_err(DbError::from)
+    }
+    pub fn get_incoming(
+        conn: &mut DbConn,
+        member_id: MemberId,
+    ) -> Result<IncomingRequests, DbError> {
+        f_dsl::friend_request
+            .filter(f_dsl::receiver_id.eq(member_id))
+            .inner_join(m_dsl::member.on(m_dsl::id.eq(f_dsl::sender_id)))
+            .select((MemberShort::as_select(), f_dsl::note, f_dsl::created_at))
+            .limit(25)
+            .order_by(f_dsl::created_at.desc())
+            .load::<(MemberShort, Option<String>, NaiveDateTime)>(conn)
+            .map(|requests| {
+                requests
+                    .into_iter()
+                    .map(|(member, note, created_at)| RequestDetails {
+                        member,
+                        note,
+                        created_at,
+                    })
+                    .collect()
+            })
+            .map_err(DbError::from)
     }
 
+    pub fn get_outgoing(
+        conn: &mut DbConn,
+        member_id: MemberId,
+    ) -> Result<OutgoingRequests, DbError> {
+        f_dsl::friend_request
+            .filter(f_dsl::sender_id.eq(member_id))
+            .inner_join(m_dsl::member.on(m_dsl::id.eq(f_dsl::receiver_id)))
+            .select((MemberShort::as_select(), f_dsl::note, f_dsl::created_at))
+            .limit(25)
+            .order_by(f_dsl::created_at.desc())
+            .load::<(MemberShort, Option<String>, NaiveDateTime)>(conn)
+            .map(|requests| {
+                requests
+                    .into_iter()
+                    .map(|(member, note, created_at)| RequestDetails {
+                        member,
+                        note,
+                        created_at,
+                    })
+                    .collect()
+            })
+            .map_err(DbError::from)
+    }
+
+    // Update
     pub fn update_request(
         conn: &mut DbConn,
         update: NewFriendRequest,
-    ) -> Result<FriendRequest, Error> {
-        diesel::update(dsl::friend_request.find((update.sender_id(), update.receiver_id())))
-            .set(dsl::note.eq(update.note().to_owned()))
+    ) -> Result<FriendRequest, DbError> {
+        diesel::update(f_dsl::friend_request.find((update.sender_id, update.receiver_id)))
+            .set(f_dsl::note.eq(update.note))
             .get_result::<FriendRequest>(conn)
+            .map_err(DbError::from)
     }
 
-    fn delete_request(conn: &mut DbConn, sender_id: i32, receiver_id: i32) -> Result<usize, Error> {
-        diesel::delete(dsl::friend_request.find((sender_id, receiver_id))).execute(conn)
-    }
-    pub fn accept_request(
+    // Delete
+    pub fn delete_request(
         conn: &mut DbConn,
-        sender_id: i32,
-        receiver_id: i32,
-    ) -> Result<Friend, Error> {
-        let friend = FriendService::add_friend(conn, NewFriend::new(sender_id, receiver_id))?;
-        Self::delete_request(conn, sender_id, receiver_id)?;
-        Ok(friend)
-    }
-    pub fn deny_request(
-        conn: &mut DbConn,
-        sender_id: i32,
-        receiver_id: i32,
-    ) -> Result<usize, Error> {
-        Self::delete_request(conn, sender_id, receiver_id)
-    }
-}
-
-pub enum RequestResolve {
-    NotResolved(FriendRequest),
-    Resolved(Friend),
-}
-impl<'r> Responder<'r, 'r> for RequestResolve {
-    fn respond_to(self, req: &'r rocket::Request<'_>) -> rocket::response::Result<'r> {
-        match self {
-            RequestResolve::NotResolved(request) => {
-                Response::build_from(Json(request).respond_to(req)?).ok()
-            }
-            RequestResolve::Resolved(friend) => {
-                Response::build_from(Json(friend).respond_to(req)?).ok()
-            }
-        }
+        sender_id: MemberId,
+        receiver_id: MemberId,
+    ) -> Result<usize, DbError> {
+        diesel::delete(f_dsl::friend_request.find((sender_id, receiver_id)))
+            .execute(conn)
+            .map_err(DbError::from)
     }
 }
