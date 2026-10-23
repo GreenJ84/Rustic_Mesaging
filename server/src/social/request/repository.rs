@@ -1,14 +1,18 @@
 use chrono::NaiveDateTime;
-use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SelectableHelper};
+use diesel::{
+    BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SelectableHelper,
+};
 
 use super::models::{FriendRequest, NewFriendRequest};
 use crate::database::{DbConn, DbError};
 use crate::member::models::{MemberId, MemberShort};
 use crate::schema::{friend_request::dsl as f_dsl, member::dsl as m_dsl};
-use crate::social::request::models::{
-    IncomingRequests, OutgoingRequests, RequestDetails,
-};
+use crate::social::request::models::{IncomingRequests, OutgoingRequests, RequestDetails};
 
+pub enum RequestType {
+    Incoming,
+    Outgoing,
+}
 pub struct FriendRequestRepository;
 impl FriendRequestRepository {
     // Create
@@ -27,13 +31,27 @@ impl FriendRequestRepository {
         conn: &mut DbConn,
         sender_id: MemberId,
         receiver_id: MemberId,
-    ) -> Result<bool, DbError> {
-        diesel::dsl::select(diesel::dsl::exists(
-            f_dsl::friend_request.find((sender_id, receiver_id)),
-        ))
-        .get_result::<bool>(conn)
-        .map_err(DbError::from)
+    ) -> Result<RequestType, DbError> {
+        let request = f_dsl::friend_request
+            .filter(
+                f_dsl::sender_id
+                    .eq(sender_id)
+                    .and(f_dsl::receiver_id.eq(receiver_id))
+                    .or(f_dsl::sender_id
+                        .eq(receiver_id)
+                        .and(f_dsl::receiver_id.eq(sender_id))),
+            )
+            .select(f_dsl::sender_id)
+            .first::<MemberId>(conn)
+            .map_err(DbError::from)?;
+
+        if sender_id == request {
+            Ok(RequestType::Outgoing)
+        } else {
+            Ok(RequestType::Incoming)
+        }
     }
+
     pub fn get_request(
         conn: &mut DbConn,
         sender_id: MemberId,
