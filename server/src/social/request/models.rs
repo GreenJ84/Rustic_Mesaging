@@ -11,9 +11,9 @@ use crate::schema::friend_request;
 #[derive(Insertable)]
 #[diesel(table_name = friend_request)]
 pub(in crate::social) struct NewFriendRequest {
-    pub(super) sender_id: MemberId,
-    pub(super) receiver_id: MemberId,
-    pub(super) note: String,
+    pub(in crate::social) sender_id: MemberId,
+    pub(in crate::social) receiver_id: MemberId,
+    pub(in crate::social) note: String,
 }
 impl NewFriendRequest {
     pub(in crate::social) fn sender_id(&self) -> MemberId {

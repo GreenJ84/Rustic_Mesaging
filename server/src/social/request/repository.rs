@@ -9,14 +9,15 @@ use crate::member::models::{MemberId, MemberShort};
 use crate::schema::{friend_request::dsl as f_dsl, member::dsl as m_dsl};
 use crate::social::request::models::{IncomingRequests, OutgoingRequests, RequestDetails};
 
-pub enum RequestType {
+/// Request Direction relative to the passed sender_id and receiver_id.
+pub(in crate::social) enum RequestType {
     Incoming,
     Outgoing,
 }
-pub struct FriendRequestRepository;
-impl FriendRequestRepository {
+pub(in crate::social) struct RequestRepository;
+impl RequestRepository {
     // Create
-    pub fn create_request(
+    pub(in crate::social) fn create_request(
         conn: &mut DbConn,
         new_request: NewFriendRequest,
     ) -> Result<FriendRequest, DbError> {
@@ -27,7 +28,7 @@ impl FriendRequestRepository {
     }
 
     // Get
-    pub fn is_requested(
+    pub(in crate::social) fn is_requested(
         conn: &mut DbConn,
         sender_id: MemberId,
         receiver_id: MemberId,
@@ -52,7 +53,7 @@ impl FriendRequestRepository {
         }
     }
 
-    pub fn get_request(
+    pub(in crate::social) fn get_request(
         conn: &mut DbConn,
         sender_id: MemberId,
         receiver_id: MemberId,
@@ -62,7 +63,7 @@ impl FriendRequestRepository {
             .first::<FriendRequest>(conn)
             .map_err(DbError::from)
     }
-    pub fn get_incoming(
+    pub(in crate::social) fn get_incoming(
         conn: &mut DbConn,
         member_id: MemberId,
     ) -> Result<IncomingRequests, DbError> {
@@ -86,7 +87,7 @@ impl FriendRequestRepository {
             .map_err(DbError::from)
     }
 
-    pub fn get_outgoing(
+    pub(in crate::social) fn get_outgoing(
         conn: &mut DbConn,
         member_id: MemberId,
     ) -> Result<OutgoingRequests, DbError> {
@@ -111,7 +112,7 @@ impl FriendRequestRepository {
     }
 
     // Update
-    pub fn update_request(
+    pub(in crate::social) fn update_request(
         conn: &mut DbConn,
         update: NewFriendRequest,
     ) -> Result<FriendRequest, DbError> {
@@ -122,7 +123,7 @@ impl FriendRequestRepository {
     }
 
     // Delete
-    pub fn delete_request(
+    pub(in crate::social) fn delete_request(
         conn: &mut DbConn,
         sender_id: MemberId,
         receiver_id: MemberId,

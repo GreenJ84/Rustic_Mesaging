@@ -64,8 +64,8 @@ impl Friendship {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Friend {
-    pub(crate) friend: MemberProfile,
-    pub(crate) created_at: NaiveDateTime,
+    pub friend: MemberProfile,
+    pub created_at: NaiveDateTime,
 }
 impl<'r> Responder<'r, 'r> for Friend {
     fn respond_to(self, req: &'r rocket::Request<'_>) -> rocket::response::Result<'r> {
@@ -75,8 +75,8 @@ impl<'r> Responder<'r, 'r> for Friend {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct FriendPreview {
-    pub(crate) friend: MemberShort,
-    pub(crate) created_at: NaiveDateTime,
+    pub friend: MemberShort,
+    pub created_at: NaiveDateTime,
 }
 impl<'r> Responder<'r, 'r> for FriendPreview {
     fn respond_to(self, req: &'r rocket::Request<'_>) -> rocket::response::Result<'r> {
@@ -85,8 +85,8 @@ impl<'r> Responder<'r, 'r> for FriendPreview {
 }
 
 #[derive(Serialize, Debug)]
-pub(crate) struct FriendList<T> {
-    pub(crate) friends: Vec<T>,
+pub struct FriendList<T> {
+    pub friends: Vec<T>,
 }
 impl<'r, T> Responder<'r, 'r> for FriendList<T>
 where

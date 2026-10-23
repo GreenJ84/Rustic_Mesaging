@@ -22,6 +22,7 @@ impl FriendRepository {
     ) -> Result<Friendship, DbError> {
         diesel::insert_into(friend_dsl::friend)
             .values(&new_friendship)
+            .returning(Friendship::as_returning())
             .get_result::<Friendship>(conn)
             .map_err(DbError::from)
     }
