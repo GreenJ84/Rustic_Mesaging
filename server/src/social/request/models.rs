@@ -5,7 +5,7 @@ use rocket::serde::json::Json;
 use rocket::Response;
 use serde::{Deserialize, Serialize};
 
-use crate::member::models::{MemberShort, MemberId};
+use crate::member::models::{MemberId, MemberShort};
 use crate::schema::friend_request;
 
 #[derive(Insertable)]

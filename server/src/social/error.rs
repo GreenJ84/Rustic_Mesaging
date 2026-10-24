@@ -3,7 +3,7 @@ use diesel::result::Error as DieselError;
 use crate::{api_error::ApiError, database::DbError};
 
 #[derive(Debug)]
-pub(super) enum SocialError {
+pub(crate) enum SocialError {
     InvalidInput(String),
     SelfFriendship,
     MemberNotFound,
