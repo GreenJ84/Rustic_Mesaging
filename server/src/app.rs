@@ -10,12 +10,12 @@ use crate::cors;
 use crate::database::Database;
 use crate::id_generator::IdGenerator;
 
-use crate::auth::system_roles;
-use crate::auth::{routes as auth_routes, service::AuthService};
+use crate::auth::system_roles::get_system_role_routes;
+use crate::auth::{get_auth_routes, service::AuthService};
 // use crate::chat::routes as chat_routes;
-use crate::member::{routes as member_routes, service::MemberService};
+use crate::member::{get_member_routes, service::MemberService};
 use crate::social;
-use crate::social::{routes as social_routes, service::SocialService};
+use crate::social::{get_friend_routes, get_request_routes, service::SocialService};
 // use crate::server::routes as server_routes;
 
 use crate::config::AppConfig;
@@ -48,6 +48,11 @@ pub fn build() -> Rocket<Build> {
         .manage(auth_service)
         .manage(member_service)
         .manage(social_service)
+        .mount("/", get_auth_routes())
+        .mount("/roles", get_system_role_routes())
+        .mount("/member", get_member_routes())
+        .mount("/friends", get_friend_routes())
+        .mount("/requests", get_request_routes())
 }
 
 // use crate::models::web_socket::WebSocketManager;
