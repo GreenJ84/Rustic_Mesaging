@@ -1,2 +1,2 @@
-DROP TABLE IF EXISTS friend;
 DROP INDEX IF EXISTS idx_friend;
+DROP TABLE IF EXISTS friend;

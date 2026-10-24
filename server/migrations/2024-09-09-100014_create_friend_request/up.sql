@@ -31,7 +31,7 @@ BEGIN
         RAISE EXCEPTION
             USING
                 ERRCODE = '23505',
-                CONSTRAINT = 'already_friend',
+                CONSTRAINT = 'friend_request_already_friend',
                 MESSAGE = 'Members are already friends';
     END IF;
 
