@@ -10,9 +10,6 @@ use super::models::{MemberChangeset, MemberId, MemberProfile, MemberShort, Multi
 use super::repository::MemberRepository;
 
 use crate::chat::models::MultiChatPreview;
-use crate::models::friend::FullFriend;
-use crate::models::friend_request::RequestDetailed;
-use crate::models::{friend::MultiFriend, friend_request::MultiFriendRequest};
 use crate::server::models::MultiServer;
 
 pub struct MemberService {
@@ -110,42 +107,6 @@ impl MemberService {
         let mut conn = self.database.get_connection()?;
         Ok(MultiServer {
             servers: MemberRepository::get_member_servers(&mut conn, member_id)?,
-        })
-    }
-
-    pub fn get_member_friends(&self, member_id: MemberId) -> Result<MultiFriend, MemberError> {
-        let mut conn = self.database.get_connection()?;
-        Ok(MultiFriend {
-            friends: MemberRepository::get_member_friends(&mut conn, member_id)?
-                .into_iter()
-                .map(|(created_at, member)| FullFriend { member, created_at })
-                .collect::<Vec<FullFriend>>(),
-        })
-    }
-
-    pub fn get_friend_requests(
-        &self,
-        member_id: MemberId,
-    ) -> Result<MultiFriendRequest, MemberError> {
-        let mut conn = self.database.get_connection()?;
-        let (incoming, outgoing) = MemberRepository::get_member_requests(&mut conn, member_id)?;
-        Ok(MultiFriendRequest {
-            incoming: incoming
-                .into_iter()
-                .map(|entry| RequestDetailed {
-                    member: entry.2,
-                    note: entry.1,
-                    created_at: entry.0,
-                })
-                .collect::<Vec<RequestDetailed>>(),
-            outgoing: outgoing
-                .into_iter()
-                .map(|entry| RequestDetailed {
-                    member: entry.2,
-                    note: entry.1,
-                    created_at: entry.0,
-                })
-                .collect::<Vec<RequestDetailed>>(),
         })
     }
 }
