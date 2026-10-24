@@ -54,10 +54,9 @@ diesel::table! {
     member (id) {
         id -> Int4,
         username -> Text,
-        password -> Text,
+        password_hash -> Text,
         email -> Text,
-        avatar -> Nullable<Text>,
-        is_admin -> Bool,
+        avatar -> Text,
         created_at -> Timestamp,
     }
 }
@@ -71,9 +70,11 @@ diesel::table! {
 }
 
 diesel::table! {
-    member_role (member_id, role_id) {
+    member_system_role (member_id, role_id) {
         member_id -> Int4,
         role_id -> Int4,
+        assigned_by -> Nullable<Int4>,
+        assigned_at -> Timestamp,
     }
 }
 
@@ -98,13 +99,6 @@ diesel::table! {
 }
 
 diesel::table! {
-    role (id) {
-        id -> Int4,
-        name -> Text,
-    }
-}
-
-diesel::table! {
     server (id) {
         id -> Int4,
         name -> Text,
@@ -123,12 +117,20 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    system_role (id) {
+        id -> Int4,
+        name -> Text,
+        authority_level -> Int4,
+        system_managed -> Bool,
+    }
+}
+
 diesel::joinable!(auth_session -> member (member_id));
 diesel::joinable!(channel -> server (server_id));
 diesel::joinable!(member_chat -> chat (chat_id));
 diesel::joinable!(member_chat -> member (member_id));
-diesel::joinable!(member_role -> member (member_id));
-diesel::joinable!(member_role -> role (role_id));
+diesel::joinable!(member_system_role -> system_role (role_id));
 diesel::joinable!(message -> chat (chat_id));
 diesel::joinable!(message -> member (sender_id));
 diesel::joinable!(post -> channel (channel_id));
@@ -145,10 +147,10 @@ diesel::allow_tables_to_appear_in_same_query!(
     friend_request,
     member,
     member_chat,
-    member_role,
+    member_system_role,
     message,
     post,
-    role,
     server,
     server_membership,
+    system_role,
 );
