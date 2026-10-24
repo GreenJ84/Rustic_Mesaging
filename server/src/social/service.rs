@@ -5,6 +5,7 @@ use crate::database::{Database, DbError};
 use crate::member::models::MemberId;
 use crate::member::repository::MemberRepository;
 use crate::social::error::SocialError;
+use crate::social::friend::models::{MultiFriend, MultiFriendPreview};
 
 use super::friend::models::{Friend, FriendList, FriendPreview, NewFriend};
 use super::friend::repository::FriendRepository;
@@ -256,14 +257,14 @@ impl SocialService {
     pub(crate) fn get_member_friends(
         &self,
         member_id: MemberId,
-    ) -> Result<FriendList<Friend>, SocialError> {
+    ) -> Result<MultiFriend, SocialError> {
         let mut conn = self.database.get_connection()?;
         FriendRepository::find_multi(&mut conn, member_id).map_err(SocialError::from)
     }
     pub(crate) fn get_member_friend_previews(
         &self,
         member_id: MemberId,
-    ) -> Result<FriendList<FriendPreview>, SocialError> {
+    ) -> Result<MultiFriendPreview, SocialError> {
         let mut conn = self.database.get_connection()?;
         FriendRepository::find_multi_preview(&mut conn, member_id).map_err(SocialError::from)
     }
