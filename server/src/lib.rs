@@ -8,6 +8,7 @@ pub(crate) mod api_error;
 pub mod app;
 pub(crate) mod config;
 pub(crate) mod database;
+pub (crate) mod cors;
 pub(crate) mod id_generator;
 pub(crate) mod schema;
 
