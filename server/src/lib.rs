@@ -18,9 +18,8 @@ pub(crate) mod member;
 pub(crate) mod server;
 pub(crate) mod social;
 
-// ! Depreciating
-pub(crate) mod models;
-pub(crate) mod routes;
-pub(crate) mod service;
 #[cfg(test)]
 pub(crate) mod tests;
+
+use rocket::response::status;
+pub(crate) type ApiResponse<T> = Result<status::Custom<T>, api_error::ApiError>;
