@@ -28,6 +28,20 @@ pub(super) struct NewServer {
     icon: Option<String>,
     owner_id: MemberId,
 }
+impl NewServer {
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+    pub fn description(&self) -> &str {
+        &self.description
+    }
+    pub fn icon(&self) -> Option<&str> {
+        self.icon.as_deref()
+    }
+    pub fn owner_id(&self) -> MemberId {
+        self.owner_id
+    }
+}
 impl TryFrom<(MemberId, ServerCreateInput)> for NewServer {
     type Error = ServerError;
     fn try_from(

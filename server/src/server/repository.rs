@@ -11,7 +11,7 @@ use crate::schema::server::dsl as s_dsl;
 
 use super::models::{NewServer, Server, ServerChangeset, ServerId};
 
-pub(super) struct ServerRepository;
+pub(crate) struct ServerRepository;
 impl ServerRepository {
     // Create
     pub(super) fn create(conn: &mut DbConn, new_server: NewServer) -> Result<Server, DbError> {
@@ -27,6 +27,13 @@ impl ServerRepository {
             .find(id)
             .first::<Server>(conn)
             .map_err(DbError::from)
+    }
+    pub(super) fn name_taken(conn: &mut DbConn, name: &str) -> Result<bool, DbError> {
+        diesel::dsl::select(diesel::dsl::exists(
+            s_dsl::server.filter(s_dsl::name.eq(name)),
+        ))
+        .get_result::<bool>(conn)
+        .map_err(DbError::from)
     }
     pub(super) fn is_owner(
         conn: &mut DbConn,
