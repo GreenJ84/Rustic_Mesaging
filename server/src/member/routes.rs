@@ -10,9 +10,8 @@ use super::models::{MemberProfile, MemberShort, MemberUpdateInput, MultiMemberPr
 use super::service::MemberService;
 
 use crate::chat::models::MultiChatPreview;
-use crate::models::{friend::MultiFriend, friend_request::MultiFriendRequest};
-use crate::routes::ApiResponse;
 use crate::server::models::MultiServer;
+use crate::ApiResponse;
 
 #[head("/")]
 pub fn head(_principal: SystemUser) -> ApiResponse<()> {
@@ -102,13 +101,4 @@ pub fn get_all_friends(
 ) -> ApiResponse<MultiFriend> {
     let friends = member_service.get_member_friends(user.member_id())?;
     Ok(status::Custom(Status::Ok, friends))
-}
-
-#[get("/requests")]
-pub fn get_friend_requests(
-    user: SystemUser,
-    member_service: &State<MemberService>,
-) -> ApiResponse<MultiFriendRequest> {
-    let requests = member_service.get_friend_requests(user.member_id())?;
-    Ok(status::Custom(Status::Ok, requests))
 }
