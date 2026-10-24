@@ -1,19 +1,20 @@
 use diesel::Connection;
+use serde::{Deserialize, Serialize};
 
 use crate::database::{Database, DbError};
 use crate::member::models::MemberId;
 use crate::member::repository::MemberRepository;
 use crate::social::error::SocialError;
-use crate::social::friend::models::{Friendship, NewFriend};
 
-use super::friend::models::{Friend, FriendList, FriendPreview};
+use super::friend::models::{Friend, FriendList, FriendPreview, NewFriend};
 use super::friend::repository::FriendRepository;
-use super::request::models::{FriendRequest, MultiFriendRequest, NewFriendRequest};
+use super::request::models::{FriendRequest, MultiFriendRequest, NewFriendRequest, RequestDetails};
 use super::request::repository::{RequestRepository, RequestType};
 
+#[derive(Serialize, Deserialize, Debug)]
 pub enum RequestCreation {
-    NewFriend(Friendship),
-    NewRequest(FriendRequest),
+    NewFriend(Friend),
+    NewRequest(RequestDetails),
 }
 pub(crate) struct SocialService {
     database: Database,
@@ -58,11 +59,16 @@ impl SocialService {
                     // If the request is incoming, accept it and create a friendship
                     let new_friendship =
                         NewFriend::new(new_request.sender_id, new_request.receiver_id);
-                    let friendship = FriendRepository::create(conn, new_friendship)?;
+                    FriendRepository::create(conn, new_friendship)?;
                     RequestRepository::delete_request(
                         conn,
                         new_request.receiver_id,
                         new_request.sender_id,
+                    )?;
+                    let friendship = FriendRepository::find(
+                        conn,
+                        new_request.sender_id,
+                        new_request.receiver_id,
                     )?;
                     Ok(RequestCreation::NewFriend(friendship))
                 }
@@ -73,6 +79,11 @@ impl SocialService {
                 Err(DbError::NotFound) => {
                     // If no request exists, create a new friend request
                     let new_request = RequestRepository::create_request(conn, new_request)?;
+                    let new_request = RequestRepository::get_request(
+                        conn,
+                        new_request.sender_id(),
+                        new_request.receiver_id(),
+                    )?;
                     Ok(RequestCreation::NewRequest(new_request))
                 }
                 Err(e) => Err(SocialError::from(e)),
@@ -81,24 +92,11 @@ impl SocialService {
     }
 
     // Get
-    pub(crate) fn is_requested(
-        &self,
-        sender_id: MemberId,
-        receiver_id: MemberId,
-    ) -> Result<Option<bool>, SocialError> {
-        let mut conn = self.database.get_connection()?;
-        match RequestRepository::is_requested(&mut conn, sender_id, receiver_id) {
-            Ok(RequestType::Incoming) => Ok(Some(true)),
-            Ok(RequestType::Outgoing) => Ok(Some(false)),
-            Err(DbError::NotFound) => Ok(None),
-            Err(e) => Err(SocialError::from(e)),
-        }
-    }
     pub(crate) fn get_friend_request(
         &self,
         sender_id: MemberId,
         receiver_id: MemberId,
-    ) -> Result<FriendRequest, SocialError> {
+    ) -> Result<RequestDetails, SocialError> {
         let mut conn = self.database.get_connection()?;
         RequestRepository::get_request(&mut conn, sender_id, receiver_id).map_err(|err| match err {
             DbError::NotFound => SocialError::RequestNotFound,
@@ -118,13 +116,44 @@ impl SocialService {
     }
 
     // Update
+    pub(crate) fn update_request(
+        &self,
+        member_id: MemberId,
+        receiver_id: MemberId,
+        note: String,
+    ) -> Result<(), SocialError> {
+        let mut conn = self.database.get_connection()?;
+        let found =
+            RequestRepository::is_requested(&mut conn, member_id, receiver_id).map_err(|err| {
+                match err {
+                    DbError::NotFound => SocialError::RequestNotFound,
+                    _ => SocialError::from(err),
+                }
+            })?;
+        match found {
+            RequestType::Incoming => Err(SocialError::NotRequestSender),
+            RequestType::Outgoing => {
+                let updated_request = NewFriendRequest {
+                    sender_id: member_id,
+                    receiver_id,
+                    note,
+                };
+                let updated_request = RequestRepository::update_request(&mut conn, updated_request)
+                    .map_err(|err| match err {
+                        DbError::NotFound => SocialError::RequestNotFound,
+                        _ => SocialError::from(err),
+                    })?;
+                Ok(())
+            }
+        }
+    }
     pub(crate) fn accept_friend_request(
         &self,
         member_id: MemberId,
         sender_id: MemberId,
-    ) -> Result<Friendship, SocialError> {
+    ) -> Result<Friend, SocialError> {
         let mut conn = self.database.get_connection()?;
-        conn.transaction::<Friendship, SocialError, _>(|conn| {
+        conn.transaction::<Friend, SocialError, _>(|conn| {
             let found = RequestRepository::is_requested(conn, member_id, sender_id).map_err(
                 |err| match err {
                     DbError::NotFound => SocialError::RequestNotFound,
@@ -134,9 +163,10 @@ impl SocialService {
             match found {
                 RequestType::Incoming => {
                     let new_friendship = NewFriend::new(sender_id, member_id);
-                    let friendship = FriendRepository::create(conn, new_friendship)?;
+                    FriendRepository::create(conn, new_friendship)?;
                     RequestRepository::delete_request(conn, sender_id, member_id)?;
-                    Ok(friendship)
+                    let friend = FriendRepository::find(conn, sender_id, member_id)?;
+                    Ok(friend)
                 }
                 RequestType::Outgoing => Err(SocialError::NotRequestRecipient),
             }
@@ -158,7 +188,13 @@ impl SocialService {
             )?;
             match found {
                 RequestType::Incoming => {
-                    RequestRepository::delete_request(conn, sender_id, member_id)?;
+                    RequestRepository::delete_request(conn, sender_id, member_id).map(|size| {
+                        if size < 1 {
+                            Err(SocialError::RequestNotFound)
+                        } else {
+                            Ok(())
+                        }
+                    })?;
                     Ok(())
                 }
                 RequestType::Outgoing => Err(SocialError::NotRequestRecipient),
