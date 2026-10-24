@@ -4,7 +4,7 @@ pub mod request;
 pub mod routes;
 pub mod service;
 
-pub fn request_routes() -> Vec<rocket::Route> {
+pub fn get_request_routes() -> Vec<rocket::Route> {
     rocket::routes![
         routes::create_request,
         routes::get_request,
@@ -16,7 +16,7 @@ pub fn request_routes() -> Vec<rocket::Route> {
     ]
 }
 
-pub fn friend_routes() -> Vec<rocket::Route> {
+pub fn get_friend_routes() -> Vec<rocket::Route> {
     rocket::routes![
         routes::get_friend_status,
         routes::get_friend,

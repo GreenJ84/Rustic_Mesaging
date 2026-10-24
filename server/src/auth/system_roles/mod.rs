@@ -8,7 +8,7 @@ pub(crate) use error::SystemRoleError;
 pub(crate) use models::*;
 pub(crate) use service::SystemRoleService;
 
-pub(crate) fn routes() -> Vec<rocket::Route> {
+pub(crate) fn get_system_role_routes() -> Vec<rocket::Route> {
     routes![
         routes::create_role,
         routes::list_roles,
