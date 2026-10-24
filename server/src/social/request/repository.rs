@@ -57,10 +57,17 @@ impl RequestRepository {
         conn: &mut DbConn,
         sender_id: MemberId,
         receiver_id: MemberId,
-    ) -> Result<FriendRequest, DbError> {
+    ) -> Result<RequestDetails, DbError> {
         f_dsl::friend_request
             .find((sender_id, receiver_id))
-            .first::<FriendRequest>(conn)
+            .inner_join(m_dsl::member.on(m_dsl::id.eq(f_dsl::sender_id)))
+            .select((MemberShort::as_select(), f_dsl::note, f_dsl::created_at))
+            .first::<(MemberShort, Option<String>, NaiveDateTime)>(conn)
+            .map(|(member, note, created_at)| RequestDetails {
+                member,
+                note,
+                created_at,
+            })
             .map_err(DbError::from)
     }
     pub(in crate::social) fn get_incoming(
