@@ -35,10 +35,7 @@ impl TryFrom<(MemberId, ServerCreateInput)> for NewServer {
     ) -> Result<NewServer, Self::Error> {
         let name = input.name.trim().to_owned();
         let description = input.description.trim().to_owned();
-        let icon = input
-            .icon
-            .map(|icon| icon.trim().to_owned())
-            .filter(|icon| !icon.is_empty());
+        let icon = validate_server_icon(input.icon).map_err(ServerError::InvalidInput)?;
 
         if !(5..=80).contains(&name.chars().count()) {
             return Err(ServerError::InvalidInput(
@@ -211,3 +208,156 @@ pub struct ServerList<T> {
 
 pub type MultiServer = ServerList<ServerDetails>;
 pub type MultiServerPreview = ServerList<ServerPreview>;
+
+#[cfg(test)]
+mod tests {
+    use chrono::NaiveDate;
+
+    use super::{
+        NewServer, Server, ServerChangeset, ServerChangesetInput, ServerCreateInput, ServerDetails,
+        ServerPreview,
+    };
+    use crate::server::errors::ServerError;
+
+    fn create_input(name: &str, description: &str, icon: Option<&str>) -> ServerCreateInput {
+        ServerCreateInput {
+            name: name.into(),
+            description: description.into(),
+            icon: icon.map(str::to_owned),
+        }
+    }
+
+    fn update_input(
+        name: Option<&str>,
+        description: Option<&str>,
+        icon: Option<&str>,
+    ) -> ServerChangesetInput {
+        ServerChangesetInput {
+            name: name.map(str::to_owned),
+            description: description.map(str::to_owned),
+            icon: icon.map(str::to_owned),
+        }
+    }
+
+    fn server() -> Server {
+        Server {
+            id: 7,
+            name: "Example Server".into(),
+            description: "An example server used by model tests".into(),
+            icon: "badge:green".into(),
+            owner_id: 11,
+            created_at: NaiveDate::from_ymd_opt(2026, 1, 2)
+                .unwrap()
+                .and_hms_opt(3, 4, 5)
+                .unwrap(),
+        }
+    }
+
+    #[test]
+    fn creation_normalizes_input_and_binds_owner() {
+        let server = NewServer::try_from((
+            11,
+            create_input(
+                "  Example Server  ",
+                "  A sufficiently long description  ",
+                Some("  badge:green  "),
+            ),
+        ))
+        .unwrap();
+
+        assert_eq!(server.name, "Example Server");
+        assert_eq!(server.description, "A sufficiently long description");
+        assert_eq!(server.icon.as_deref(), Some("badge:green"));
+        assert_eq!(server.owner_id, 11);
+    }
+
+    #[test]
+    fn creation_omits_icon_to_use_database_default() {
+        let server = NewServer::try_from((
+            11,
+            create_input("Example", "A valid server description", None),
+        ))
+        .unwrap();
+
+        assert_eq!(server.icon, None);
+    }
+
+    #[test]
+    fn creation_rejects_invalid_name_and_description_lengths() {
+        assert!(matches!(
+            NewServer::try_from((11, create_input("four", "A valid description", None))),
+            Err(ServerError::InvalidInput(_))
+        ));
+        assert!(matches!(
+            NewServer::try_from((11, create_input("Valid", "too short", None))),
+            Err(ServerError::InvalidInput(_))
+        ));
+    }
+
+    #[test]
+    fn creation_rejects_invalid_icons() {
+        for icon in ["unknown:red", "badge:unknown", "badge", "   "] {
+            assert!(matches!(
+                NewServer::try_from((
+                    11,
+                    create_input("Example", "A valid server description", Some(icon)),
+                )),
+                Err(ServerError::InvalidInput(_))
+            ));
+        }
+    }
+
+    #[test]
+    fn update_rejects_empty_changeset() {
+        assert!(matches!(
+            ServerChangeset::try_from(update_input(None, None, None)),
+            Err(ServerError::InvalidChangeset(_))
+        ));
+    }
+
+    #[test]
+    fn update_normalizes_supplied_fields() {
+        let changeset = ServerChangeset::try_from(update_input(
+            Some("  Updated Server  "),
+            Some("  An updated server description  "),
+            Some("  building:blue  "),
+        ))
+        .unwrap();
+
+        assert_eq!(changeset.name.as_deref(), Some("Updated Server"));
+        assert_eq!(
+            changeset.description.as_deref(),
+            Some("An updated server description")
+        );
+        assert_eq!(changeset.icon.as_deref(), Some("building:blue"));
+    }
+
+    #[test]
+    fn update_rejects_blank_or_invalid_supplied_fields() {
+        for input in [
+            update_input(Some("   "), None, None),
+            update_input(None, Some("   "), None),
+            update_input(None, None, Some("bug:unknown")),
+            update_input(None, None, Some("   ")),
+        ] {
+            assert!(matches!(
+                ServerChangeset::try_from(input),
+                Err(ServerError::InvalidChangeset(_))
+            ));
+        }
+    }
+
+    #[test]
+    fn persistence_model_converts_to_details_and_preview() {
+        let details = ServerDetails::from(server());
+        assert_eq!(details.id, 7);
+        assert_eq!(details.name, "Example Server");
+        assert_eq!(details.icon, "badge:green");
+        assert_eq!(details.owner_id, 11);
+
+        let preview = ServerPreview::from(server());
+        assert_eq!(preview.id, 7);
+        assert_eq!(preview.name, "Example Server");
+        assert_eq!(preview.icon, "badge:green");
+    }
+}
