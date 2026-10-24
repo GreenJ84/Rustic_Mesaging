@@ -27,13 +27,13 @@ impl From<DieselError> for DbError {
                 | DatabaseErrorKind::NotNullViolation
                 | DatabaseErrorKind::CheckViolation => Self::ConstraintViolation(error),
 
-                DatabaseErrorKind::SerializationFailure => Self::RetryableTransaction(error),
+                DatabaseErrorKind::ReadOnlyTransaction => Self::Transaction(error),
 
-                DatabaseErrorKind::UnableToSendCommand | DatabaseErrorKind::ReadOnlyTransaction => {
-                    Self::Transaction(error)
-                }
+                DatabaseErrorKind::SerializationFailure =>  Self::RetryableTransaction(error),
 
-                DatabaseErrorKind::ClosedConnection | _ => Self::Database(error),
+                DatabaseErrorKind::UnableToSendCommand
+                | DatabaseErrorKind::ClosedConnection
+                | _ => Self::Database(error),
             },
 
             DieselError::SerializationError(_) | DieselError::DeserializationError(_) => {
