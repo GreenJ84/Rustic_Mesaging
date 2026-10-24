@@ -93,12 +93,3 @@ pub fn get_all_member_servers(
     let servers = member_service.get_all_member_servers(user.member_id())?;
     Ok(status::Custom(Status::Ok, servers))
 }
-
-#[get("/friends")]
-pub fn get_all_friends(
-    user: SystemUser,
-    member_service: &State<MemberService>,
-) -> ApiResponse<MultiFriend> {
-    let friends = member_service.get_member_friends(user.member_id())?;
-    Ok(status::Custom(Status::Ok, friends))
-}

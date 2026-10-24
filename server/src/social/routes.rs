@@ -7,6 +7,7 @@ use rocket::State;
 use crate::api_error::ApiError;
 use crate::auth::SystemUser;
 use crate::member::models::MemberId;
+use crate::social::friend::models::MultiFriendPreview;
 use crate::ApiResponse;
 
 use super::error::SocialError;
@@ -16,6 +17,9 @@ use super::request::models::MultiFriendRequest;
 use super::request::models::{FriendRequest, RequestDetails};
 use super::service::{RequestCreation, SocialService};
 
+// =================================
+// Friend Request routes
+// =================================
 #[post("/<receiver_id>", data = "<form>")]
 pub(crate) fn create_request(
     user: SystemUser,
@@ -42,6 +46,15 @@ pub(crate) fn get_request(
     let request = social_service.get_friend_request(sender_id, receiver_id)?;
 
     Ok(status::Custom(Status::Ok, Json(request)))
+}
+
+#[get("/requests")]
+pub(crate) fn get_friend_requests(
+    user: SystemUser,
+    social_service: &State<SocialService>,
+) -> ApiResponse<MultiFriendRequest> {
+    let requests = social_service.get_friend_requests(user.member_id())?;
+    Ok(status::Custom(Status::Ok, requests))
 }
 
 #[put("/<receiver_id>", data = "<form>")]
@@ -84,11 +97,65 @@ pub(crate) fn delete_request(
     Ok(status::Custom(Status::Ok, ()))
 }
 
-#[get("/requests")]
-pub(crate) fn get_friend_requests(
+// =================================
+// Friend routes
+// =================================
+#[get("/<friend_id>/status")]
+pub fn get_friend_status(
     user: SystemUser,
     social_service: &State<SocialService>,
-) -> ApiResponse<MultiFriendRequest> {
-    let requests = social_service.get_friend_requests(user.member_id())?;
-    Ok(status::Custom(Status::Ok, requests))
+    friend_id: i32,
+) -> ApiResponse<Json<(bool, String)>> {
+    let is_friend = social_service.is_friend(user.member_id(), friend_id)?;
+    Ok(status::Custom(
+        Status::Ok,
+        Json((
+            is_friend,
+            format!(
+                "You are {}a friend with member {}",
+                if is_friend { "" } else { "NOT " },
+                friend_id
+            ),
+        )),
+    ))
+}
+#[get("/<friend_id>")]
+pub fn get_friend(
+    user: SystemUser,
+    social_service: &State<SocialService>,
+    friend_id: i32,
+) -> ApiResponse<Json<Friend>> {
+    let friend = social_service.get_friend(user.member_id(), friend_id)?;
+    Ok(status::Custom(Status::Ok, Json((friend))))
+}
+#[get("/friends")]
+pub fn get_friend_previews(
+    user: SystemUser,
+    social_service: &State<SocialService>,
+) -> ApiResponse<Json<MultiFriendPreview>> {
+    let friends = social_service.get_member_friend_previews(user.member_id())?;
+    Ok(status::Custom(Status::Ok, Json(friends)))
+}
+#[get("/friends/detailed")]
+pub fn get_friends(
+    user: SystemUser,
+    social_service: &State<SocialService>,
+) -> ApiResponse<Json<MultiFriend>> {
+    let friends = social_service.get_member_friends(user.member_id())?;
+    Ok(status::Custom(Status::Ok, Json(friends)))
+}
+
+#[put("/<_friend_id>")]
+pub fn update_friend_status(_user: SystemUser, _friend_id: i32) -> ApiResponse<()> {
+    Err(ApiError::NotImplemented)
+}
+
+#[delete("/<friend_id>")]
+pub fn remove_friend(
+    user: SystemUser,
+    social_service: &State<SocialService>,
+    friend_id: i32,
+) -> ApiResponse<()> {
+    social_service.remove_friend(user.member_id(), friend_id)?;
+    Ok(status::Custom(Status::Ok, ()))
 }
