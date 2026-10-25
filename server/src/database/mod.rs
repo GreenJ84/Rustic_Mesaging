@@ -56,11 +56,37 @@ impl Database {
         }
         escaped
     }
+
+    pub fn normalize_search_term(term: String) -> Result<String, SearchTermError> {
+        let search = term.trim().to_lowercase();
+        if search.is_empty() {
+            return Err(SearchTermError::Empty);
+        } else if search.len() > 100 {
+            return Err(SearchTermError::TooLong);
+        }
+        Ok(search)
+    }
+}
+
+#[derive(Debug)]
+pub enum SearchTermError {
+    Empty,
+    TooLong,
+}
+impl SearchTermError {
+    pub fn message(&self) -> &str {
+        match self {
+            SearchTermError::Empty => "Search term is empty",
+            SearchTermError::TooLong => "Search term too long",
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::Database;
+    use crate::database::SearchTermError;
+
+use super::Database;
 
     #[test]
     fn escapes_like_wildcards_and_escape_characters() {
@@ -72,7 +98,10 @@ mod tests {
 
     #[test]
     fn leaves_plain_search_terms_unchanged() {
-        assert_eq!(Database::escape_search_pattern("rust server"), "rust server");
+        assert_eq!(
+            Database::escape_search_pattern("rust server"),
+            "rust server"
+        );
     }
 
     #[test]
@@ -82,4 +111,27 @@ mod tests {
         assert_eq!(Database::page_offset(3), 75);
         assert_eq!(Database::page_offset(u32::MAX), i64::from(u32::MAX) * 25);
     }
+
+    #[test]
+    fn normalizes_search_terms() {
+        assert_eq!(Database::normalize_search_term("  Alice  ".to_string()).unwrap(), "Alice");
+    }
+
+    #[test]
+    fn rejects_empty_search_terms() {
+        assert!(matches!(
+            Database::normalize_search_term(" \t\n ".to_string()),
+            Err(SearchTermError::Empty)
+        ));
+    }
+
+    #[test]
+    fn limits_search_terms_by_character_count() {
+        assert!(Database::normalize_search_term("é".repeat(125)).is_ok());
+        assert!(matches!(
+            Database::normalize_search_term("é".repeat(126)),
+            Err(SearchTermError::TooLong)
+        ));
+    }
 }
+

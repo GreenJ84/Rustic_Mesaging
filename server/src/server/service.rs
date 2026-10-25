@@ -69,10 +69,7 @@ impl ServerService {
     }
 
     pub fn search_servers(&self, query: String) -> Result<MultiServerPreview, ServerError> {
-        let query = Database::normalize_search_term(query).map_err(|e| match e {
-            SearchTermError::Empty => ServerError::InvalidSearchTerm(e.message().to_owned()),
-            SearchTermError::TooLong => ServerError::InvalidSearchTerm(e.message().to_owned()),
-        })?;
+        let query = Database::normalize_search_term(query)?;
 
         let mut conn = self.database.get_connection()?;
         ServerRepository::search(&mut conn, query)
