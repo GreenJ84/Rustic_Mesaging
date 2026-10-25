@@ -13,6 +13,13 @@ use super::models::{NewServer, Server, ServerChangeset, ServerId};
 
 pub(crate) struct ServerRepository;
 impl ServerRepository {
+    // Existence
+    pub(super) fn exists(conn: &mut DbConn, id: ServerId) -> Result<bool, DbError> {
+        diesel::dsl::select(diesel::dsl::exists(s_dsl::server.find(id)))
+            .get_result::<bool>(conn)
+            .map_err(DbError::from)
+    }
+
     // Create
     pub(super) fn create(conn: &mut DbConn, new_server: NewServer) -> Result<Server, DbError> {
         diesel::insert_into(s_dsl::server)
@@ -48,7 +55,6 @@ impl ServerRepository {
         .get_result::<bool>(conn)
         .map_err(DbError::from)
     }
-
     pub(super) fn read_page(conn: &mut DbConn, page: u32) -> Result<Vec<Server>, DbError> {
         let offset = Database::page_offset(page);
         s_dsl::server
@@ -59,7 +65,6 @@ impl ServerRepository {
             .load(conn)
             .map_err(DbError::from)
     }
-
     pub(super) fn search(conn: &mut DbConn, search_term: String) -> Result<Vec<Server>, DbError> {
         let escaped = Database::escape_search_pattern(&search_term);
 
