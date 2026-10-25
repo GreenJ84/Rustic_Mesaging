@@ -12,5 +12,7 @@ pub fn get_member_routes() -> Vec<rocket::Route> {
         routes::search_members,
         routes::update,
         routes::delete,
+
+        crate::server::routes::get_member_servers,
     ]
 }
