@@ -19,8 +19,8 @@ pub struct NewServerMembership {
 #[derive(Queryable, Associations, Serialize, Deserialize, Debug)]
 #[diesel(table_name = server_membership)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-#[belongs_to(Member)]
-#[belongs_to(Server)]
+#[diesel(belongs_to(Member))]
+#[diesel(belongs_to(Server))]
 pub struct ServerMembership {
     #[diesel(sql_type = Int4)]
     pub member_id: MemberId,
@@ -28,9 +28,4 @@ pub struct ServerMembership {
     pub server_id: ServerId,
     #[diesel(sql_type = Timestamp)]
     joined_at: NaiveDateTime,
-}
-impl<'r> Responder<'r, 'r> for ServerMembership {
-    fn respond_to(self, req: &'r rocket::Request<'_>) -> rocket::response::Result<'r> {
-        Response::build_from(Json(self).respond_to(req)?).ok()
-    }
 }
