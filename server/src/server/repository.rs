@@ -61,7 +61,7 @@ impl ServerRepository {
     }
 
     pub(super) fn search(conn: &mut DbConn, search_term: String) -> Result<Vec<Server>, DbError> {
-        let escaped = Self::escape_like_pattern(&search_term);
+        let escaped = Database::escape_search_pattern(&search_term);
 
         let prefix = format!("{escaped}%");
         let contains = format!("%{escaped}%");
@@ -78,16 +78,6 @@ impl ServerRepository {
             .select(Server::as_select())
             .load(conn)
             .map_err(DbError::from)
-    }
-    fn escape_like_pattern(value: &str) -> String {
-        let mut escaped = String::with_capacity(value.len());
-        for character in value.chars() {
-            if matches!(character, '\\' | '%' | '_') {
-                escaped.push('\\');
-            }
-            escaped.push(character);
-        }
-        escaped
     }
 
     // Update
@@ -147,34 +137,3 @@ impl ServerRepository {
     // }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::ServerRepository;
-
-    #[test]
-    fn escapes_like_wildcards_and_escape_characters() {
-        assert_eq!(
-            ServerRepository::escape_like_pattern(r"50%_off\today"),
-            r"50\%\_off\\today"
-        );
-    }
-
-    #[test]
-    fn leaves_plain_search_terms_unchanged() {
-        assert_eq!(
-            ServerRepository::escape_like_pattern("rust server"),
-            "rust server"
-        );
-    }
-
-    #[test]
-    fn calculates_zero_based_page_offsets() {
-        assert_eq!(ServerRepository::page_offset(0), 0);
-        assert_eq!(ServerRepository::page_offset(1), 25);
-        assert_eq!(ServerRepository::page_offset(3), 75);
-        assert_eq!(
-            ServerRepository::page_offset(u32::MAX),
-            i64::from(u32::MAX) * 25
-        );
-    }
-}
