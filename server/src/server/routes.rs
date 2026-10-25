@@ -1,222 +1,146 @@
-use diesel::result::Error;
-use diesel::Connection;
-use rocket::form::{Form, Lenient, Strict};
+use rocket::form::{Form, Strict};
 use rocket::http::Status;
 use rocket::response::status;
+use rocket::serde::json::Json;
 use rocket::State;
 
-use super::models::{MultiServer, NewServer, Server};
+use crate::auth::SystemUser;
+use crate::member::models::MultiMemberPreview;
+
 use super::service::ServerService;
-use crate::auth::models::JWT;
-use crate::db::{get_db_connection, DbConn, DbPool};
-use crate::member::models::{MemberProfile, MultiMember};
-use crate::models::channel::MultiChannel;
-use crate::models::server_membership::NewServerMembership;
-use crate::routes::CustomResponse;
-use crate::service::server_membership_service::MembershipService;
-use crate::service::CrudOps;
+use crate::server::models::{
+    MultiServerPreview, ServerChangesetInput, ServerCreateInput, ServerDetails, ServerId,
+};
+use crate::ApiResponse;
 
 #[post("/", data = "<form>")]
 pub fn create(
-    _token: JWT,
-    pool: &State<DbPool>,
-    form: Form<Strict<NewServer>>,
-) -> CustomResponse<Server> {
-    let mut conn = get_db_connection(pool)?;
-
+    user: SystemUser,
+    server_service: &State<ServerService>,
+    form: Form<Strict<ServerCreateInput>>,
+) -> ApiResponse<Json<ServerDetails>> {
     let input = form.into_inner().into_inner();
-    match conn.transaction::<Server, Error, _>(move |mut conn| {
-        let server = ServerService::create(&mut conn, input)?;
-        MembershipService::join(
-            &mut conn,
-            NewServerMembership {
-                member_id: server.owner_id(),
-                server_id: server.id(),
-            },
-        )?;
-        Ok(server)
-    }) {
-        Ok(server) => Ok(status::Custom(Status::Created, server)),
-        Err(e) => Err(status::Custom(
-            Status::InternalServerError,
-            format!("Server entity creation error: {}", e),
-        )),
-    }
+    let server = server_service.create_server(user.member_id(), input)?;
+    Ok(status::Custom(Status::Created, Json(server)))
 }
 
 #[get("/<server_id>")]
-pub fn get(_token: JWT, pool: &State<DbPool>, server_id: i32) -> CustomResponse<Server> {
-    let mut conn = get_db_connection(pool)?;
-
-    match ServerService::read(&mut conn, server_id) {
-        Ok(server) => Ok(status::Custom(Status::Ok, server)),
-        Err(e) => {
-            return Err::<status::Custom<Server>, status::Custom<String>>(status::Custom(
-                Status::NotFound,
-                format!("Server lookup error: {}", e),
-            ))
-        }
-    }
+pub fn get(
+    _user: SystemUser,
+    server_service: &State<ServerService>,
+    server_id: ServerId,
+) -> ApiResponse<Json<ServerDetails>> {
+    let server = server_service.get_server(server_id)?;
+    Ok(status::Custom(Status::Ok, Json(server)))
 }
 
-#[put("/<server_id>", data = "<form>")]
-pub fn update(
-    token: JWT,
-    pool: &State<DbPool>,
-    form: Form<Lenient<NewServer>>,
-    server_id: i32,
-) -> CustomResponse<Server> {
-    let mut conn = get_db_connection(pool)?;
-
-    let server = ServerService::read(&mut conn, server_id).map_err(|_| {
-        status::Custom(
-            Status::FailedDependency,
-            String::from("Server update error"),
-        )
-    })?;
-    if token.claims.member_id != server.owner_id() && !token.claims.is_admin {
-        return Err::<status::Custom<Server>, status::Custom<String>>(status::Custom(
-            Status::Unauthorized,
-            String::from("Only Admin and Owners can update servers."),
-        ));
-    }
-
-    let input = form.into_inner().into_inner();
-    match ServerService::update(&mut conn, server_id, input) {
-        Ok(server) => Ok(status::Custom(Status::Ok, server)),
-        Err(e) => {
-            return Err::<status::Custom<Server>, status::Custom<String>>(status::Custom(
-                Status::InternalServerError,
-                format!("Server update error: {}", e),
-            ))
-        }
-    }
-}
-
-#[delete("/<server_id>")]
-pub fn delete(token: JWT, pool: &State<DbPool>, server_id: i32) -> CustomResponse<()> {
-    let mut conn = get_db_connection(pool)?;
-
-    let server = ServerService::read(&mut conn, server_id).map_err(|_| {
-        status::Custom(
-            Status::InternalServerError,
-            String::from("Database connection error"),
-        )
-    })?;
-    if token.claims.member_id != server.owner_id() && !token.claims.is_admin {
-        return Err::<status::Custom<()>, status::Custom<String>>(status::Custom(
-            Status::Unauthorized,
-            String::from("Only Admin and Owners can update servers."),
-        ));
-    }
-
-    match ServerService::delete(&mut conn, server_id) {
-        Ok(size) => {
-            if size > 1 {
-                eprint!("{} number of documents were deleted", size);
-            }
-            Ok(status::Custom(Status::Ok, ()))
-        }
-        Err(e) => {
-            return Err::<status::Custom<()>, status::Custom<String>>(status::Custom(
-                Status::FailedDependency,
-                format!("Server deletion error: {}", e),
-            ))
-        }
-    }
+#[get("/all?<page>")]
+pub fn get_servers_list(
+    _user: SystemUser,
+    server_service: &State<ServerService>,
+    page: Option<u32>,
+) -> ApiResponse<Json<MultiServerPreview>> {
+    let page = page.unwrap_or(0);
+    let servers = server_service.get_servers_list(page)?;
+    Ok(status::Custom(Status::Ok, Json(servers)))
 }
 
 #[get("/search?<search_term>")]
 pub fn search_servers(
-    _token: JWT,
-    pool: &State<DbPool>,
+    _user: SystemUser,
+    server_service: &State<ServerService>,
     search_term: &str,
-) -> CustomResponse<MultiServer> {
-    let mut conn = get_db_connection(pool)?;
-
-    let results =
-        ServerService::search_servers(&mut conn, search_term.to_string()).map_err(|_| {
-            status::Custom(
-                Status::InternalServerError,
-                String::from("Server search error"),
-            )
-        })?;
-
-    Ok(status::Custom(Status::Ok, MultiServer { servers: results }))
+) -> ApiResponse<Json<MultiServerPreview>> {
+    let servers = server_service.search_servers(search_term.to_string())?;
+    Ok(status::Custom(Status::Ok, Json(servers)))
 }
 
-#[get("/all")]
-pub fn get_all_servers(_token: JWT, pool: &State<DbPool>) -> CustomResponse<MultiServer> {
-    let mut conn = get_db_connection(pool)?;
-
-    match ServerService::get_all_servers(&mut conn) {
-        Ok(servers) => Ok(status::Custom(Status::Ok, MultiServer { servers })),
-        Err(e) => {
-            return Err::<status::Custom<MultiServer>, status::Custom<String>>(status::Custom(
-                Status::InternalServerError,
-                format!("Servers lookup error: {}", e),
-            ))
-        }
-    }
+#[patch("/<server_id>", data = "<form>")]
+pub fn update(
+    user: SystemUser,
+    server_service: &State<ServerService>,
+    form: Form<Strict<ServerChangesetInput>>,
+    server_id: ServerId,
+) -> ApiResponse<Json<ServerDetails>> {
+    let input = form.into_inner().into_inner();
+    let server = server_service.update_server(server_id, user.member_id(), input)?;
+    Ok(status::Custom(Status::Ok, Json(server)))
 }
 
-#[get("/<server_id>/members")]
+#[delete("/<server_id>")]
+pub fn delete(
+    user: SystemUser,
+    server_service: &State<ServerService>,
+    server_id: ServerId,
+) -> ApiResponse<()> {
+    server_service.delete_server(server_id, user.member_id())?;
+    Ok(status::Custom(Status::NoContent, ()))
+}
+
+#[post("/<server_id>/join")]
+pub fn join_server(
+    user: SystemUser,
+    server_service: &State<ServerService>,
+    server_id: ServerId,
+) -> ApiResponse<()> {
+    server_service.join_server(server_id, user.member_id())?;
+    Ok(status::Custom(Status::Created, ()))
+}
+
+#[get("/<server_id>/members?<page>")]
 pub fn get_server_members(
-    token: JWT,
-    pool: &State<DbPool>,
-    server_id: i32,
-) -> CustomResponse<MultiMember> {
-    let mut conn = get_db_connection(pool)?;
-    if !MembershipService::has_membership(&mut conn, server_id, token.claims.member_id) {
-        return Err::<status::Custom<MultiMember>, status::Custom<String>>(status::Custom(
-            Status::Unauthorized,
-            String::from("Only server members can view other members within"),
-        ));
-    }
-
-    match ServerService::get_server_members(&mut conn, server_id) {
-        Ok(members) => {
-            let safe_members = members
-                .into_iter()
-                .map(|member| member.into_profile())
-                .collect::<Vec<MemberProfile>>();
-            Ok(status::Custom(
-                Status::Ok,
-                MultiMember {
-                    members: safe_members,
-                },
-            ))
-        }
-        Err(e) => {
-            return Err::<status::Custom<MultiMember>, status::Custom<String>>(status::Custom(
-                Status::NotFound,
-                format!("Server members lookup error: {}", e),
-            ))
-        }
-    }
+    user: SystemUser,
+    server_service: &State<ServerService>,
+    server_id: ServerId,
+    page: Option<u32>,
+) -> ApiResponse<Json<MultiMemberPreview>> {
+    let page = page.unwrap_or(0);
+    let members = server_service.get_server_members(server_id, user.member_id(), page)?;
+    Ok(status::Custom(Status::Ok, Json(members)))
 }
 
-#[get("/<server_id>/channels")]
-pub fn get_server_channels(
-    token: JWT,
-    pool: &State<DbPool>,
-    server_id: i32,
-) -> CustomResponse<MultiChannel> {
-    let mut conn = get_db_connection(pool)?;
-    if !MembershipService::has_membership(&mut conn, server_id, token.claims.member_id) {
-        return Err::<status::Custom<MultiChannel>, status::Custom<String>>(status::Custom(
-            Status::Unauthorized,
-            String::from("Only server members can view channels within"),
-        ));
-    }
-
-    match ServerService::get_server_channels(&mut conn, server_id) {
-        Ok(channels) => Ok(status::Custom(Status::Ok, MultiChannel { channels })),
-        Err(e) => {
-            return Err::<status::Custom<MultiChannel>, status::Custom<String>>(status::Custom(
-                Status::NotFound,
-                format!("Server channels lookup error: {}", e),
-            ))
-        }
-    }
+#[get("/servers?<page>")]
+pub fn get_member_servers(
+    user: SystemUser,
+    server_service: &State<ServerService>,
+    page: Option<u32>,
+) -> ApiResponse<Json<MultiServerPreview>> {
+    let page = page.unwrap_or(0);
+    let servers = server_service.get_member_servers(user.member_id(), page)?;
+    Ok(status::Custom(Status::Ok, Json(servers)))
 }
+
+#[delete("/<server_id>/leave")]
+pub fn leave_server(
+    user: SystemUser,
+    server_service: &State<ServerService>,
+    server_id: ServerId,
+) -> ApiResponse<()> {
+    server_service.leave_server(server_id, user.member_id())?;
+    Ok(status::Custom(Status::NoContent, ()))
+}
+
+// #[get("/<server_id>/channels")]
+// pub fn get_server_channels(
+//     user: SystemUser,
+//     server_service: &State<ServerService>,
+//     server_id: ServerId,
+// ) -> ApiResponse<MultiChannel> {
+//     let mut conn = get_db_connection(pool)?;
+//     if !MembershipService::has_membership(&mut conn, server_id, token.claims.member_id) {
+//         return Err::<status::Custom<MultiChannel>, status::Custom<String>>(status::Custom(
+//             Status::Unauthorized,
+//             String::from("Only server members can view channels within"),
+//         ));
+//     }
+
+//     match ServerService::get_server_channels(&mut conn, server_id) {
+//         Ok(channels) => Ok(status::Custom(Status::Ok, MultiChannel { channels })),
+//         Err(e) => {
+//             return Err::<status::Custom<MultiChannel>, status::Custom<String>>(status::Custom(
+//                 Status::NotFound,
+//                 format!("Server channels lookup error: {}", e),
+//             ))
+//         }
+//     }
+// }

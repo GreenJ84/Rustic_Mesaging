@@ -84,12 +84,3 @@ pub fn get_all_member_chats(
     let chats = member_service.get_member_chats(user.member_id())?;
     Ok(status::Custom(Status::Ok, chats))
 }
-
-#[get("/servers")]
-pub fn get_all_member_servers(
-    user: SystemUser,
-    member_service: &State<MemberService>,
-) -> ApiResponse<MultiServer> {
-    let servers = member_service.get_all_member_servers(user.member_id())?;
-    Ok(status::Custom(Status::Ok, servers))
-}
