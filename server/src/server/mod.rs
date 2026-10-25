@@ -5,6 +5,7 @@ pub(crate) mod routes;
 pub(crate) mod service;
 
 pub mod membership;
+pub mod channel;
 
 pub fn get_server_routes() -> Vec<rocket::Route> {
     routes![
