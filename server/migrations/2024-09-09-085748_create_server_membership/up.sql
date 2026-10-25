@@ -6,5 +6,4 @@ CREATE TABLE server_membership (
     PRIMARY KEY(member_id, server_id)
 );
 
-CREATE INDEX member_servers ON server_membership(member_id);
 CREATE INDEX server_members ON server_membership(server_id);
