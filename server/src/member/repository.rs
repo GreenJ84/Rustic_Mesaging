@@ -10,7 +10,6 @@ use crate::schema::{
     chat::dsl as c_dsl, friend::dsl as f_dsl, friend_request::dsl as fr_dsl, member::dsl as m_dsl,
     member_chat::dsl as mc_dsl, server::dsl as s_dsl, server_membership::dsl as sm_dsl,
 };
-use crate::server::models::Server;
 
 enum MemberIdentifier<'a> {
     Id(MemberId),
@@ -150,15 +149,6 @@ impl MemberRepository {
     }
 
     // TODO: Move to sub-services ===============
-    pub fn get_member_servers(conn: &mut DbConn, member_id: i32) -> Result<Vec<Server>, DbError> {
-        sm_dsl::server_membership
-            .filter(sm_dsl::member_id.eq(member_id))
-            .inner_join(s_dsl::server.on(sm_dsl::server_id.eq(s_dsl::id)))
-            .select(Server::as_select()) // Select server ID and name
-            .load::<Server>(conn)
-            .map_err(DbError::from)
-    }
-
     pub fn get_member_chats(conn: &mut DbConn, member_id: i32) -> Result<Vec<Chat>, DbError> {
         mc_dsl::member_chat
             .filter(mc_dsl::member_id.eq(member_id))

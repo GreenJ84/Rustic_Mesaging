@@ -105,28 +105,6 @@ impl ServerRepository {
         }
     }
 
-    // pub fn get_member_servers(conn: &mut DbConn, member_id: i32) -> Result<Vec<Server>, DbError> {
-    //     sm_dsl::server_membership
-    //         .filter(sm_dsl::member_id.eq(member_id))
-    //         .inner_join(s_dsl::server.on(sm_dsl::server_id.eq(s_dsl::id)))
-    //         .select(Server::as_select()) // Select server ID and name
-    //         .load::<Server>(conn)
-    //         .map_err(DbError::from)
-    // }
-    // pub fn get_all_member_servers(&self, member_id: MemberId) -> Result<MultiServer, MemberDbError> {
-    //     let mut conn = self.database.get_connection()?;
-    //     Ok(MultiServer {
-    //         servers: MemberRepository::get_member_servers(&mut conn, member_id)?,
-    //     })
-    // }
-    // pub fn get_server_members(conn: &mut DbConn, server_id: i32) -> Result<Vec<Member>, DbError> {
-    //     sm_dsl::server_membership
-    //         .filter(sm_dsl::server_id.eq(server_id))
-    //         .inner_join(m_dsl::member.on(sm_dsl::member_id.eq(m_dsl::id)))
-    //         .order_by(sm_dsl::joined_at.asc())
-    //         .select(Member::as_select())
-    //         .load::<Member>(conn)
-    // }
     // pub fn get_server_channels(conn: &mut DbConn, server_id: i32) -> Result<Vec<Channel>, DbError> {
     //     c_dsl::channel
     //         .filter(c_dsl::server_id.eq(server_id))
