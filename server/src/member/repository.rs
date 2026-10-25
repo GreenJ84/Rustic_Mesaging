@@ -167,51 +167,6 @@ impl MemberRepository {
             .load::<Chat>(conn)
             .map_err(DbError::from)
     }
-
-    pub fn get_member_friends(
-        conn: &mut DbConn,
-        member_id: i32,
-    ) -> Result<Vec<(NaiveDateTime, MemberShort)>, DbError> {
-        let other_member_id =
-            case_when(f_dsl::member_id.eq(member_id), f_dsl::friend_id).otherwise(f_dsl::member_id);
-
-        f_dsl::friend
-            .filter(
-                f_dsl::member_id
-                    .eq(member_id)
-                    .or(f_dsl::friend_id.eq(member_id)), // Find all friend relationships
-            )
-            .inner_join(m_dsl::member.on(m_dsl::id.eq(other_member_id)))
-            .select((f_dsl::created_at, MemberShort::as_select()))
-            .order_by(f_dsl::created_at.desc())
-            .load::<(NaiveDateTime, MemberShort)>(conn)
-            .map_err(DbError::from)
-    }
-
-    pub fn get_member_requests(
-        conn: &mut DbConn,
-        member_id: i32,
-    ) -> Result<
-        (
-            Vec<(NaiveDateTime, Option<String>, MemberShort)>,
-            Vec<(NaiveDateTime, Option<String>, MemberShort)>,
-        ),
-        DbError,
-    > {
-        let incoming = fr_dsl::friend_request
-            .filter(fr_dsl::receiver_id.eq(member_id))
-            .inner_join(m_dsl::member.on(m_dsl::id.eq(fr_dsl::sender_id)))
-            .select((fr_dsl::created_at, fr_dsl::note, MemberShort::as_select()))
-            .load::<(NaiveDateTime, Option<String>, MemberShort)>(conn)?;
-
-        let outgoing = fr_dsl::friend_request
-            .filter(fr_dsl::sender_id.eq(member_id))
-            .inner_join(m_dsl::member.on(m_dsl::id.eq(fr_dsl::receiver_id)))
-            .select((fr_dsl::created_at, fr_dsl::note, MemberShort::as_select()))
-            .load::<(NaiveDateTime, Option<String>, MemberShort)>(conn)?;
-
-        Ok((incoming, outgoing))
-    }
 }
 
 #[cfg(test)]
