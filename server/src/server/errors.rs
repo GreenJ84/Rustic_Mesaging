@@ -1,5 +1,8 @@
 use crate::api_error::ApiError;
 use crate::database::{DbError, DieselError};
+use crate::member::error::MemberError;
+
+use super::membership::error::MembershipError;
 
 /// Failures produced by server-entity validation, authorization, and persistence.
 #[derive(Debug)]
@@ -13,6 +16,8 @@ pub(crate) enum ServerError {
 
     NotOwner,
 
+    Membership(MembershipError),
+    Member(MemberError),
     Persistence(DbError),
 }
 
@@ -24,6 +29,17 @@ impl From<DbError> for ServerError {
             DbError::Conflict(DieselError::DatabaseError(_, information)) => {
                 match information.constraint_name() {
                     Some("server_name_key") => Self::NameTaken,
+                    Some("server_membership_pkey") => {
+                        ServerError::Membership(MembershipError::AlreadyMember)
+                    }
+                    _ => Self::Persistence(error),
+                }
+            }
+
+            DbError::ConstraintViolation(DieselError::DatabaseError(_, information)) => {
+                match information.constraint_name() {
+                    Some("server_membership_server_id_fkey") => Self::NotFound,
+                    Some("server_membership_member_id_fkey") => Self::Member(MemberError::NotFound),
                     _ => Self::Persistence(error),
                 }
             }
@@ -40,10 +56,15 @@ impl From<DbError> for ServerError {
         }
     }
 }
-
 impl From<DieselError> for ServerError {
     fn from(error: DieselError) -> Self {
         Self::from(DbError::from(error))
+    }
+}
+
+impl From<MembershipError> for ServerError {
+    fn from(error: MembershipError) -> Self {
+        Self::Membership(error)
     }
 }
 
@@ -64,6 +85,8 @@ impl From<ServerError> for ApiError {
                 ApiError::Forbidden("Server ownership is required for this operation".into())
             }
 
+            ServerError::Membership(error) => ApiError::from(error),
+            ServerError::Member(error) => ApiError::from(error),
             ServerError::Persistence(_) => ApiError::InternalError,
         }
     }
