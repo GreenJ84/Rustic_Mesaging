@@ -177,7 +177,8 @@ fn validate_server_icon(icon: Option<String>) -> Result<Option<String>, String> 
 // ================================
 // Server DTO Models
 // ================================
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Queryable, Selectable, Serialize, Deserialize, Debug)]
+#[diesel(table_name = server)]
 pub struct ServerDetails {
     pub id: ServerId,
     pub name: String,
@@ -199,7 +200,8 @@ impl From<Server> for ServerDetails {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Queryable, Selectable, Serialize, Deserialize, Debug)]
+#[diesel(table_name = server)]
 pub struct ServerPreview {
     pub id: ServerId,
     pub name: String,
