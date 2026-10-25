@@ -46,7 +46,7 @@ impl SocialService {
 
         let mut conn = self.database.get_connection()?;
         conn.transaction::<RequestCreation, SocialError, _>(|conn| {
-            if MemberRepository::find_by_id(conn, receiver_id)?.is_none() {
+            if !MemberRepository::exists(conn, receiver_id)? {
                 return Err(SocialError::MemberNotFound);
             } else if FriendRepository::exists(conn, member_id, receiver_id)? {
                 return Err(SocialError::AlreadyFriends);

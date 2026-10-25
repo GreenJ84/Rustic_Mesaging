@@ -125,7 +125,7 @@ impl SystemRoleService {
         new_role_id: SystemRoleId,
     ) -> Result<(), SystemRoleError> {
         conn.transaction(|conn| {
-            if MemberRepository::find_by_id(conn, member_id)?.is_none() {
+            if !MemberRepository::exists(conn, member_id)? {
                 return Err(SystemRoleError::MemberNotFound);
             }
             // Lock the member's current assignment, if any, to prevent concurrent modifications.

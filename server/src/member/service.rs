@@ -30,14 +30,6 @@ impl MemberService {
             Err(MemberError::NotFound)
         }
     }
-    pub fn find_by_id(&self, id: MemberId) -> Result<Option<MemberShort>, MemberError> {
-        let mut conn = self.database.get_connection()?;
-        if let Some(member) = MemberRepository::find_by_id(&mut conn, id)? {
-            Ok(Some(member.into_short()))
-        } else {
-            Ok(None)
-        }
-    }
     pub fn find_by_username(&self, username: String) -> Result<Option<MemberShort>, MemberError> {
         let mut conn = self.database.get_connection()?;
         if let Some(member) = MemberRepository::find_by_username(&mut conn, &username)? {
@@ -100,13 +92,6 @@ impl MemberService {
         let mut conn = self.database.get_connection()?;
         Ok(MultiChatPreview {
             chat_previews: MemberRepository::get_member_chats(&mut conn, member_id)?,
-        })
-    }
-
-    pub fn get_all_member_servers(&self, member_id: MemberId) -> Result<MultiServer, MemberError> {
-        let mut conn = self.database.get_connection()?;
-        Ok(MultiServer {
-            servers: MemberRepository::get_member_servers(&mut conn, member_id)?,
         })
     }
 }

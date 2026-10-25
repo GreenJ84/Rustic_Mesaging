@@ -19,7 +19,7 @@ enum MemberIdentifier<'a> {
 /// Stateless persistence operations for members.
 pub(crate) struct MemberRepository;
 impl MemberRepository {
-    /// Creation =============================
+    // Existence
     pub(crate) fn identity_exists(
         conn: &mut DbConn,
         username: &str,
@@ -51,6 +51,13 @@ impl MemberRepository {
             .optional()
             .map_err(DbError::from)
     }
+    pub(crate) fn exists(conn: &mut DbConn, id: MemberId) -> Result<bool, DbError> {
+        diesel::select(diesel::dsl::exists(m_dsl::member.find(id)))
+            .get_result::<bool>(conn)
+            .map_err(DbError::from)
+    }
+
+    /// Creation =============================
     pub(crate) fn create(conn: &mut DbConn, new_member: NewMember) -> Result<Member, DbError> {
         diesel::insert_into(m_dsl::member)
             .values(&new_member)
@@ -69,7 +76,7 @@ impl MemberRepository {
         }
         .map_err(DbError::from)
     }
-    pub(crate) fn find_by_id(conn: &mut DbConn, id: MemberId) -> Result<Option<Member>, DbError> {
+    pub fn find_by_id(conn: &mut DbConn, id: MemberId) -> Result<Option<Member>, DbError> {
         Self::read(conn, MemberIdentifier::Id(id))
     }
     pub(crate) fn find_by_username(
