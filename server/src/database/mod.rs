@@ -40,4 +40,9 @@ impl Database {
             ))),
         }
     }
+
+    pub const PAGE_SIZE: i64 = 25;
+    pub fn page_offset(page: u32) -> i64 {
+        i64::from(page) * Self::PAGE_SIZE
+    }
 }

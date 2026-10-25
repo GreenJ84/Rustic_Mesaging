@@ -5,7 +5,7 @@ use diesel::{
     SelectableHelper, TextExpressionMethods,
 };
 
-use crate::database::{DbConn, DbError};
+use crate::database::{Database, DbConn, DbError};
 use crate::member::models::MemberId;
 use crate::schema::server::dsl as s_dsl;
 
@@ -49,20 +49,17 @@ impl ServerRepository {
         .map_err(DbError::from)
     }
 
-    const PAGE_SIZE: i64 = 25;
     pub(super) fn read_page(conn: &mut DbConn, page: u32) -> Result<Vec<Server>, DbError> {
-        let offset = Self::page_offset(page);
+        let offset = Database::page_offset(page);
         s_dsl::server
             .select(Server::as_select())
             .order_by((s_dsl::created_at.desc(), s_dsl::id.desc()))
-            .limit(Self::PAGE_SIZE)
+            .limit(Database::PAGE_SIZE)
             .offset(offset)
             .load(conn)
             .map_err(DbError::from)
     }
-    fn page_offset(page: u32) -> i64 {
-        i64::from(page) * Self::PAGE_SIZE
-    }
+
     pub(super) fn search(conn: &mut DbConn, search_term: String) -> Result<Vec<Server>, DbError> {
         let escaped = Self::escape_like_pattern(&search_term);
 
