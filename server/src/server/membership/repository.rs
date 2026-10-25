@@ -12,18 +12,20 @@ use super::models::{NewServerMembership, ServerMembership};
 pub(in crate::server) struct ServerMembershipRepository;
 impl ServerMembershipRepository {
     // Create
-    pub(in crate::server) fn join(
+    pub(in crate::server) fn create(
         conn: &mut DbConn,
         new_membership: NewServerMembership,
-    ) -> Result<ServerMembership, DbError> {
-        diesel::insert_into(sm_dsl::server_membership)
+    ) -> Result<(), DbError> {
+        let size = diesel::insert_into(sm_dsl::server_membership)
             .values(&new_membership)
-            .get_result::<ServerMembership>(conn)
-            .map_err(DbError::from)
+            .execute(conn)
+            .map_err(DbError::from)?;
+
+        Ok(())
     }
 
     // Read
-    pub(in crate::server) fn has_membership(
+    pub(in crate::server) fn exists(
         conn: &mut DbConn,
         server_id: ServerId,
         member_id: MemberId,
@@ -68,7 +70,7 @@ impl ServerMembershipRepository {
     }
 
     // Delete
-    pub(in crate::server) fn leave(
+    pub(in crate::server) fn delete(
         conn: &mut DbConn,
         server_id: ServerId,
         member_id: MemberId,
