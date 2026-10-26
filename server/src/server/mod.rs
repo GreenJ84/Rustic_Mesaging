@@ -1,14 +1,16 @@
+use channel::get_channel_routes;
+
 pub(crate) mod errors;
 pub(crate) mod models;
 pub(crate) mod repository;
 pub(crate) mod routes;
 pub(crate) mod service;
 
-pub mod membership;
 pub mod channel;
+pub mod membership;
 
 pub fn get_server_routes() -> Vec<rocket::Route> {
-    routes![
+    let mut routes = routes![
         routes::create,
         routes::get,
         routes::get_servers_list,
@@ -18,5 +20,7 @@ pub fn get_server_routes() -> Vec<rocket::Route> {
         routes::join_server,
         routes::get_server_members,
         routes::leave_server,
-    ]
+    ];
+    routes.extend(get_channel_routes());
+    routes
 }

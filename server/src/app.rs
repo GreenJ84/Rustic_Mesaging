@@ -15,7 +15,7 @@ use crate::auth::system_roles::get_system_role_routes;
 use crate::auth::{get_auth_routes, service::AuthService};
 // use crate::chat::routes as chat_routes;
 use crate::member::{get_member_routes, service::MemberService};
-use crate::server::channel::{get_channel_routes, service::ChannelService};
+use crate::server::channel::service::ChannelService;
 use crate::server::{get_server_routes, service::ServerService};
 use crate::social::{get_friend_routes, get_request_routes, service::SocialService};
 // use crate::server::routes as server_routes;
@@ -56,11 +56,10 @@ pub fn build() -> Rocket<Build> {
         .manage(channel_service)
         .mount("/", get_auth_routes())
         .mount("/roles", get_system_role_routes())
-        .mount("/members", get_member_routes())
+        .mount("/member", get_member_routes())
         .mount("/friends", get_friend_routes())
         .mount("/requests", get_request_routes())
         .mount("/servers", get_server_routes())
-        .mount("/server", get_channel_routes())
 }
 
 // use crate::models::web_socket::WebSocketManager;
