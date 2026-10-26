@@ -1,3 +1,4 @@
+use rocket::{post, get, put, delete};
 use rocket::form::{Form, Lenient, Strict};
 use rocket::http::Status;
 use rocket::response::status;

@@ -4,6 +4,8 @@ pub mod repository;
 pub mod routes;
 pub mod service;
 
+pub mod post;
+
 pub fn get_channel_routes() -> Vec<rocket::Route> {
     routes![
         routes::create,
