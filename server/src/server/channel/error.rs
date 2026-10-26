@@ -42,6 +42,11 @@ impl From<DbError> for ChannelError {
         }
     }
 }
+impl From<DieselError> for ChannelError {
+    fn from(error: DieselError) -> Self {
+        Self::from(DbError::from(error))
+    }
+}
 
 impl From<ChannelError> for ApiError {
     fn from(error: ChannelError) -> Self {
