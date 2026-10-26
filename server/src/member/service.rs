@@ -1,16 +1,18 @@
 use diesel::Connection;
 
-use crate::auth::system_roles::SystemRoleService;
-use crate::database::Database;
-use crate::member::error::DeletionBlock;
-use crate::member::models::MemberUpdateInput;
-
-use super::error::MemberError;
-use super::models::{MemberChangeset, MemberId, MemberProfile, MemberShort, MultiMemberPreview};
-use super::repository::MemberRepository;
-
 use crate::chat::models::MultiChatPreview;
 use crate::server::models::MultiServer;
+use crate::utils::SearchValidation;
+use crate::{auth::system_roles::SystemRoleService, database::Database, utils::Validator};
+
+use super::{
+    error::{DeletionBlock, MemberError},
+    models::{
+        MemberChangeset, MemberId, MemberProfile, MemberShort, MemberUpdateInput,
+        MultiMemberPreview,
+    },
+    repository::MemberRepository,
+};
 
 pub struct MemberService {
     database: Database,
@@ -39,10 +41,10 @@ impl MemberService {
         }
     }
     pub fn search_members(&self, search_term: String) -> Result<MultiMemberPreview, MemberError> {
-        let search_term = Database::normalize_search_term(search_term)?;
+        let search = Validator::validate_search_term(search_term)?;
         let mut conn = self.database.get_connection()?;
         Ok(MultiMemberPreview {
-            members: MemberRepository::search_usernames(&mut conn, search_term)?,
+            members: MemberRepository::search_usernames(&mut conn, search)?,
         })
     }
 
@@ -95,4 +97,3 @@ impl MemberService {
         })
     }
 }
-

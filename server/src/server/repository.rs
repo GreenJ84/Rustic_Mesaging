@@ -8,8 +8,11 @@ use diesel::{
 use crate::database::{Database, DbConn, DbError};
 use crate::member::models::MemberId;
 use crate::schema::server::dsl as s_dsl;
+use crate::utils::{Paginator, SearchValidation};
 
 use super::models::{NewServer, Server, ServerChangeset, ServerId};
+
+const SERVER_PAGINATOR: Paginator = Paginator::new(None);
 
 pub(crate) struct ServerRepository;
 impl ServerRepository {
@@ -56,22 +59,24 @@ impl ServerRepository {
         .map_err(DbError::from)
     }
     pub(super) fn read_page(conn: &mut DbConn, page: u32) -> Result<Vec<Server>, DbError> {
-        let offset = Database::page_offset(page);
+        let page_offset = SERVER_PAGINATOR.offset(page);
+        let page_size = SERVER_PAGINATOR.page_size();
         s_dsl::server
             .select(Server::as_select())
             .order_by((s_dsl::created_at.desc(), s_dsl::id.desc()))
-            .limit(Database::PAGE_SIZE)
-            .offset(offset)
+            .limit(page_size)
+            .offset(page_offset)
             .load(conn)
             .map_err(DbError::from)
     }
-    pub(super) fn search(conn: &mut DbConn, search_term: String) -> Result<Vec<Server>, DbError> {
-        let escaped = Database::escape_search_pattern(&search_term);
+    pub(super) fn search(
+        conn: &mut DbConn,
+        search: SearchValidation,
+    ) -> Result<Vec<Server>, DbError> {
+        let prefix = format!("{}%", search.escaped);
+        let contains = format!("%{}%", search.escaped);
 
-        let prefix = format!("{escaped}%");
-        let contains = format!("%{escaped}%");
-
-        let relevance = case_when::<_, _, Integer>(s_dsl::name.eq(search_term), 0)
+        let relevance = case_when::<_, _, Integer>(s_dsl::name.eq(search.normalized), 0)
             .when(s_dsl::name.like(&prefix).escape('\\'), 1)
             .when(s_dsl::name.ilike(&prefix).escape('\\'), 2)
             .otherwise(3);
@@ -119,4 +124,3 @@ impl ServerRepository {
     //         .load::<Channel>(conn)
     // }
 }
-

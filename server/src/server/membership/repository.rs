@@ -6,9 +6,11 @@ use crate::database::{Database, DbConn, DbError};
 use crate::member::models::{MemberId, MemberShort};
 use crate::schema::{member::dsl as m_dsl, server::dsl as s_dsl, server_membership::dsl as sm_dsl};
 use crate::server::models::{ServerId, ServerPreview};
+use crate::utils::Paginator;
 
 use super::models::{NewServerMembership, ServerMembership};
 
+const MEMBERSHIP_PAGINATOR: Paginator = Paginator::new(None);
 pub(in crate::server) struct ServerMembershipRepository;
 impl ServerMembershipRepository {
     // Create
@@ -41,13 +43,14 @@ impl ServerMembershipRepository {
         member_id: MemberId,
         page: u32,
     ) -> Result<Vec<ServerPreview>, DbError> {
-        let offset = Database::page_offset(page);
+        let page_offset = MEMBERSHIP_PAGINATOR.offset(page);
+        let page_size = MEMBERSHIP_PAGINATOR.page_size();
         sm_dsl::server_membership
             .filter(sm_dsl::member_id.eq(member_id))
             .inner_join(s_dsl::server.on(sm_dsl::server_id.eq(s_dsl::id)))
             .order_by((sm_dsl::joined_at.desc(), s_dsl::id.desc()))
-            .limit(Database::PAGE_SIZE)
-            .offset(offset)
+            .limit(page_size)
+            .offset(page_offset)
             .select(ServerPreview::as_select())
             .load(conn)
             .map_err(DbError::from)
@@ -57,13 +60,14 @@ impl ServerMembershipRepository {
         server_id: ServerId,
         page: u32,
     ) -> Result<Vec<MemberShort>, DbError> {
-        let offset = Database::page_offset(page);
+        let page_offset = MEMBERSHIP_PAGINATOR.offset(page);
+        let page_size = MEMBERSHIP_PAGINATOR.page_size();
         sm_dsl::server_membership
             .filter(sm_dsl::server_id.eq(server_id))
             .inner_join(m_dsl::member.on(sm_dsl::member_id.eq(m_dsl::id)))
             .order_by((m_dsl::username.asc(), m_dsl::id.desc()))
-            .limit(Database::PAGE_SIZE)
-            .offset(offset)
+            .limit(page_size)
+            .offset(page_offset)
             .select(MemberShort::as_select())
             .load(conn)
             .map_err(DbError::from)

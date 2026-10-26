@@ -1,6 +1,7 @@
 use crate::api_error::ApiError;
-use crate::database::{DbError, DieselError, SearchTermError};
+use crate::database::{DbError, DieselError};
 use crate::member::error::MemberError;
+use crate::utils::ValidationError;
 
 use super::membership::error::MembershipError;
 
@@ -62,11 +63,11 @@ impl From<DieselError> for ServerError {
     }
 }
 
-impl From<SearchTermError> for ServerError {
-    fn from(error: SearchTermError) -> Self {
+impl From<ValidationError> for ServerError {
+    fn from(error: ValidationError) -> Self {
         match error {
-            SearchTermError::Empty => Self::InvalidSearchTerm(error.message().to_string()),
-            SearchTermError::TooLong => Self::InvalidSearchTerm(error.message().to_string()),
+            ValidationError::Empty => Self::InvalidSearchTerm(error.message().to_string()),
+            ValidationError::TooLong => Self::InvalidSearchTerm(error.message().to_string()),
         }
     }
 }

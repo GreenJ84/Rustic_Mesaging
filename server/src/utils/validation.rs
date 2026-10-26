@@ -86,9 +86,9 @@ mod tests {
 
     #[test]
     fn limits_search_terms_by_character_count() {
-        assert!(Validator::validate_search_term("é".repeat(125)).is_ok());
+        assert!(Validator::validate_search_term("é".repeat(100)).is_ok());
         assert!(matches!(
-            Validator::validate_search_term("é".repeat(126)),
+            Validator::validate_search_term("é".repeat(101)),
             Err(ValidationError::TooLong)
         ));
     }

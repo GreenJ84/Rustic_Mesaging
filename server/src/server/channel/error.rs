@@ -2,6 +2,7 @@ use diesel::result::Error as DieselError;
 
 use crate::api_error::ApiError;
 use crate::database::DbError;
+use crate::utils::ValidationError;
 
 #[derive(Debug)]
 pub enum ChannelError {
@@ -42,6 +43,15 @@ impl From<DbError> for ChannelError {
         }
     }
 }
+impl From<ValidationError> for ChannelError {
+    fn from(error: ValidationError) -> Self {
+        match error {
+            ValidationError::Empty => Self::InvalidInput(error.message().to_string()),
+            ValidationError::TooLong => Self::InvalidInput(error.message().to_string()),
+        }
+    }
+}
+
 impl From<ChannelError> for ApiError {
     fn from(error: ChannelError) -> Self {
         match error {

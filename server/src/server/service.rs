@@ -1,9 +1,10 @@
 use diesel::Connection;
 
-use crate::database::{Database, SearchTermError};
+use crate::database::{Database};
 use crate::member::models::{MemberId, MultiMemberPreview};
 use crate::server::membership::error::MembershipError;
 use crate::server::membership::repository::ServerMembershipRepository;
+use crate::utils::Validator;
 
 use super::errors::ServerError;
 use super::membership::models::NewServerMembership;
@@ -68,11 +69,11 @@ impl ServerService {
             .map_err(ServerError::from)
     }
 
-    pub fn search_servers(&self, query: String) -> Result<MultiServerPreview, ServerError> {
-        let query = Database::normalize_search_term(query)?;
+    pub fn search_servers(&self, search_term: String) -> Result<MultiServerPreview, ServerError> {
+        let search = Validator::validate_search_term(search_term)?;
 
         let mut conn = self.database.get_connection()?;
-        ServerRepository::search(&mut conn, query)
+        ServerRepository::search(&mut conn, search)
             .map(|servers| MultiServerPreview {
                 servers: servers.into_iter().map(ServerPreview::from).collect(),
             })

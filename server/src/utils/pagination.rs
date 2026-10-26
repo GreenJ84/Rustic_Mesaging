@@ -26,8 +26,8 @@ impl Paginator {
 }
 
 #[derive(Debug, Serialize)]
-pub struct Page<T> {
-    pub items: Vec<T>,
+pub struct Page<Items> {
+    pub items: Items,
     pub page: u32,
     pub per_page: i64,
     pub has_next: bool,

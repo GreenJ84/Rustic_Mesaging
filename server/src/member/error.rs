@@ -1,5 +1,8 @@
 use crate::{
-    api_error::ApiError, auth::system_roles::SystemRoleError, database::{DbError, DieselError, SearchTermError},
+    api_error::ApiError,
+    auth::system_roles::SystemRoleError,
+    database::{DbError, DieselError},
+    utils::ValidationError,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -50,11 +53,11 @@ impl From<DieselError> for MemberError {
         DbError::from(error).into()
     }
 }
-impl From<SearchTermError> for MemberError {
-    fn from(error: SearchTermError) -> Self {
+impl From<ValidationError> for MemberError {
+    fn from(error: ValidationError) -> Self {
         match error {
-            SearchTermError::Empty => Self::InvalidSearchTerm(error.message().to_string()),
-            SearchTermError::TooLong => Self::InvalidSearchTerm(error.message().to_string()),
+            ValidationError::Empty => Self::InvalidSearchTerm(error.message().to_string()),
+            ValidationError::TooLong => Self::InvalidSearchTerm(error.message().to_string()),
         }
     }
 }

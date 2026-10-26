@@ -10,6 +10,7 @@ use crate::schema::{
     chat::dsl as c_dsl, friend::dsl as f_dsl, friend_request::dsl as fr_dsl, member::dsl as m_dsl,
     member_chat::dsl as mc_dsl, server::dsl as s_dsl, server_membership::dsl as sm_dsl,
 };
+use crate::utils::SearchValidation;
 
 enum MemberIdentifier<'a> {
     Id(MemberId),
@@ -87,14 +88,12 @@ impl MemberRepository {
     }
     pub fn search_usernames(
         conn: &mut DbConn,
-        search_term: String,
+        search: SearchValidation,
     ) -> Result<Vec<MemberShort>, DbError> {
-        let escaped = Self::escape_like_pattern(&search_term);
+        let prefix = format!("{}%", search.escaped);
+        let contains = format!("%{}%", search.escaped);
 
-        let prefix = format!("{escaped}%");
-        let contains = format!("%{escaped}%");
-
-        let relevance = case_when::<_, _, Integer>(m_dsl::username.eq(search_term), 0)
+        let relevance = case_when::<_, _, Integer>(m_dsl::username.eq(search.normalized), 0)
             .when(m_dsl::username.like(&prefix).escape('\\'), 1)
             .when(m_dsl::username.ilike(&prefix).escape('\\'), 2)
             .otherwise(3);
