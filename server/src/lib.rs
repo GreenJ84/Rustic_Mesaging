@@ -11,6 +11,7 @@ pub(crate) mod database;
 pub (crate) mod cors;
 pub(crate) mod id_generator;
 pub(crate) mod schema;
+pub(crate) mod utils;
 
 pub(crate) mod auth;
 pub(crate) mod chat;
