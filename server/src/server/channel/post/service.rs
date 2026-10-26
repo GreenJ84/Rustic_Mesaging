@@ -99,10 +99,10 @@ impl PostService {
     // Update
     pub fn update_post(
         &self,
-        post_id: PostId,
         member_id: MemberId,
         server_id: ServerId,
         channel_id: ChannelId,
+        post_id: PostId,
         changeset: PostChangesetInput,
     ) -> Result<Post, PostError> {
         let changeset = PostChangeset::try_from(changeset)?;

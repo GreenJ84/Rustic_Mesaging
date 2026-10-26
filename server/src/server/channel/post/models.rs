@@ -18,7 +18,7 @@ pub struct NewPostInput {
 
 #[derive(Insertable)]
 #[diesel(table_name = post)]
-pub struct NewPost {
+pub(crate) struct NewPost {
     content: String,
     author_id: MemberId,
     channel_id: ChannelId,
@@ -62,7 +62,7 @@ impl PostChangesetInput {
 
 #[derive(AsChangeset)]
 #[diesel(table_name = post)]
-pub struct PostChangeset {
+pub(crate) struct PostChangeset {
     content: Option<String>,
 }
 impl PostChangeset {
@@ -90,7 +90,7 @@ impl TryFrom<PostChangesetInput> for PostChangeset {
     }
 }
 
-#[derive(Identifiable, Queryable, Selectable, Associations)]
+#[derive(Identifiable, Queryable, Selectable, Associations, Serialize)]
 #[diesel(table_name = post)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 #[diesel(belongs_to(Channel, foreign_key = channel_id))]

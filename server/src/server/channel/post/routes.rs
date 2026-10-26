@@ -1,132 +1,78 @@
-use rocket::{post, get, put, delete};
-use rocket::form::{Form, Lenient, Strict};
+use rocket::form::{Form, Strict};
 use rocket::http::Status;
 use rocket::response::status;
+use rocket::serde::json::Json;
 use rocket::State;
 
-use crate::auth::models::JWT;
-use crate::db::{get_db_connection, DbConn, DbPool};
-use crate::models::post::{NewPost, Post, PostDetail};
-use crate::routes::CustomResponse;
-use crate::service::{post_service::PostService, CrudOps};
+use crate::auth::SystemUser;
+use crate::server::channel::models::ChannelId;
+use crate::server::channel::post::models::{MultiPost, PostId};
+use crate::server::channel::post::service::PostService;
+use crate::server::models::ServerId;
+use crate::ApiResponse;
 
-fn post_authorization(
-    conn: &mut DbConn,
-    post_id: i32,
-    jwt: JWT,
-) -> Result<bool, status::Custom<String>> {
-    if !jwt.claims.is_admin && !PostService::has_authorization(conn, post_id, jwt.claims.member_id)
-    {
-        return Err(status::Custom(
-            Status::Unauthorized,
-            String::from("Only server members can access post details"),
-        ));
-    }
-    Ok(true)
-}
+use super::models::{NewPostInput, Post, PostChangesetInput, PostDetail};
 
-#[post("/", data = "<form>")]
+#[post("/<server_id>/channels/<channel_id>/posts", data = "<form>")]
 pub fn create(
-    _token: JWT,
-    pool: &State<DbPool>,
-    form: Form<Strict<NewPost>>,
-) -> CustomResponse<Post> {
-    let mut conn = get_db_connection(pool)?;
-
+    user: SystemUser,
+    post_service: &State<PostService>,
+    server_id: ServerId,
+    channel_id: ChannelId,
+    form: Form<Strict<NewPostInput>>,
+) -> ApiResponse<Json<Post>> {
     let input = form.into_inner().into_inner();
-    match PostService::create(&mut conn, input) {
-        Ok(post) => Ok(status::Custom(Status::Ok, post)),
-        Err(e) => {
-            return Err::<status::Custom<Post>, status::Custom<String>>(status::Custom(
-                Status::InternalServerError,
-                format!("Post creation error: {}", e),
-            ))
-        }
-    }
+    let post = post_service.create_post(user.member_id(), server_id, channel_id, input)?;
+    Ok(status::Custom(Status::Created, Json(post)))
 }
 
-#[get("/<post_id>")]
-pub fn get(token: JWT, pool: &State<DbPool>, post_id: i32) -> CustomResponse<PostDetail> {
-    let mut conn = get_db_connection(pool)?;
-    post_authorization(&mut conn, post_id, token)?;
-
-    match PostService::read_detail(&mut conn, post_id) {
-        Ok(post) => Ok(status::Custom(Status::Ok, post)),
-        Err(e) => {
-            return Err::<status::Custom<PostDetail>, status::Custom<String>>(status::Custom(
-                Status::NotFound,
-                format!("Post lookup error: {}", e),
-            ))
-        }
-    }
+#[get("/<server_id>/channels/<channel_id>/posts/<post_id>")]
+pub fn get(
+    user: SystemUser,
+    post_service: &State<PostService>,
+    server_id: ServerId,
+    channel_id: ChannelId,
+    post_id: PostId,
+) -> ApiResponse<Json<PostDetail>> {
+    let post = post_service.get_post_detail(user.member_id(), server_id, channel_id, post_id)?;
+    Ok(status::Custom(Status::Ok, Json(post)))
 }
 
-#[put("/<post_id>", data = "<form>")]
+#[get("/<server_id>/channels/<channel_id>/posts?<page>")]
+pub fn get_page(
+    user: SystemUser,
+    post_service: &State<PostService>,
+    server_id: ServerId,
+    channel_id: ChannelId,
+    page: Option<u32>,
+) -> ApiResponse<Json<MultiPost>> {
+    let page = page.unwrap_or(0);
+    let page = post_service.get_post_page(user.member_id(), server_id, channel_id, page)?;
+    Ok(status::Custom(Status::Ok, Json(page)))
+}
+
+#[put("/<server_id>/channels/<channel_id>/posts/<post_id>", data = "<form>")]
 pub fn update(
-    token: JWT,
-    pool: &State<DbPool>,
-    form: Form<Lenient<NewPost>>,
-    post_id: i32,
-) -> CustomResponse<Post> {
-    let mut conn = get_db_connection(pool)?;
-
-    let post = PostService::read(&mut conn, post_id).map_err(|_| {
-        status::Custom(
-            Status::InternalServerError,
-            String::from("Database connection error"),
-        )
-    })?;
-    if !token.claims.member_id == post.author_id() {
-        return Err::<status::Custom<Post>, status::Custom<String>>(status::Custom(
-            Status::Unauthorized,
-            String::from("Only post author can update contents."),
-        ));
-    }
-
+    user: SystemUser,
+    post_service: &State<PostService>,
+    server_id: ServerId,
+    channel_id: ChannelId,
+    form: Form<Strict<PostChangesetInput>>,
+    post_id: PostId,
+) -> ApiResponse<Json<Post>> {
     let input = form.into_inner().into_inner();
-    match PostService::update(&mut conn, post_id, input) {
-        Ok(post) => Ok(status::Custom(Status::Ok, post)),
-        Err(e) => {
-            return Err::<status::Custom<Post>, status::Custom<String>>(status::Custom(
-                Status::FailedDependency,
-                format!("Database update error: {}", e),
-            ))
-        }
-    }
+    let post = post_service.update_post(user.member_id(), server_id, channel_id, post_id, input)?;
+    Ok(status::Custom(Status::Ok, Json(post)))
 }
 
-#[delete("/<post_id>")]
-pub fn delete(token: JWT, pool: &State<DbPool>, post_id: i32) -> CustomResponse<String> {
-    let mut conn = get_db_connection(pool)?;
-
-    let post = PostService::read(&mut conn, post_id).map_err(|_| {
-        status::Custom(
-            Status::InternalServerError,
-            String::from("Database connection error"),
-        )
-    })?;
-    if !token.claims.member_id == post.author_id() {
-        return Err::<status::Custom<String>, status::Custom<String>>(status::Custom(
-            Status::Unauthorized,
-            String::from("Only post author can delete contents."),
-        ));
-    }
-
-    match PostService::delete(&mut conn, post_id) {
-        Ok(size) => {
-            if size > 1 {
-                eprint!("{} number of documents were deleted", size);
-            }
-            Ok(status::Custom(
-                Status::Ok,
-                format!("Post number {} has been deleted.", post_id),
-            ))
-        }
-        Err(e) => {
-            return Err::<status::Custom<String>, status::Custom<String>>(status::Custom(
-                Status::FailedDependency,
-                format!("Database deletion error: {}", e),
-            ))
-        }
-    }
+#[delete("/<server_id>/channels/<channel_id>/posts/<post_id>")]
+pub fn delete(
+    user: SystemUser,
+    post_service: &State<PostService>,
+    server_id: ServerId,
+    channel_id: ChannelId,
+    post_id: PostId,
+) -> ApiResponse<()> {
+    post_service.delete_post(user.member_id(), server_id, channel_id, post_id)?;
+    Ok(status::Custom(Status::NoContent, ()))
 }
