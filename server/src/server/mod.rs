@@ -1,5 +1,3 @@
-use channel::get_channel_routes;
-
 pub(crate) mod errors;
 pub(crate) mod models;
 pub(crate) mod repository;
@@ -21,6 +19,6 @@ pub fn get_server_routes() -> Vec<rocket::Route> {
         routes::get_server_members,
         routes::leave_server,
     ];
-    routes.extend(get_channel_routes());
+    routes.extend(channel::get_channel_routes());
     routes
 }
