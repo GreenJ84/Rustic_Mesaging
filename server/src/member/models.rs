@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::member::error::MemberError;
 use crate::schema::member;
+use crate::utils::Validator;
 
 // Data Models ==========================
 #[derive(Insertable)]
@@ -117,42 +118,6 @@ impl MemberUpdateInput {
     pub fn is_empty(&self) -> bool {
         self.username.is_none() && self.email.is_none() && self.avatar.is_none()
     }
-    pub(crate) fn normalize_and_validate(mut self) -> Result<Self, MemberError> {
-        if self.is_empty() {
-            return Err(MemberError::InvalidChangeset("No changes provided".into()));
-        }
-        if let Some(username) = self.username.take() {
-            let username = username.trim().to_owned();
-
-            if !(3..=125).contains(&username.len()) {
-                return Err(MemberError::InvalidChangeset(
-                    "Username must be between 3 and 125 characters".into(),
-                ));
-            }
-            self.username = Some(username);
-        }
-
-        if let Some(email) = self.email.take() {
-            let email = email.trim().to_owned();
-            if email.len() > 254 || !email.contains('@') {
-                return Err(MemberError::InvalidChangeset(
-                    "Invalid email address".into(),
-                ));
-            }
-
-            self.email = Some(email);
-        }
-
-        if let Some(avatar) = self.avatar.take() {
-            let avatar = avatar.trim().to_owned();
-            if !ALLOWED_AVATARS.contains(&avatar.as_str()) {
-                return Err(MemberError::InvalidChangeset("Invalid avatar value".into()));
-            }
-            self.avatar = Some(avatar);
-        }
-
-        Ok(self)
-    }
 }
 #[derive(AsChangeset, Debug)]
 #[diesel(table_name = member)]
@@ -165,11 +130,45 @@ impl TryFrom<MemberUpdateInput> for MemberChangeset {
     type Error = MemberError;
 
     fn try_from(input: MemberUpdateInput) -> Result<MemberChangeset, Self::Error> {
-        let changeset = input.normalize_and_validate()?;
+        if input.is_empty() {
+            return Err(MemberError::InvalidChangeset(
+                "No changes provided".to_string(),
+            ));
+        }
+        let username = if let Some(username) = input.username {
+            let username = Validator::validate_text(username, Some(3), Some(25))
+                .map_err(|e| MemberError::InvalidChangeset(format!("Username {}", e.message())))?;
+            Some(username)
+        } else {
+            None
+        };
+
+        let email = if let Some(email) = input.email {
+            let email = Validator::validate_text(email, Some(6), Some(254))
+                .map_err(|e| MemberError::InvalidChangeset(format!("Email {}", e.message())))?;
+            if !email.contains('@') {
+                return Err(MemberError::InvalidChangeset(
+                    "Email must contain '@'".to_string(),
+                ));
+            }
+            Some(email)
+        } else {
+            None
+        };
+
+        let avatar = if let Some(avatar) = input.avatar {
+            let avatar = avatar.trim().to_owned();
+            if !ALLOWED_AVATARS.contains(&avatar.as_str()) {
+                return Err(MemberError::InvalidChangeset("Invalid avatar value".into()));
+            }
+            Some(avatar)
+        } else {
+            None
+        };
         Ok(MemberChangeset {
-            username: changeset.username,
-            email: changeset.email,
-            avatar: changeset.avatar,
+            username,
+            email,
+            avatar,
         })
     }
 }

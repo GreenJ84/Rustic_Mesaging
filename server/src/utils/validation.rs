@@ -29,13 +29,15 @@ impl Validator {
         max_length: Option<usize>,
     ) -> Result<String, ValidationError> {
         let search = term.trim().to_owned();
-        let length = search.chars().count();
+        let curr_length = search.chars().count();
+        let min = min_length.unwrap_or(MIN_LENGTH);
+        let max = max_length.unwrap_or(MAX_LENGTH);
         if search.is_empty() {
             return Err(ValidationError::Empty);
-        } else if length < min_length.unwrap_or(MIN_LENGTH) {
-            return Err(ValidationError::TooLong);
-        } else if length > max_length.unwrap_or(MAX_LENGTH) {
-            return Err(ValidationError::TooLong);
+        } else if curr_length < min {
+            return Err(ValidationError::TooShort(min));
+        } else if curr_length > max {
+            return Err(ValidationError::TooLong(max));
         }
         Ok(search)
     }
@@ -49,17 +51,20 @@ pub struct SearchValidation {
 #[derive(Debug)]
 pub enum ValidationError {
     Empty,
-    TooShort,
-    TooLong,
+    TooShort(usize),
+    TooLong(usize),
 }
 impl ValidationError {
     pub fn message(&self) -> String {
         match self {
-            ValidationError::Empty => "is empty",
-            ValidationError::TooShort => "is too short",
-            ValidationError::TooLong => "is too long",
+            ValidationError::Empty => "is empty.".to_owned(),
+            ValidationError::TooShort(size) => {
+                format!("is too short. Must be at least {size} characters long.")
+            }
+            ValidationError::TooLong(size) => {
+                format!("is too long. Must be at most {size} characters long.")
+            }
         }
-        .to_owned()
     }
 }
 
@@ -106,7 +111,7 @@ mod tests {
         assert!(Validator::validate_search_term("é".repeat(100)).is_ok());
         assert!(matches!(
             Validator::validate_search_term("é".repeat(101)),
-            Err(ValidationError::TooLong)
+            Err(ValidationError::TooLong(100))
         ));
     }
 }
