@@ -3,6 +3,7 @@ use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use std::sync::Arc;
 
 mod error;
+pub mod sql;
 
 pub(crate) use error::{DbError, DieselError};
 
