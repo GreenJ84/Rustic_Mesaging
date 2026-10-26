@@ -114,13 +114,4 @@ impl ServerRepository {
             Ok(())
         }
     }
-
-    // pub fn get_server_channels(conn: &mut DbConn, server_id: i32) -> Result<Vec<Channel>, DbError> {
-    //     c_dsl::channel
-    //         .filter(c_dsl::server_id.eq(server_id))
-    //         .inner_join(s_dsl::server.on(c_dsl::server_id.eq(s_dsl::id)))
-    //         .order_by(c_dsl::name.asc())
-    //         .select(Channel::as_select()) // Select member ID and username
-    //         .load::<Channel>(conn)
-    // }
 }

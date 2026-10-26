@@ -71,8 +71,9 @@ impl TryFrom<ChannelChangesetInput> for ChannelChangeset {
         }
         // Field validation
         let name = if let Some(name) = input.name {
-            let name = validate_channel_name(name)
-                .map_err(|e| ChannelError::InvalidChangeset(format!("Channel name {}", e.message())))?;
+            let name = validate_channel_name(name).map_err(|e| {
+                ChannelError::InvalidChangeset(format!("Channel name {}", e.message()))
+            })?;
             Some(name)
         } else {
             None
@@ -117,7 +118,7 @@ impl From<Channel> for ChannelDetails {
         Self {
             id: channel.id,
             server_id: channel.server_id,
-            name: channel.name.to_owned(),
+            name: channel.name,
             created_at: channel.created_at,
         }
     }
