@@ -9,6 +9,7 @@ pub(crate) enum PostError {
 
     NotFound,
 
+    ServerNotFound,
     ChannelNotFound,
     MemberNotFound,
     MembershipRequired,
@@ -55,6 +56,7 @@ impl From<PostError> for ApiError {
 
             PostError::NotFound => ApiError::NotFound("Post not found".into()),
 
+            PostError::ServerNotFound => ApiError::NotFound("Server not found".into()),
             PostError::ChannelNotFound => ApiError::NotFound("Channel not found".into()),
             PostError::MemberNotFound => ApiError::NotFound("Member not found".into()),
             PostError::MembershipRequired => {
