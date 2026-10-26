@@ -16,7 +16,6 @@ use crate::member::repository::MemberRepository;
 
 #[derive(Serialize, Deserialize, Debug, FromForm)]
 pub struct RegisterInput {
-    #[field(validate = len(3..=125).or_else(msg!("Username must be between 3 and 125 characters long.")))]
     pub username: String,
     #[field(validate = len(MIN_PASSWORD_LENGTH..=MAX_PASSWORD_LENGTH).or_else(msg!(format!("Password must be between {MIN_PASSWORD_LENGTH} and {MAX_PASSWORD_LENGTH} characters long."))))]
     pub password: String,
@@ -28,8 +27,10 @@ impl TryInto<NewMember> for RegisterInput {
     type Error = AuthError;
     fn try_into(self) -> Result<NewMember, AuthError> {
         let password_hash = PasswordManager::validate(&self)?;
+        let username = Validator::validate_text(self.username, Some(3), Some(125))
+            .map_err(|e| AuthError::InvalidInput(format!("Username {}", e.message())))?;
         Ok(NewMember::new(
-            self.username.to_string(),
+            username.to_string(),
             password_hash,
             self.email.to_string(),
         ))
@@ -82,6 +83,7 @@ pub(crate) struct AuthOutcome {
 // Old Implementations
 // ======================================================
 use crate::member::models::Member;
+use crate::utils::Validator;
 use jsonwebtoken::{
     decode, encode, Algorithm, DecodingKey, EncodingKey, Header as JWTHeader, Validation,
 };

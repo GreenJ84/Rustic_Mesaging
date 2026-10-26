@@ -8,6 +8,7 @@ use rocket::http::Status;
 #[derive(Debug)]
 pub enum AuthError {
     // Registration Errors
+    InvalidInput(String),
     UsernameTaken,
     EmailTaken,
     PasswordRejected(PasswordError),
@@ -36,6 +37,7 @@ pub enum AuthError {
 impl AuthError {
     pub fn message(&self) -> String {
         match self {
+            Self::InvalidInput(message) => message.to_string(),
             Self::UsernameTaken => "Username is already taken.".to_string(),
             Self::EmailTaken => "Email is already taken.".to_string(),
             Self::PasswordRejected(violation) => violation.message(),
@@ -64,6 +66,7 @@ impl AuthError {
 
     pub(crate) fn status(&self) -> Status {
         match self {
+            Self::InvalidInput(_) => Status::BadRequest,
             Self::UsernameTaken | Self::EmailTaken => Status::Conflict,
             Self::PasswordRejected(_) | Self::PasswordConfirmationMismatch => Status::BadRequest,
             Self::InvalidAdministrationKey => Status::Unauthorized,
@@ -116,6 +119,7 @@ impl From<SystemRoleError> for AuthError {
 impl From<AuthError> for ApiError {
     fn from(err: AuthError) -> Self {
         match err {
+            AuthError::InvalidInput(msg) => ApiError::BadRequest(msg),
             AuthError::UsernameTaken => ApiError::Conflict(err.message()),
             AuthError::EmailTaken => ApiError::Conflict(err.message()),
             AuthError::PasswordRejected(violation) => ApiError::BadRequest(violation.message()),
