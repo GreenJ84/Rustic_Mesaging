@@ -1,100 +1,122 @@
-use crate::member::models::{Member, MemberShort};
-use crate::models::channel::Channel;
-use crate::schema::post;
 use chrono::NaiveDateTime;
-use diesel::{Associations, Identifiable, Insertable, Queryable, Selectable};
-use rocket::response::Responder;
-use rocket::serde::json::Json;
-use rocket::Response;
+use diesel::{AsChangeset, Associations, Identifiable, Insertable, Queryable, Selectable};
 use serde::{Deserialize, Serialize};
 
-#[derive(Insertable, Serialize, Deserialize, Debug, FromForm)]
+use crate::member::models::{Member, MemberId, MemberShort};
+use crate::schema::post;
+use crate::server::channel::models::{Channel, ChannelId};
+use crate::utils::{Page, Validator};
+
+use super::error::PostError;
+
+pub type PostId = i32;
+
+#[derive(Debug, FromForm)]
+pub struct NewPostInput {
+    content: String,
+}
+
+#[derive(Insertable)]
 #[diesel(table_name = post)]
 pub struct NewPost {
     content: String,
-    author_id: i32,
-    channel_id: i32,
+    author_id: MemberId,
+    channel_id: ChannelId,
 }
-
 impl NewPost {
     pub fn content(&self) -> &str {
         &self.content
     }
-    pub fn author_id(&self) -> &i32 {
-        &self.author_id
+    pub fn author_id(&self) -> MemberId {
+        self.author_id
     }
-    pub fn channel_id(&self) -> i32 {
+    pub fn channel_id(&self) -> ChannelId {
         self.channel_id
     }
-
-    pub fn new(content: String, author_id: i32, channel_id: i32) -> Self {
-        Self {
+}
+impl TryFrom<(MemberId, ChannelId, NewPostInput)> for NewPost {
+    type Error = PostError;
+    fn try_from(
+        (member_id, channel_id, input): (MemberId, ChannelId, NewPostInput),
+    ) -> Result<Self, Self::Error> {
+        let content = Validator::validate_text(input.content, None, Some(500)).map_err(|e| {
+            PostError::InvalidInput(format!("Post content {}", e.message().to_string()))
+        })?;
+        Ok(Self {
             content,
-            author_id,
-            channel_id,
-        }
+            author_id: member_id,
+            channel_id: channel_id,
+        })
     }
 }
 
-#[derive(Identifiable, Queryable, Selectable, Associations, Serialize, Deserialize, Debug)]
+#[derive(Debug, FromForm)]
+pub struct PostChangesetInput {
+    content: Option<String>,
+}
+impl PostChangesetInput {
+    pub fn is_empty(&self) -> bool {
+        self.content.is_none()
+    }
+}
+
+#[derive(AsChangeset)]
+#[diesel(table_name = post)]
+pub struct PostChangeset {
+    content: Option<String>,
+}
+impl PostChangeset {
+    pub fn content(&self) -> Option<&str> {
+        self.content.as_deref()
+    }
+}
+impl TryFrom<PostChangesetInput> for PostChangeset {
+    type Error = PostError;
+    fn try_from(input: PostChangesetInput) -> Result<Self, Self::Error> {
+        if input.is_empty() {
+            return Err(PostError::InvalidChangeset(
+                "No fields provided for update".into(),
+            ));
+        }
+        let content = if let Some(content) = input.content {
+            let validated = Validator::validate_text(content, None, Some(500)).map_err(|e| {
+                PostError::InvalidChangeset(format!("Post content {}", e.message().to_string()))
+            })?;
+            Some(validated)
+        } else {
+            None
+        };
+        Ok(Self { content })
+    }
+}
+
+#[derive(Identifiable, Queryable, Selectable, Associations)]
 #[diesel(table_name = post)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 #[diesel(belongs_to(Channel, foreign_key = channel_id))]
 #[diesel(belongs_to(Member, foreign_key = author_id))]
 pub struct Post {
-    #[diesel(sql_type = Int4)]
-    id: i32,
-    #[diesel(sql_type = Text)]
+    id: PostId,
     content: String,
-    #[diesel(sql_type = Int4)]
-    author_id: i32,
-    #[diesel(sql_type = Int4)]
-    channel_id: i32,
-    #[diesel(sql_type = Timestamp)]
+    author_id: MemberId,
+    channel_id: ChannelId,
     created_at: NaiveDateTime,
-}
-impl<'r> Responder<'r, 'r> for Post {
-    fn respond_to(self, req: &'r rocket::Request<'_>) -> rocket::response::Result<'r> {
-        Response::build_from(Json(self).respond_to(req)?).ok()
-    }
-}
-impl Post {
-    pub fn id(&self) -> i32 {
-        self.id
-    }
-    pub fn content(&self) -> &str {
-        &self.content
-    }
-    pub fn author_id(&self) -> i32 {
-        self.author_id
-    }
-    pub fn channel_id(&self) -> i32 {
-        self.channel_id
-    }
-    pub fn created_at(&self) -> NaiveDateTime {
-        self.created_at
-    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct PostDetail {
-    id: i32,
+    id: PostId,
     content: String,
-    pub(crate) author: MemberShort,
-    channel_id: i32,
+    author: MemberShort,
+    channel_id: ChannelId,
     created_at: NaiveDateTime,
-}
-impl<'r> Responder<'r, 'r> for PostDetail {
-    fn respond_to(self, req: &'r rocket::Request<'_>) -> rocket::response::Result<'r> {
-        Response::build_from(Json(self).respond_to(req)?).ok()
-    }
 }
 impl PostDetail {
     pub fn new(
-        id: i32,
+        id: PostId,
         content: String,
         author: MemberShort,
-        channel_id: i32,
+        channel_id: ChannelId,
         created_at: NaiveDateTime,
     ) -> Self {
         Self {
@@ -106,12 +128,17 @@ impl PostDetail {
         }
     }
 }
-#[derive(Serialize, Debug)]
-pub struct MultiPost {
-    pub(crate) posts: Vec<PostDetail>,
-}
-impl<'r> Responder<'r, 'r> for MultiPost {
-    fn respond_to(self, req: &'r rocket::Request<'_>) -> rocket::response::Result<'static> {
-        Response::build_from(Json(self).respond_to(req)?).ok()
+impl From<(Post, MemberShort)> for PostDetail {
+    fn from((post, author): (Post, MemberShort)) -> Self {
+        Self {
+            id: post.id,
+            content: post.content,
+            author: author,
+            channel_id: post.channel_id,
+            created_at: post.created_at,
+        }
     }
 }
+
+pub type MultiPost = Vec<PostDetail>;
+pub type PostPage = Page<MultiPost>;

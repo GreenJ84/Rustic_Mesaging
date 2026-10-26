@@ -64,9 +64,7 @@ impl From<PostError> for ApiError {
                 ApiError::Forbidden("You do not have permission to perform this action".into())
             }
 
-            PostError::PersistenceError(_) => {
-                ApiError::InternalError("Database error occurred".into())
-            }
+            PostError::PersistenceError(_) => ApiError::InternalError,
         }
     }
 }
