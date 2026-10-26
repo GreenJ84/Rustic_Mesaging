@@ -15,7 +15,7 @@ fn validate_channel_name(name: String) -> Result<String, ValidationError> {
     Validator::validate_text(name, Some(5), Some(10))
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, FromForm)]
 pub struct NewChannelInput {
     pub name: String,
 }
@@ -44,7 +44,7 @@ impl TryFrom<(ServerId, NewChannelInput)> for NewChannel {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, FromForm)]
 pub struct ChannelChangesetInput {
     pub name: Option<String>,
 }

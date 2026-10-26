@@ -1,140 +1,102 @@
-use crate::auth::models::JWT;
-use crate::db::{get_db_connection, DbConn, DbPool};
-use crate::models::channel::{Channel, NewChannel};
-use crate::models::post::MultiPost;
-use crate::routes::CustomResponse;
-use crate::server::service::ServerService;
-use crate::service::{channel_service::ChannelService, CrudOps};
-use rocket::form::{Form, Lenient, Strict};
+use rocket::form::{Form, Strict};
 use rocket::http::Status;
 use rocket::response::status;
+use rocket::serde::json::Json;
 use rocket::State;
 
-pub fn channel_authorized(
-    conn: &mut DbConn,
-    channel_id: i32,
-    jwt: JWT,
-) -> Result<bool, status::Custom<String>> {
-    if !jwt.claims.is_admin
-        && !ChannelService::has_authorization(conn, channel_id, jwt.claims.member_id)
-    {
-        return Err(status::Custom(
-            Status::Unauthorized,
-            String::from("Only server members can access channel details"),
-        ));
-    }
-    Ok(true)
-}
+use crate::auth::SystemUser;
+use crate::server::models::ServerId;
+use crate::ApiResponse;
 
-#[post("/", data = "<form>")]
+use super::models::{
+    ChannelChangesetInput, ChannelDetails, ChannelId, MultiChannelDetails, MultiChannelPreview,
+    NewChannelInput,
+};
+use super::service::ChannelService;
+
+#[post("/<server_id>/channel", data = "<form>")]
 pub fn create(
-    _token: JWT,
-    pool: &State<DbPool>,
-    form: Form<Strict<NewChannel>>,
-) -> CustomResponse<Channel> {
-    let mut conn = get_db_connection(pool)?;
-
+    user: SystemUser,
+    channel_service: &State<ChannelService>,
+    server_id: ServerId,
+    form: Form<Strict<NewChannelInput>>,
+) -> ApiResponse<Json<ChannelDetails>> {
     let input = form.into_inner().into_inner();
-    match ChannelService::create(&mut conn, input) {
-        Ok(channel) => Ok(status::Custom(Status::Ok, channel)),
-        Err(e) => {
-            return Err::<status::Custom<Channel>, status::Custom<String>>(status::Custom(
-                Status::InternalServerError,
-                format!("Database creation error: {}", e),
-            ))
-        }
-    }
+    let new_channel = channel_service.create_channel(user.member_id(), server_id, input)?;
+    Ok(status::Custom(Status::Created, Json(new_channel)))
 }
 
-#[get("/<channel_id>")]
-pub fn get(token: JWT, pool: &State<DbPool>, channel_id: i32) -> CustomResponse<Channel> {
-    let mut conn = get_db_connection(pool)?;
-    channel_authorized(&mut conn, channel_id, token)?;
-
-    match ChannelService::read(&mut conn, channel_id) {
-        Ok(channel) => Ok(status::Custom(Status::Ok, channel)),
-        Err(e) => Err::<status::Custom<Channel>, status::Custom<String>>(status::Custom(
-            Status::NotFound,
-            format!("Channel lookup error: {}", e),
-        )),
-    }
+#[get("/<server_id>/channel/<channel_id>")]
+pub fn get(
+    user: SystemUser,
+    channel_service: &State<ChannelService>,
+    server_id: ServerId,
+    channel_id: ChannelId,
+) -> ApiResponse<Json<ChannelDetails>> {
+    let channel = channel_service.get_channel(user.member_id(), server_id, channel_id)?;
+    Ok(status::Custom(Status::Ok, Json(channel)))
 }
 
-#[put("/<channel_id>", data = "<form>")]
+#[get("/<server_id>/channels")]
+pub fn get_server_channels(
+    user: SystemUser,
+    channel_service: &State<ChannelService>,
+    server_id: ServerId,
+) -> ApiResponse<Json<MultiChannelDetails>> {
+    let channels = channel_service.get_server_channels(user.member_id(), server_id)?;
+    Ok(status::Custom(Status::Ok, Json(channels)))
+}
+
+#[get("/<server_id>/channels/preview")]
+pub fn get_server_channel_previews(
+    user: SystemUser,
+    channel_service: &State<ChannelService>,
+    server_id: ServerId,
+) -> ApiResponse<Json<MultiChannelPreview>> {
+    let channels = channel_service.get_server_channel_previews(user.member_id(), server_id)?;
+    Ok(status::Custom(Status::Ok, Json(channels)))
+}
+
+#[patch("/<server_id>/channel/<channel_id>", data = "<form>")]
 pub fn update(
-    token: JWT,
-    pool: &State<DbPool>,
-    form: Form<Lenient<NewChannel>>,
-    channel_id: i32,
-) -> CustomResponse<Channel> {
-    let mut conn = get_db_connection(pool)?;
-
+    user: SystemUser,
+    channel_service: &State<ChannelService>,
+    server_id: ServerId,
+    channel_id: ChannelId,
+    form: Form<Strict<ChannelChangesetInput>>,
+) -> ApiResponse<Json<ChannelDetails>> {
     let input = form.into_inner().into_inner();
-    if !ServerService::is_owner(&mut conn, input.server_id(), token.claims.member_id) {
-        return Err::<status::Custom<Channel>, status::Custom<String>>(status::Custom(
-            Status::Unauthorized,
-            String::from("Only server owner can update channels"),
-        ));
-    }
 
-    match ChannelService::update(&mut conn, channel_id, input) {
-        Ok(channel) => Ok(status::Custom(Status::Ok, channel)),
-        Err(e) => {
-            return Err::<status::Custom<Channel>, status::Custom<String>>(status::Custom(
-                Status::InternalServerError,
-                format!("Channel update error: {}", e),
-            ))
-        }
-    }
+    let channel = channel_service.update_channel(user.member_id(), server_id, channel_id, input)?;
+    Ok(status::Custom(Status::Ok, Json(channel)))
 }
 
-#[delete("/<channel_id>")]
-pub fn delete(token: JWT, pool: &State<DbPool>, channel_id: i32) -> CustomResponse<String> {
-    let mut conn = get_db_connection(pool)?;
-    if !token.claims.is_admin
-        && !ChannelService::has_authorization(&mut conn, channel_id, token.claims.member_id)
-    {
-        return Err::<status::Custom<String>, status::Custom<String>>(status::Custom(
-            Status::Unauthorized,
-            String::from("Only server owner can delete channels."),
-        ));
-    }
-
-    match ChannelService::delete(&mut conn, channel_id) {
-        Ok(size) => {
-            if size > 1 {
-                eprint!("{} number of documents were deleted", size);
-            }
-            Ok(status::Custom(
-                Status::Ok,
-                format!("Channel number {} has been deleted.", channel_id),
-            ))
-        }
-        Err(e) => {
-            return Err::<status::Custom<String>, status::Custom<String>>(status::Custom(
-                Status::InternalServerError,
-                format!("Channel deletion error: {}", e),
-            ))
-        }
-    }
+#[delete("/<server_id>/channel/<channel_id>")]
+pub fn delete(
+    user: SystemUser,
+    channel_service: &State<ChannelService>,
+    server_id: ServerId,
+    channel_id: ChannelId,
+) -> ApiResponse<()> {
+    channel_service.delete_channel(user.member_id(), server_id, channel_id)?;
+    Ok(status::Custom(Status::NoContent, ()))
 }
 
-#[get("/<channel_id>/posts")]
-pub fn get_channel_posts(
-    token: JWT,
-    pool: &State<DbPool>,
-    channel_id: i32,
-) -> CustomResponse<MultiPost> {
-    let mut conn = get_db_connection(pool)?;
-    channel_authorized(&mut conn, channel_id, token)?;
+// #[get("/<channel_id>/posts")]
+// pub fn get_channel_posts(
+//     user: SystemUser,
+//     channel_service: &State<ChannelService>,
+//     channel_id: ChannelId,
+// ) -> ApiResponse<MultiPost> {
+//     channel_authorized(&mut conn, channel_id, token)?;
 
-    match ChannelService::get_channel_posts(&mut conn, channel_id) {
-        Ok(posts) => Ok(status::Custom(Status::Ok, posts)),
-        Err(e) => {
-            return Err::<status::Custom<MultiPost>, status::Custom<String>>(status::Custom(
-                Status::NotFound,
-                format!("Channel post lookup error: {}", e),
-            ))
-        }
-    }
-}
+//     match channel_service.get_channel_posts(&mut conn, channel_id) {
+//         Ok(posts) => Ok(status::Custom(Status::Ok, posts)),
+//         Err(e) => {
+//             return Err::<status::Custom<MultiPost>, status::Custom<String>>(status::Custom(
+//                 Status::NotFound,
+//                 format!("Channel post lookup error: {}", e),
+//             ))
+//         }
+//     }
+// }
