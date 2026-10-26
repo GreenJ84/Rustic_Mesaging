@@ -15,6 +15,7 @@ use crate::auth::system_roles::get_system_role_routes;
 use crate::auth::{get_auth_routes, service::AuthService};
 // use crate::chat::routes as chat_routes;
 use crate::member::{get_member_routes, service::MemberService};
+use crate::server::channel::post::service::PostService;
 use crate::server::channel::service::ChannelService;
 use crate::server::{get_server_routes, service::ServerService};
 use crate::social::{get_friend_routes, get_request_routes, service::SocialService};
@@ -42,6 +43,7 @@ pub fn build() -> Rocket<Build> {
     let social_service = SocialService::new(database.clone());
     let server_service = ServerService::new(database.clone());
     let channel_service = ChannelService::new(database.clone());
+    let post_service = PostService::new(database.clone());
 
     let cors = cors::create_cors(&config.allowed_origins)
         .to_cors()
@@ -54,6 +56,7 @@ pub fn build() -> Rocket<Build> {
         .manage(social_service)
         .manage(server_service)
         .manage(channel_service)
+        .manage(post_service)
         .mount("/", get_auth_routes())
         .mount("/roles", get_system_role_routes())
         .mount("/member", get_member_routes())
