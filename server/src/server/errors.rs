@@ -1,7 +1,6 @@
 use crate::api_error::ApiError;
 use crate::database::{DbError, DieselError};
 use crate::member::error::MemberError;
-use crate::utils::ValidationError;
 
 use super::membership::error::MembershipError;
 
@@ -16,6 +15,7 @@ pub(crate) enum ServerError {
     NameTaken,
 
     NotOwner,
+    MissingAuthority,
 
     Membership(MembershipError),
     Member(MemberError),
@@ -63,14 +63,6 @@ impl From<DieselError> for ServerError {
     }
 }
 
-impl From<ValidationError> for ServerError {
-    fn from(error: ValidationError) -> Self {
-        match error {
-            ValidationError::Empty => Self::InvalidSearchTerm(error.message().to_string()),
-            ValidationError::TooLong => Self::InvalidSearchTerm(error.message().to_string()),
-        }
-    }
-}
 impl From<MembershipError> for ServerError {
     fn from(error: MembershipError) -> Self {
         Self::Membership(error)
@@ -93,6 +85,9 @@ impl From<ServerError> for ApiError {
             ServerError::NotOwner => {
                 ApiError::Forbidden("Server ownership is required for this operation".into())
             }
+            ServerError::MissingAuthority => ApiError::Forbidden(
+                "You do not have the required authority for this operation".into(),
+            ),
 
             ServerError::Membership(error) => ApiError::from(error),
             ServerError::Member(error) => ApiError::from(error),

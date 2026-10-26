@@ -53,14 +53,6 @@ impl From<DieselError> for MemberError {
         DbError::from(error).into()
     }
 }
-impl From<ValidationError> for MemberError {
-    fn from(error: ValidationError) -> Self {
-        match error {
-            ValidationError::Empty => Self::InvalidSearchTerm(error.message().to_string()),
-            ValidationError::TooLong => Self::InvalidSearchTerm(error.message().to_string()),
-        }
-    }
-}
 impl From<SystemRoleError> for MemberError {
     fn from(error: SystemRoleError) -> Self {
         Self::SystemRoleError(error)

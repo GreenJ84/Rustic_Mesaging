@@ -5,10 +5,39 @@ use serde::{Deserialize, Serialize};
 
 use crate::member::models::{Member, MemberId};
 use crate::schema::server;
+use crate::utils::{ValidationError, Validator};
 
 use super::errors::ServerError;
 
 pub type ServerId = i32;
+
+fn validate_server_name(name: String) -> Result<String, ValidationError> {
+    Validator::validate_text(name, Some(5), Some(80))
+}
+fn validate_server_description(description: String) -> Result<String, ValidationError> {
+    Validator::validate_text(description, Some(10), Some(300))
+}
+fn validate_server_icon(icon: Option<String>) -> Result<Option<String>, String> {
+    let Some(icon) = icon else {
+        return Ok(None); // INSERT uses the database default
+    };
+
+    let icon = icon.trim();
+
+    let Some((shape, color)) = icon.split_once(':') else {
+        return Err("Server icon must use the '<shape>:<color>' format".into());
+    };
+
+    if !SERVER_ICON_SHAPES.contains(&shape) {
+        return Err("Unsupported server icon".into());
+    }
+
+    if !SERVER_ICON_COLORS.contains(&color) {
+        return Err("Unsupported server icon color".into());
+    }
+
+    Ok(Some(icon.to_owned()))
+}
 
 // ================================
 // Server Creation Models
@@ -47,20 +76,12 @@ impl TryFrom<(MemberId, ServerCreateInput)> for NewServer {
     fn try_from(
         (member_id, input): (MemberId, ServerCreateInput),
     ) -> Result<NewServer, Self::Error> {
-        let name = input.name.trim().to_owned();
-        let description = input.description.trim().to_owned();
+        let name = validate_server_name(input.name)
+            .map_err(|e| ServerError::InvalidInput(format!("Server name {}", e.message())))?;
+        let description = validate_server_description(input.description).map_err(|e| {
+            ServerError::InvalidInput(format!("Server description {}", e.message()))
+        })?;
         let icon = validate_server_icon(input.icon).map_err(ServerError::InvalidInput)?;
-
-        if !(5..=80).contains(&name.chars().count()) {
-            return Err(ServerError::InvalidInput(
-                "Server name must be between 5 and 80 characters".into(),
-            ));
-        }
-        if !(10..=300).contains(&description.chars().count()) {
-            return Err(ServerError::InvalidInput(
-                "Server description must be between 10 and 300 characters".into(),
-            ));
-        }
 
         Ok(Self {
             name,
@@ -91,31 +112,29 @@ pub(super) struct ServerChangeset {
 impl TryFrom<ServerChangesetInput> for ServerChangeset {
     type Error = ServerError;
     fn try_from(input: ServerChangesetInput) -> Result<ServerChangeset, Self::Error> {
-        let name = input.name.map(|name| name.trim().to_owned());
-        let description = input
-            .description
-            .map(|description| description.trim().to_owned());
-        let icon = validate_server_icon(input.icon).map_err(ServerError::InvalidChangeset)?;
-
-        if name.is_none() && description.is_none() && icon.is_none() {
+        if input.name.is_none() && input.description.is_none() && input.icon.is_none() {
             return Err(ServerError::InvalidChangeset(
                 "At least one field must be provided for update".into(),
             ));
         }
-        if let Some(ref name) = name {
-            if !(5..=80).contains(&name.chars().count()) {
-                return Err(ServerError::InvalidChangeset(
-                    "Server name must be between 5 and 80 characters".into(),
-                ));
-            }
-        }
-        if let Some(ref description) = description {
-            if !(10..=300).contains(&description.chars().count()) {
-                return Err(ServerError::InvalidChangeset(
-                    "Server description must be between 10 and 300 characters".into(),
-                ));
-            }
-        }
+        let name = if let Some(name) = input.name {
+            let name = validate_server_name(name).map_err(|e| {
+                ServerError::InvalidChangeset(format!("Server name {}", e.message()))
+            })?;
+            Some(name)
+        } else {
+            None
+        };
+        let description = if let Some(description) = input.description {
+            let description = validate_server_description(description).map_err(|e| {
+                ServerError::InvalidChangeset(format!("Server description {}", e.message()))
+            })?;
+            Some(description)
+        } else {
+            None
+        };
+
+        let icon = validate_server_icon(input.icon).map_err(ServerError::InvalidChangeset)?;
 
         Ok(Self {
             name,
@@ -153,27 +172,6 @@ const SERVER_ICON_COLORS: &[&str] = &[
     "pink",
 ];
 
-fn validate_server_icon(icon: Option<String>) -> Result<Option<String>, String> {
-    let Some(icon) = icon else {
-        return Ok(None); // INSERT uses the database default
-    };
-
-    let icon = icon.trim();
-
-    let Some((shape, color)) = icon.split_once(':') else {
-        return Err("Server icon must use the '<shape>:<color>' format".into());
-    };
-
-    if !SERVER_ICON_SHAPES.contains(&shape) {
-        return Err("Unsupported server icon".into());
-    }
-
-    if !SERVER_ICON_COLORS.contains(&color) {
-        return Err("Unsupported server icon color".into());
-    }
-
-    Ok(Some(icon.to_owned()))
-}
 // ================================
 // Server DTO Models
 // ================================

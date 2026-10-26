@@ -41,7 +41,8 @@ impl MemberService {
         }
     }
     pub fn search_members(&self, search_term: String) -> Result<MultiMemberPreview, MemberError> {
-        let search = Validator::validate_search_term(search_term)?;
+        let search = Validator::validate_search_term(search_term)
+            .map_err(|e| MemberError::InvalidSearchTerm(format!("Members search term {}", e.message())))?;
         let mut conn = self.database.get_connection()?;
         Ok(MultiMemberPreview {
             members: MemberRepository::search_usernames(&mut conn, search)?,
