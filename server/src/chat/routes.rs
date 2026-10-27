@@ -4,7 +4,7 @@ use rocket::response::status;
 use rocket::serde::json::Json;
 use rocket::State;
 
-use crate::auth::{SystemModerator, SystemUser};
+use crate::auth::SystemUser;
 use crate::chat::membership::models::{ChatMember, ChatMemberDetails, MultiChatMemberDetails};
 use crate::member::models::{MemberId, MultiMemberPreview};
 use crate::ApiResponse;
@@ -51,7 +51,7 @@ pub(crate) fn join(
     chat_id: ChatId,
 ) -> ApiResponse<Json<ChatMember>> {
     let members = chat_service.join(user.member_id(), chat_id)?;
-    Ok(status::Custom(Status::Ok, Json(members)))
+    Ok(status::Custom(Status::Created, Json(members)))
 }
 
 #[post("/<chat_id>/members/many", data = "<form>")]
@@ -62,7 +62,7 @@ pub(crate) fn add_members(
     form: Form<Strict<Vec<MemberId>>>,
 ) -> ApiResponse<Json<Vec<ChatMember>>> {
     let input = form.into_inner().into_inner();
-    let members = chat_service.add_members(input, chat_id)?;
+    let members = chat_service.add_members(user.member_id(), input, chat_id)?;
     Ok(status::Custom(Status::Ok, Json(members)))
 }
 
@@ -81,7 +81,7 @@ pub(crate) fn leave(
     user: SystemUser,
     chat_service: &State<ChatService>,
     chat_id: ChatId,
-) -> ApiResponse<Json<ChatMember>> {
-    let members = chat_service.join(user.member_id(), chat_id)?;
-    Ok(status::Custom(Status::Ok, Json(members)))
+) -> ApiResponse<()> {
+    chat_service.leave(user.member_id(), chat_id)?;
+    Ok(status::Custom(Status::NoContent, ()))
 }

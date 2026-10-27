@@ -58,11 +58,7 @@ impl ChatMembershipRepository {
             .inner_join(m_dsl::member.on(mc_dsl::member_id.eq(m_dsl::id)))
             .select((ChatMember::as_select(), MemberShort::as_select()))
             .first::<(ChatMember, MemberShort)>(conn)
-            .map(|(membership, member)| ChatMemberDetails {
-                chat_id: membership.chat_id,
-                member,
-                joined_at: membership.joined_at,
-            })
+            .map(ChatMemberDetails::from)
             .map_err(DbError::from)
     }
 
@@ -78,11 +74,7 @@ impl ChatMembershipRepository {
             .map(|memberships| {
                 memberships
                     .into_iter()
-                    .map(|(membership, member)| ChatMemberDetails {
-                        chat_id: membership.chat_id,
-                        member,
-                        joined_at: membership.joined_at,
-                    })
+                    .map(ChatMemberDetails::from)
                     .collect()
             })
             .map_err(DbError::from)

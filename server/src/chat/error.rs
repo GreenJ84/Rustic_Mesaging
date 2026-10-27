@@ -2,8 +2,6 @@ use diesel::result::Error as DieselError;
 
 use crate::{api_error::ApiError, database::DbError};
 
-use super::models::Chat;
-
 #[derive(Debug)]
 pub(crate) enum ChatError {
     InvalidInput(String),

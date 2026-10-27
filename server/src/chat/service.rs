@@ -31,7 +31,8 @@ impl ChatService {
         member_id: MemberId,
         input: NewChatInput,
     ) -> Result<ChatDetails, ChatError> {
-        let (new_chat, added_members) = NewChat::new(input)?;
+        let (new_chat, mut added_members) = NewChat::new(input)?;
+        added_members.push(member_id);
 
         let mut conn = self.database.get_connection()?;
         conn.transaction::<ChatDetails, ChatError, _>(|conn| {
@@ -50,7 +51,7 @@ impl ChatService {
         chat_id: ChatId,
     ) -> Result<ChatDetails, ChatError> {
         let mut conn = self.database.get_connection()?;
-        self.require_participant(&mut conn, chat_id, member_id)?;
+        self.require_participant(&mut conn, member_id, chat_id)?;
         ChatRepository::read(&mut conn, chat_id)
             .map(ChatDetails::from)
             .map_err(ChatError::from)
@@ -65,7 +66,7 @@ impl ChatService {
     ) -> Result<ChatDetails, ChatError> {
         let changeset = ChatChangeset::try_from(input)?;
         let mut conn = self.database.get_connection()?;
-        self.require_participant(&mut conn, chat_id, member_id)?;
+        self.require_participant(&mut conn, member_id, chat_id)?;
         ChatRepository::update(&mut conn, chat_id, changeset)
             .map(ChatDetails::from)
             .map_err(ChatError::from)
@@ -84,7 +85,7 @@ impl ChatService {
             return Err(ChatError::NotFound);
         }
         if !ChatMembershipRepository::exists(conn, member_id, chat_id)? {
-            return Err(ChatError::from(ChatError::NotMember));
+            return Err(ChatError::NotMember);
         }
         Ok(())
     }
@@ -92,10 +93,10 @@ impl ChatService {
     // Create
     pub(crate) fn join(
         &self,
-        member_ids: MemberId,
+        member_id: MemberId,
         chat_id: ChatId,
     ) -> Result<ChatMember, ChatError> {
-        let memberships = NewChatMember::from((chat_id, member_ids));
+        let memberships = NewChatMember::from((chat_id, member_id));
 
         let mut conn = self.database.get_connection()?;
         conn.transaction::<ChatMember, ChatError, _>(|conn| {
@@ -108,12 +109,14 @@ impl ChatService {
 
     pub(crate) fn add_members(
         &self,
+        member_id: MemberId,
         member_ids: Vec<MemberId>,
         chat_id: ChatId,
     ) -> Result<Vec<ChatMember>, ChatError> {
         let memberships = NewChatMembers::try_from((chat_id, member_ids))?;
 
         let mut conn = self.database.get_connection()?;
+        self.require_participant(&mut conn, member_id, chat_id)?;
         ChatMembershipRepository::create_many(&mut conn, memberships).map_err(ChatError::from)
     }
 
@@ -124,23 +127,25 @@ impl ChatService {
         chat_id: ChatId,
     ) -> Result<MultiChatMemberDetails, ChatError> {
         let mut conn = self.database.get_connection()?;
-        self.require_participant(&mut conn, chat_id, member_id)?;
+        self.require_participant(&mut conn, member_id, chat_id)?;
         ChatMembershipRepository::read_many(&mut conn, chat_id).map_err(ChatError::from)
     }
 
     // Delete
     pub(crate) fn leave(&self, member_id: MemberId, chat_id: ChatId) -> Result<(), ChatError> {
         let mut conn = self.database.get_connection()?;
-        self.require_participant(&mut conn, chat_id, member_id)?;
-        ChatMembershipRepository::delete(&mut conn, chat_id, member_id).map_err(
-            |error| match error {
-                DbError::NotFound => ChatError::NotMember,
-                error => ChatError::from(error),
-            },
-        )?;
-        if ChatMembershipRepository::read_member_counts(&mut conn, chat_id)? == 0 {
-            ChatRepository::delete(&mut conn, chat_id)?;
-        }
-        Ok(())
+        conn.transaction::<(), ChatError, _>(|conn| {
+            self.require_participant(conn, member_id, chat_id)?;
+            ChatMembershipRepository::delete(conn, chat_id, member_id).map_err(
+                |error| match error {
+                    DbError::NotFound => ChatError::NotMember,
+                    error => ChatError::from(error),
+                },
+            )?;
+            if ChatMembershipRepository::read_member_counts(conn, chat_id)? == 0 {
+                ChatRepository::delete(conn, chat_id)?;
+            }
+            Ok(())
+        })
     }
 }
