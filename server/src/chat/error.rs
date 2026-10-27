@@ -1,10 +1,8 @@
 use diesel::result::Error as DieselError;
 
-use crate::{
-    api_error::ApiError,
-    chat::{membership::error::ChatMembershipError, models::Chat},
-    database::DbError,
-};
+use crate::{api_error::ApiError, database::DbError};
+
+use super::models::Chat;
 
 #[derive(Debug)]
 pub(crate) enum ChatError {
@@ -14,7 +12,8 @@ pub(crate) enum ChatError {
     NotFound,
     MemberNotFound,
 
-    PermissionDenied,
+    AlreadyMember,
+    NotMember,
 
     PersistenceError(DbError),
 }
@@ -23,6 +22,13 @@ impl From<DbError> for ChatError {
     fn from(error: DbError) -> Self {
         match &error {
             DbError::NotFound => Self::NotFound,
+
+            DbError::Conflict(DieselError::DatabaseError(_, info)) => {
+                match info.constraint_name() {
+                    Some("member_chat_pkey") => Self::AlreadyMember,
+                    _ => Self::PersistenceError(error),
+                }
+            }
             DbError::ConstraintViolation(DieselError::DatabaseError(_, info)) => {
                 match info.constraint_name() {
                     Some("member_chat_member_id_fkey") => Self::MemberNotFound,
@@ -53,26 +59,6 @@ impl From<DieselError> for ChatError {
     }
 }
 
-impl From<ChatMembershipError> for ChatError {
-    fn from(error: ChatMembershipError) -> Self {
-        match error {
-            ChatMembershipError::InvalidInput(msg) => Self::InvalidInput(msg),
-
-            ChatMembershipError::NotFound => Self::NotFound,
-            ChatMembershipError::MemberNotFound => Self::MemberNotFound,
-            ChatMembershipError::ChatNotFound => Self::NotFound,
-
-            ChatMembershipError::NotMember => Self::PermissionDenied,
-            ChatMembershipError::AlreadyMember => {
-                Self::InvalidInput("Member is already in the chat".into())
-            }
-
-
-            ChatMembershipError::PersistenceError(db_error) => Self::PersistenceError(db_error),
-        }
-    }
-}
-
 impl From<ChatError> for ApiError {
     fn from(error: ChatError) -> Self {
         match error {
@@ -81,9 +67,9 @@ impl From<ChatError> for ApiError {
             }
             ChatError::NotFound => ApiError::NotFound("Chat not found".into()),
             ChatError::MemberNotFound => ApiError::NotFound("Member not found".into()),
-            ChatError::PermissionDenied => {
-                ApiError::Forbidden("You do not have permission to modify this chat".into())
-            }
+
+            ChatError::AlreadyMember => ApiError::Conflict("Member is already in this chat".into()),
+            ChatError::NotMember => ApiError::NotFound("Chat membership not found".into()),
             ChatError::PersistenceError(error) => {
                 log::error!("Chat persistence error: {error:?}");
                 ApiError::InternalError
