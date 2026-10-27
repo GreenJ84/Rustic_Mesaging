@@ -1,97 +1,109 @@
-use crate::member::models::MemberShort;
-use crate::schema::message;
 use chrono::NaiveDateTime;
-use diesel::{Identifiable, Insertable, Queryable, Selectable};
-use rocket::response::Responder;
-use rocket::serde::json::Json;
-use rocket::Response;
+use diesel::{AsChangeset, Identifiable, Insertable, Queryable, Selectable};
 use serde::{Deserialize, Serialize};
 
-#[derive(Insertable, Serialize, Deserialize, Debug, FromForm)]
-#[diesel(table_name = message)]
-pub struct NewMessage {
-    content: String,
-    sender_id: i32,
-    chat_id: i32,
-}
-impl NewMessage {
-    pub fn content(&self) -> &str {
-        &self.content
-    }
-    pub fn sender_id(&self) -> &i32 {
-        &self.sender_id
-    }
-    pub fn chat_id(&self) -> i32 {
-        self.chat_id
-    }
+use crate::chat::models::{Chat, ChatId};
+use crate::member::models::{Member, MemberId, MemberShort};
+use crate::schema::message;
+use crate::utils::{Page, Validator};
 
-    pub fn new(content: String, sender_id: i32, chat_id: i32) -> Self {
-        Self {
+use super::error::MessageError;
+
+pub(crate) type MessageId = i32;
+
+#[derive(Debug, FromForm)]
+pub(crate) struct MessageInput {
+    pub(crate) content: String,
+}
+
+#[derive(Insertable, Debug)]
+#[diesel(table_name = message)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub(crate) struct NewMessage {
+    content: String,
+    sender_id: MemberId,
+    chat_id: ChatId,
+}
+impl TryFrom<(ChatId, MemberId, MessageInput)> for NewMessage {
+    type Error = MessageError;
+
+    fn try_from(
+        (chat_id, sender_id, input): (ChatId, MemberId, MessageInput),
+    ) -> Result<Self, Self::Error> {
+        let content = Validator::validate_text(input.content, None, Some(2000))
+            .map_err(|e| MessageError::InvalidInput(format!("Message content {}", e.message())))?;
+        Ok(Self {
             content,
             sender_id,
             chat_id,
+        })
+    }
+}
+
+#[derive(Debug, FromForm)]
+pub(crate) struct MessageChangesetInput {
+    pub(crate) content: Option<String>,
+}
+
+#[derive(AsChangeset, Debug)]
+#[diesel(table_name = message)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub(crate) struct MessageChangeset {
+    content: Option<String>,
+}
+impl TryFrom<MessageChangesetInput> for MessageChangeset {
+    type Error = MessageError;
+
+    fn try_from(input: MessageChangesetInput) -> Result<Self, Self::Error> {
+        let Some(content) = input.content else {
+            return Err(MessageError::InvalidChangeset("No changes provided".into()));
+        };
+        let content = Validator::validate_text(content, None, Some(2000)).map_err(|e| {
+            MessageError::InvalidChangeset(format!("Message content {}", e.message()))
+        })?;
+        Ok(Self {
+            content: Some(content),
+        })
+    }
+}
+
+#[derive(Identifiable, Queryable, Selectable, Debug)]
+#[diesel(table_name = message)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+#[diesel(belongs_to(Member, foreign_key = sender_id))]
+pub(crate) struct Message {
+    id: MessageId,
+    content: String,
+    sender_id: MemberId,
+    chat_id: ChatId,
+    created_at: NaiveDateTime,
+}
+impl Message {
+    pub(crate) fn id(&self) -> MessageId {
+        self.id
+    }
+}
+
+#[derive(Serialize, Debug)]
+pub(crate) struct MessageDetails {
+    pub(crate) id: MessageId,
+    pub(crate) content: String,
+    pub(crate) sender: MemberShort,
+    pub(crate) chat_id: ChatId,
+    pub(crate) created_at: NaiveDateTime,
+}
+
+impl From<(Message, MemberShort)> for MessageDetails {
+    fn from((message, sender): (Message, MemberShort)) -> Self {
+        Self {
+            id: message.id,
+            content: message.content,
+            sender,
+            chat_id: message.chat_id,
+            created_at: message.created_at,
         }
     }
 }
 
-#[derive(Identifiable, Queryable, Selectable, Serialize, Deserialize, Clone, Debug)]
-#[diesel(table_name = message)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
-#[diesel(belongs_to(Chat, foreign_key = chat_id))]
-#[diesel(belongs_to(Member, foreign_key = sender_id))]
-pub struct Message {
-    #[diesel(sql_type = Int4)]
-    id: i32,
-    #[diesel(sql_type = Text)]
-    content: String,
-    #[diesel(sql_type = Int4)]
-    sender_id: i32,
-    #[diesel(sql_type = Int4)]
-    chat_id: i32,
-    #[diesel(sql_type = Timestamp)]
-    created_at: NaiveDateTime,
-}
-impl<'r> Responder<'r, 'r> for Message {
-    fn respond_to(self, req: &'r rocket::Request<'_>) -> rocket::response::Result<'r> {
-        Response::build_from(Json(self).respond_to(req)?).ok()
-    }
-}
-impl Message {
-    pub fn id(&self) -> i32 {
-        self.id
-    }
-    pub fn content(&self) -> &str {
-        &self.content
-    }
-    pub fn sender_id(&self) -> i32 {
-        self.sender_id
-    }
-    pub fn chat_id(&self) -> i32 {
-        self.chat_id
-    }
-    pub fn created_at(&self) -> NaiveDateTime {
-        self.created_at
-    }
-}
-
-#[derive(Serialize, Debug)]
-pub struct ResponseMessage {
-    pub(crate) id: i32,
-    pub(crate) content: String,
-    pub(crate) sender: MemberShort,
-    pub(crate) created_at: NaiveDateTime,
-}
-impl<'r> Responder<'r, 'r> for ResponseMessage {
-    fn respond_to(self, req: &'r rocket::Request<'_>) -> rocket::response::Result<'r> {
-        Response::build_from(Json(self).respond_to(req)?).ok()
-    }
-}
-#[derive(Serialize, Debug)]
-pub struct MessageThread {
-    pub(crate) thread: Vec<ResponseMessage>,
-}
-impl<'r> Responder<'r, 'r> for MessageThread {
-    fn respond_to(self, req: &'r rocket::Request<'_>) -> rocket::response::Result<'static> {
-        Response::build_from(Json(self).respond_to(req)?).ok()
-    }
-}
+pub type MultiMessageDetails = Vec<MessageDetails>;
+pub type MessagePage = Page<MultiMessageDetails>;
