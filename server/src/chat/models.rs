@@ -1,65 +1,90 @@
-use crate::schema::chat;
 use chrono::NaiveDateTime;
-use diesel::{Identifiable, Insertable, Queryable, Selectable};
-use rocket::response::Responder;
-use rocket::serde::json::Json;
-use rocket::Response;
+use diesel::{AsChangeset, Identifiable, Insertable, Queryable, Selectable};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug, FromForm)]
-pub struct NewChatWithMembers {
-    pub name: String,
-    pub members: Vec<i32>,
-}
-#[derive(Insertable, Serialize, Deserialize, Debug, FromForm)]
-#[diesel(table_name = chat)]
-pub struct NewChat {
-    pub name: String,
-}
-impl NewChat {
-    pub fn name(&self) -> &str {
-        &self.name
-    }
+use crate::member::models::{MemberId, MemberShort};
+use crate::schema::chat;
+use crate::utils::{Page, Validator};
 
-    pub fn new(name: String) -> Self {
-        Self { name }
-    }
+use super::error::ChatError;
+
+pub(crate) type ChatId = i32;
+
+#[derive(FromForm, Debug)]
+pub(crate) struct NewChatInput {
+    pub(crate) name: String,
+    pub(crate) members: Vec<MemberId>,
 }
 
-#[derive(Identifiable, Queryable, Selectable, Serialize, Deserialize, Clone, Debug)]
+#[derive(Insertable, Debug)]
 #[diesel(table_name = chat)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct Chat {
-    #[diesel(sql_type = Int4)]
-    id: i32,
-    #[diesel(sql_type = Text)]
+pub(crate) struct NewChat {
     name: String,
-    #[diesel(sql_type = Timestamp)]
-    created_at: NaiveDateTime,
 }
-impl<'r> Responder<'r, 'r> for Chat {
-    fn respond_to(self, req: &'r rocket::Request<'_>) -> rocket::response::Result<'r> {
-        Response::build_from(Json(self).respond_to(req)?).ok()
-    }
-}
-impl Chat {
-    pub fn id(&self) -> i32 {
-        self.id
-    }
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-    pub fn created_at(&self) -> NaiveDateTime {
-        self.created_at
+impl TryFrom<NewChatInput> for NewChat {
+    type Error = ChatError;
+
+    fn try_from(input: NewChatInput) -> Result<Self, Self::Error> {
+        let name = Validator::validate_text(input.name, Some(3), Some(80))
+            .map_err(|e| ChatError::InvalidInput(format!("Chat name {}", e.message())))?;
+        Ok(Self { name })
     }
 }
 
-#[derive(Serialize, Debug)]
-pub struct MultiChatPreview {
-    pub(crate) chat_previews: Vec<Chat>,
+#[derive(Debug, FromForm)]
+pub(crate) struct ChatChangesetInput {
+    pub(crate) name: Option<String>,
 }
-impl<'r> Responder<'r, 'r> for MultiChatPreview {
-    fn respond_to(self, req: &'r rocket::Request<'_>) -> rocket::response::Result<'static> {
-        Response::build_from(Json(self).respond_to(req)?).ok()
+
+#[derive(AsChangeset)]
+#[diesel(table_name = chat)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub(crate) struct ChatChangeset {
+    name: Option<String>,
+}
+impl TryFrom<ChatChangesetInput> for ChatChangeset {
+    type Error = ChatError;
+
+    fn try_from(input: ChatChangesetInput) -> Result<Self, Self::Error> {
+        let Some(name) = input.name else {
+            return Err(ChatError::InvalidChangeset("No changes provided".into()));
+        };
+        let name = Validator::validate_text(name, Some(3), Some(80))
+            .map_err(|e| ChatError::InvalidChangeset(format!("Chat name {}", e.message())))?;
+        Ok(Self { name: Some(name) })
     }
 }
+
+#[derive(Identifiable, Queryable, Selectable, Debug)]
+#[diesel(table_name = chat)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub(crate) struct Chat {
+    id: ChatId,
+    name: String,
+    created_at: NaiveDateTime,
+}
+impl Chat {
+    pub(crate) fn id(&self) -> ChatId {
+        self.id
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub(crate) struct ChatDetails {
+    pub id: ChatId,
+    pub name: String,
+    pub created_at: NaiveDateTime,
+}
+impl From<Chat> for ChatDetails {
+    fn from(chat: Chat) -> Self {
+        Self {
+            id: chat.id,
+            name: chat.name,
+            created_at: chat.created_at,
+        }
+    }
+}
+
+pub(crate) type MultiChatDetails = Vec<ChatDetails>;
+pub(crate) type MultiChatPage = Page<MultiChatDetails>;
