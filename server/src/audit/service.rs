@@ -1,7 +1,12 @@
-use crate::db::DbConn;
+use crate::db::{DbConn, DbError};
+use crate::member::models::MemberProfile;
 use crate::models::report::{ActivityReportItem, ServerMemberReportItem};
+use crate::schema::{member, server_membership};
 use chrono::NaiveDateTime;
-use diesel::{sql_query, OptionalExtension, RunQueryDsl};
+use diesel::{
+    sql_query, ExpressionMethods, JoinOnDsl, OptionalExtension, QueryDsl, RunQueryDsl,
+    SelectableHelper,
+};
 
 pub struct ReportService;
 
@@ -72,30 +77,17 @@ impl ReportService {
     pub fn generate_membership_report(
         conn: &mut DbConn,
         server_id: i32,
-    ) -> Vec<ServerMemberReportItem> {
-        sql_query(
-            "
-            SELECT
-                m.id as id,
-                m.username as username,
-                m.email as email,
-                m.avatar as avatar,
-                m.created_at as created_at,
-                sm.joined_at as timestamp
-            FROM
-                member m
-            JOIN
-                server_membership sm
-            ON
-                m.id = sm.member_id
-            WHERE
-                sm.server_id = $1
-            ORDER BY
-                sm.joined_at DESC;
-            ",
-        )
-        .bind::<diesel::sql_types::Integer, _>(server_id)
-        .get_results::<ServerMemberReportItem>(conn)
-        .unwrap_or(Vec::new())
+    ) -> Result<Vec<ServerMemberReportItem>, DbError> {
+        let rows = member::table
+            .inner_join(server_membership::table.on(member::id.eq(server_membership::member_id)))
+            .filter(server_membership::server_id.eq(server_id))
+            .order(server_membership::joined_at.desc())
+            .select((MemberProfile::as_select(), server_membership::joined_at))
+            .load::<(MemberProfile, NaiveDateTime)>(conn)?;
+
+        Ok(rows
+            .into_iter()
+            .map(|(member, timestamp)| ServerMemberReportItem { member, timestamp })
+            .collect())
     }
 }

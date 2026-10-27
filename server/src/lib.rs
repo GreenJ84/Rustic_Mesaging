@@ -18,6 +18,7 @@ pub(crate) mod chat;
 pub(crate) mod member;
 pub(crate) mod server;
 pub(crate) mod social;
+pub(crate) mod audit;
 
 #[cfg(test)]
 pub(crate) mod tests;

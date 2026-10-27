@@ -7,6 +7,7 @@ use rocket::State;
 
 use crate::auth::models::JWT;
 use crate::db::{get_db_connection, DbConn, DbPool};
+
 use crate::member::service::MemberService;
 use crate::models::report::{
     ActivityReportItem, CsvDownload, ServerMemberReportCsv, ServerMemberReportItem,
@@ -43,12 +44,13 @@ pub(crate) fn server_membership_report(
     token: JWT,
     pool: &State<DbPool>,
     server_id: i32,
-) -> Json<Vec<ServerMemberReportItem>> {
+) -> Result<Json<Vec<ServerMemberReportItem>>, Status> {
     let mut conn = get_db_connection(pool).expect("Database connection expected");
 
-    Json(ReportService::generate_membership_report(
-        &mut conn, server_id,
-    ))
+    let report = ReportService::generate_membership_report(&mut conn, server_id)
+        .map_err(|e| Status::InternalServerError)?;
+
+    Ok(Json(report))
 }
 
 #[get("/server/<server_id>/csv")]
@@ -59,7 +61,8 @@ pub(crate) fn download_server_membership_report(
 ) -> Result<CsvDownload, Status> {
     let mut conn = get_db_connection(pool).expect("Database connection expected");
 
-    let data = ReportService::generate_membership_report(&mut conn, server_id);
+    let data = ReportService::generate_membership_report(&mut conn, server_id)
+        .map_err(|e| Status::InternalServerError)?;
     let csv_data: Vec<ServerMemberReportCsv> = data
         .into_iter()
         .map(|item| ServerMemberReportCsv::from_report_item(item))
