@@ -10,6 +10,7 @@ use crate::cors;
 use crate::database::Database;
 use crate::id_generator::IdGenerator;
 use crate::schema::server;
+use crate::utils::get_catchers;
 
 use crate::auth::system_roles::get_system_role_routes;
 use crate::auth::{get_auth_routes, service::AuthService};
@@ -67,6 +68,7 @@ pub fn build() -> Rocket<Build> {
         .mount("/requests", get_request_routes())
         .mount("/servers", get_server_routes())
         .mount("/chat", crate::chat::get_chat_routes())
+        .register("/", get_catchers())
 }
 
 // use crate::models::web_socket::WebSocketManager;
