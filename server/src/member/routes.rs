@@ -9,7 +9,6 @@ use crate::auth::SystemUser;
 use super::models::{MemberProfile, MemberShort, MemberUpdateInput, MultiMemberPreview};
 use super::service::MemberService;
 
-use crate::chat::models::MultiChatPreview;
 use crate::server::models::MultiServer;
 use crate::ApiResponse;
 
@@ -74,13 +73,4 @@ pub fn search_members(
 ) -> ApiResponse<MultiMemberPreview> {
     let members = member_service.search_members(search_term)?;
     Ok(status::Custom(Status::Ok, members))
-}
-
-#[get("/chats")]
-pub fn get_all_member_chats(
-    user: SystemUser,
-    member_service: &State<MemberService>,
-) -> ApiResponse<MultiChatPreview> {
-    let chats = member_service.get_member_chats(user.member_id())?;
-    Ok(status::Custom(Status::Ok, chats))
 }

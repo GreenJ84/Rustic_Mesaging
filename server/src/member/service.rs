@@ -1,6 +1,5 @@
 use diesel::Connection;
 
-use crate::chat::models::MultiChatPreview;
 use crate::server::models::MultiServer;
 use crate::utils::SearchValidation;
 use crate::{auth::system_roles::SystemRoleService, database::Database, utils::Validator};
@@ -41,8 +40,9 @@ impl MemberService {
         }
     }
     pub fn search_members(&self, search_term: String) -> Result<MultiMemberPreview, MemberError> {
-        let search = Validator::validate_search_term(search_term)
-            .map_err(|e| MemberError::InvalidSearchTerm(format!("Members search term {}", e.message())))?;
+        let search = Validator::validate_search_term(search_term).map_err(|e| {
+            MemberError::InvalidSearchTerm(format!("Members search term {}", e.message()))
+        })?;
         let mut conn = self.database.get_connection()?;
         Ok(MultiMemberPreview {
             members: MemberRepository::search_usernames(&mut conn, search)?,
@@ -87,14 +87,6 @@ impl MemberService {
             } else {
                 Err(MemberError::NotFound)
             }
-        })
-    }
-
-    // TODO: Migrate into associated service for chats, servers, and friends
-    pub fn get_member_chats(&self, member_id: MemberId) -> Result<MultiChatPreview, MemberError> {
-        let mut conn = self.database.get_connection()?;
-        Ok(MultiChatPreview {
-            chat_previews: MemberRepository::get_member_chats(&mut conn, member_id)?,
         })
     }
 }
