@@ -5,4 +5,5 @@ CREATE TABLE channel (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX server_channel ON channel(server_id);
+CREATE UNIQUE INDEX channel_server_name_unique
+ON channel (server_id, lower(name));
