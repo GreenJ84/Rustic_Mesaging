@@ -1,93 +1,146 @@
-use chrono::NaiveDateTime;
-use diesel::result::Error;
-use diesel::{ExpressionMethods, JoinOnDsl, OptionalExtension, QueryDsl, RunQueryDsl};
+use diesel::Connection;
 
-use crate::chat::models::{Chat, NewChat};
-use crate::db::DbConn;
-use crate::member::models::MemberShort;
-use crate::models::message::ResponseMessage;
-use crate::schema::{
-    chat::dsl as c_dsl, member::dsl as m_dsl, member_chat::dsl as mc_dsl, message::dsl as ms_dsl,
+use crate::database::{Database, DbConn, DbError};
+use crate::member::models::{MemberId, MemberShort};
+
+use super::error::ChatError;
+use super::membership::models::{
+    ChatMember, ChatMemberDetails, MultiChatMemberDetails, NewChatMember, NewChatMembers,
 };
-use crate::service::CrudOps;
+use super::membership::repository::ChatMembershipRepository;
+use super::models::{
+    ChatChangeset, ChatChangesetInput, ChatDetails, ChatId, MultiChatDetails, NewChat, NewChatInput,
+};
+use super::repository::ChatRepository;
 
-pub struct ChatService;
-
-impl CrudOps<NewChat, Chat> for ChatService {
-    fn create(conn: &mut DbConn, new_chat: NewChat) -> Result<Chat, Error> {
-        diesel::insert_into(c_dsl::chat)
-            .values(&new_chat)
-            .get_result::<Chat>(conn)
-    }
-
-    fn read(conn: &mut DbConn, id: i32) -> Result<Chat, Error> {
-        let chat = c_dsl::chat.find(id).first::<Chat>(conn).optional()?;
-
-        match chat {
-            Some(chat) => Ok(chat),
-            None => Err(Error::NotFound),
-        }
-    }
-
-    fn update(conn: &mut DbConn, id: i32, entity: NewChat) -> Result<Chat, Error> {
-        let updated_fields = (c_dsl::name.eq(entity.name().to_owned()),);
-
-        diesel::update(c_dsl::chat.find(id))
-            .set(updated_fields)
-            .get_result::<Chat>(conn)
-    }
-
-    fn delete(conn: &mut DbConn, id: i32) -> Result<usize, Error> {
-        diesel::delete(c_dsl::chat.find(id)).execute(conn)
-    }
+pub(crate) struct ChatService {
+    database: Database,
 }
 
 impl ChatService {
-    pub fn get_chat_thread(conn: &mut DbConn, chat_id: i32) -> Result<Vec<ResponseMessage>, Error> {
-        let thread = ms_dsl::message
-            .filter(ms_dsl::chat_id.eq(chat_id))
-            .inner_join(m_dsl::member.on(ms_dsl::sender_id.eq(m_dsl::id)))
-            .select((
-                ms_dsl::id,
-                ms_dsl::content,
-                (m_dsl::id, m_dsl::username, m_dsl::avatar),
-                ms_dsl::created_at,
-            ))
-            .order_by(ms_dsl::created_at.desc())
-            .load::<(i32, String, (i32, String, String), NaiveDateTime)>(conn)?
-            .into_iter()
-            .map(
-                |(id, content, (sender_id, username, avatar), created_at)| ResponseMessage {
-                    id,
-                    content,
-                    sender: MemberShort {
-                        id: sender_id,
-                        username,
-                        avatar,
-                    },
-                    created_at,
-                },
-            )
-            .collect::<Vec<_>>();
-
-        Ok(thread)
+    pub(crate) fn new(database: Database) -> Self {
+        Self { database }
     }
 
-    pub fn get_chat_members(conn: &mut DbConn, chat_id: i32) -> Result<Vec<MemberShort>, Error> {
-        let members = mc_dsl::member_chat
-            .filter(mc_dsl::chat_id.eq(chat_id))
-            .inner_join(m_dsl::member.on(mc_dsl::member_id.eq(m_dsl::id)))
-            .select((m_dsl::id, m_dsl::username, m_dsl::avatar, mc_dsl::joined_at))
-            .order_by(mc_dsl::joined_at.asc())
-            .load::<(i32, String, String, NaiveDateTime)>(conn)?
-            .into_iter()
-            .map(|(id, username, avatar, _)| MemberShort {
-                id,
-                username,
-                avatar,
-            })
-            .collect::<Vec<_>>();
+    // ===============================
+    // Chat Operations
+    // ===============================
+    // Create
+    pub(crate) fn create_chat(
+        &self,
+        member_id: MemberId,
+        input: NewChatInput,
+    ) -> Result<ChatDetails, ChatError> {
+        let (new_chat, added_members) = NewChat::new(input)?;
 
-        Ok(members)
+        let mut conn = self.database.get_connection()?;
+        conn.transaction::<ChatDetails, ChatError, _>(|conn| {
+            let chat = ChatRepository::create(conn, new_chat)?;
+            let memberships = NewChatMembers::try_from((chat.id(), added_members))?;
+
+            ChatMembershipRepository::create_many(conn, memberships)?;
+            Ok(chat.into())
+        })
+    }
+
+    // Read
+    pub(crate) fn get_chat(
+        &self,
+        member_id: MemberId,
+        chat_id: ChatId,
+    ) -> Result<ChatDetails, ChatError> {
+        let mut conn = self.database.get_connection()?;
+        self.require_participant(&mut conn, chat_id, member_id)?;
+        ChatRepository::read(&mut conn, chat_id)
+            .map(ChatDetails::from)
+            .map_err(ChatError::from)
+    }
+
+    // Update
+    pub(crate) fn update_chat(
+        &self,
+        member_id: MemberId,
+        chat_id: ChatId,
+        input: ChatChangesetInput,
+    ) -> Result<ChatDetails, ChatError> {
+        let changeset = ChatChangeset::try_from(input)?;
+        let mut conn = self.database.get_connection()?;
+        self.require_participant(&mut conn, chat_id, member_id)?;
+        ChatRepository::update(&mut conn, chat_id, changeset)
+            .map(ChatDetails::from)
+            .map_err(ChatError::from)
+    }
+
+    // ===============================
+    // Chat Membership Operations
+    // ===============================
+    fn require_participant(
+        &self,
+        conn: &mut DbConn,
+        member_id: MemberId,
+        chat_id: ChatId,
+    ) -> Result<(), ChatError> {
+        if !ChatRepository::exists(conn, chat_id)? {
+            return Err(ChatError::NotFound);
+        }
+        if !ChatMembershipRepository::exists(conn, member_id, chat_id)? {
+            return Err(ChatError::from(ChatError::NotMember));
+        }
+        Ok(())
+    }
+
+    // Create
+    pub(crate) fn join(
+        &self,
+        member_ids: MemberId,
+        chat_id: ChatId,
+    ) -> Result<ChatMember, ChatError> {
+        let memberships = NewChatMember::from((chat_id, member_ids));
+
+        let mut conn = self.database.get_connection()?;
+        conn.transaction::<ChatMember, ChatError, _>(|conn| {
+            if !ChatRepository::exists(conn, chat_id)? {
+                return Err(ChatError::NotFound);
+            }
+            ChatMembershipRepository::create(conn, memberships).map_err(ChatError::from)
+        })
+    }
+
+    pub(crate) fn add_members(
+        &self,
+        member_ids: Vec<MemberId>,
+        chat_id: ChatId,
+    ) -> Result<Vec<ChatMember>, ChatError> {
+        let memberships = NewChatMembers::try_from((chat_id, member_ids))?;
+
+        let mut conn = self.database.get_connection()?;
+        ChatMembershipRepository::create_many(&mut conn, memberships).map_err(ChatError::from)
+    }
+
+    // Read
+    pub(crate) fn get_chat_members(
+        &self,
+        member_id: MemberId,
+        chat_id: ChatId,
+    ) -> Result<MultiChatMemberDetails, ChatError> {
+        let mut conn = self.database.get_connection()?;
+        self.require_participant(&mut conn, chat_id, member_id)?;
+        ChatMembershipRepository::read_many(&mut conn, chat_id).map_err(ChatError::from)
+    }
+
+    // Delete
+    pub(crate) fn leave(&self, member_id: MemberId, chat_id: ChatId) -> Result<(), ChatError> {
+        let mut conn = self.database.get_connection()?;
+        self.require_participant(&mut conn, chat_id, member_id)?;
+        ChatMembershipRepository::delete(&mut conn, chat_id, member_id).map_err(
+            |error| match error {
+                DbError::NotFound => ChatError::NotMember,
+                error => ChatError::from(error),
+            },
+        )?;
+        if ChatMembershipRepository::read_member_counts(&mut conn, chat_id)? == 0 {
+            ChatRepository::delete(&mut conn, chat_id)?;
+        }
+        Ok(())
     }
 }
