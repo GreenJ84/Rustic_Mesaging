@@ -1,0 +1,84 @@
+use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SelectableHelper};
+
+use crate::chat::membership::models::ChatMemberDetails;
+use crate::chat::models::ChatId;
+use crate::database::{DbConn, DbError};
+use crate::member::models::{MemberId, MemberShort};
+use crate::schema::{member::dsl as m_dsl, member_chat::dsl as mc_dsl};
+
+use super::models::{ChatMember, NewChatMember, NewChatMembers};
+
+pub(crate) struct ChatMembershipRepository;
+
+impl ChatMembershipRepository {
+    // Existence
+    pub(crate) fn exists(
+        conn: &mut DbConn,
+        member_id: MemberId,
+        chat_id: ChatId,
+    ) -> Result<bool, DbError> {
+        diesel::select(diesel::dsl::exists(
+            mc_dsl::member_chat.find((chat_id, member_id)),
+        ))
+        .get_result(conn)
+        .map_err(DbError::from)
+    }
+
+    // Create
+    pub(crate) fn add(
+        conn: &mut DbConn,
+        new_membership: NewChatMember,
+    ) -> Result<ChatMember, DbError> {
+        diesel::insert_into(mc_dsl::member_chat)
+            .values(new_membership)
+            .returning(ChatMember::as_returning())
+            .get_result(conn)
+            .map_err(DbError::from)
+    }
+
+    pub(crate) fn add_many(
+        conn: &mut DbConn,
+        new_memberships: NewChatMembers,
+    ) -> Result<Vec<ChatMember>, DbError> {
+        diesel::insert_into(mc_dsl::member_chat)
+            .values(new_memberships.rows())
+            .returning(ChatMember::as_returning())
+            .get_results(conn)
+            .map_err(DbError::from)
+    }
+
+    // Read
+    pub(crate) fn find(
+        conn: &mut DbConn,
+        member_id: MemberId,
+        chat_id: ChatId,
+    ) -> Result<ChatMemberDetails, DbError> {
+        mc_dsl::member_chat
+            .find((chat_id, member_id))
+            .inner_join(m_dsl::member.on(mc_dsl::member_id.eq(m_dsl::id)))
+            .select((ChatMember::as_select(), MemberShort::as_select()))
+            .first::<(ChatMember, MemberShort)>(conn)
+            .map(|(membership, member)| ChatMemberDetails {
+                chat_id: membership.chat_id,
+                member,
+                joined_at: membership.joined_at,
+            })
+            .map_err(DbError::from)
+    }
+
+    // Delete
+    pub(crate) fn remove(
+        conn: &mut DbConn,
+        chat_id: ChatId,
+        member_id: MemberId,
+    ) -> Result<(), DbError> {
+        let deleted = diesel::delete(mc_dsl::member_chat.find((chat_id, member_id)))
+            .execute(conn)
+            .map_err(DbError::from)?;
+        if deleted == 0 {
+            Err(DbError::NotFound)
+        } else {
+            Ok(())
+        }
+    }
+}
