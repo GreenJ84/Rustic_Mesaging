@@ -1,41 +1,106 @@
-use diesel::result::Error;
-use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
+use crate::database::{Database, DbConn};
+use crate::member::models::MemberId;
 
-use crate::db::DbConn;
-use crate::models::message::{Message, NewMessage};
-use crate::schema::message::dsl;
-use crate::service::CrudOps;
+use crate::chat::membership::repository::ChatMembershipRepository;
+use crate::chat::models::ChatId;
+use crate::chat::repository::ChatRepository;
 
-pub struct MessageService;
-impl CrudOps<NewMessage, Message> for MessageService {
-    fn create(conn: &mut DbConn, new_message: NewMessage) -> Result<Message, Error> {
-        diesel::insert_into(dsl::message)
-            .values(&new_message)
-            .get_result::<Message>(conn)
+use super::error::MessageError;
+use super::models::{
+    MessageChangeset, MessageChangesetInput, MessageDetails, MessageId, MessageInput,
+    MultiMessageDetails, NewMessage,
+};
+use super::repository::MessageRepository;
+
+pub(crate) struct MessageService {
+    database: Database,
+}
+impl MessageService {
+    pub(crate) fn new(database: Database) -> Self {
+        Self { database }
     }
 
-    fn read(conn: &mut DbConn, id: i32) -> Result<Message, Error> {
-        let message: Option<Message> = dsl::message
-            .find(id)
-            .first::<Message>(conn)
-            .optional()
-            .map_err(|e| e)?;
-
-        match message {
-            Some(message) => Ok(message),
-            None => Err(Error::NotFound),
+    fn authorize(
+        &self,
+        conn: &mut DbConn,
+        member_id: MemberId,
+        chat_id: ChatId,
+    ) -> Result<(), MessageError> {
+        if !ChatRepository::exists(conn, chat_id)? {
+            return Err(MessageError::ChatNotFound);
         }
+        if !ChatMembershipRepository::exists(conn, member_id, chat_id)? {
+            return Err(MessageError::MembershipRequired);
+        }
+        Ok(())
     }
 
-    fn update(conn: &mut DbConn, id: i32, entity: NewMessage) -> Result<Message, Error> {
-        let updated_fields = (dsl::content.eq(entity.content().to_owned()),);
-
-        diesel::update(dsl::message.find(id))
-            .set(updated_fields)
-            .get_result::<Message>(conn)
+    // Create
+    pub(crate) fn create(
+        &self,
+        member_id: MemberId,
+        chat_id: ChatId,
+        input: MessageInput,
+    ) -> Result<MessageDetails, MessageError> {
+        let new_message = NewMessage::try_from((chat_id, member_id, input))?;
+        let mut conn = self.database.get_connection()?;
+        self.authorize(&mut conn, member_id, chat_id)?;
+        let message = MessageRepository::create(&mut conn, new_message)?;
+        MessageRepository::read(&mut conn, chat_id, message.id()).map_err(MessageError::from)
     }
 
-    fn delete(conn: &mut DbConn, id: i32) -> Result<usize, Error> {
-        diesel::delete(dsl::message.find(id)).execute(conn)
+    // Read
+    pub(crate) fn get(
+        &self,
+        member_id: MemberId,
+        chat_id: ChatId,
+        message_id: MessageId,
+    ) -> Result<MessageDetails, MessageError> {
+        let mut conn = self.database.get_connection()?;
+        self.authorize(&mut conn, member_id, chat_id)?;
+        MessageRepository::read(&mut conn, chat_id, message_id).map_err(MessageError::from)
+    }
+    pub(crate) fn get_thread(
+        &self,
+        member_id: MemberId,
+        chat_id: ChatId,
+        page: u32,
+    ) -> Result<MultiMessageDetails, MessageError> {
+        let mut conn = self.database.get_connection()?;
+        self.authorize(&mut conn, member_id, chat_id)?;
+        MessageRepository::read_many(&mut conn, chat_id, page).map_err(MessageError::from)
+    }
+
+    // Update
+    pub(crate) fn update(
+        &self,
+        member_id: MemberId,
+        chat_id: ChatId,
+        message_id: MessageId,
+        input: MessageChangesetInput,
+    ) -> Result<MessageDetails, MessageError> {
+        let changeset = MessageChangeset::try_from(input)?;
+        let mut conn = self.database.get_connection()?;
+        self.authorize(&mut conn, member_id, chat_id)?;
+        if MessageRepository::read_author_id(&mut conn, chat_id, message_id)? != member_id {
+            return Err(MessageError::PermissionDenied);
+        }
+        MessageRepository::update(&mut conn, chat_id, message_id, changeset)
+            .map_err(MessageError::from)
+    }
+
+    // Delete
+    pub(crate) fn delete(
+        &self,
+        member_id: MemberId,
+        chat_id: ChatId,
+        message_id: MessageId,
+    ) -> Result<(), MessageError> {
+        let mut conn = self.database.get_connection()?;
+        self.authorize(&mut conn, member_id, chat_id)?;
+        if MessageRepository::read_author_id(&mut conn, chat_id, message_id)? != member_id {
+            return Err(MessageError::PermissionDenied);
+        }
+        MessageRepository::delete(&mut conn, chat_id, message_id).map_err(MessageError::from)
     }
 }
