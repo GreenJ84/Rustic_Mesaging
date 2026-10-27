@@ -15,6 +15,7 @@ use crate::service::{message_service::MessageService, CrudOps};
 pub fn create(
     token: JWT,
     pool: &State<DbPool>,
+    member_service: &State<MemberService>,
     form: Form<Strict<NewMessage>>,
 ) -> CustomResponse<ResponseMessage> {
     let mut conn = get_db_connection(pool)?;
@@ -34,7 +35,8 @@ pub fn create(
             ResponseMessage {
                 id: message.id(),
                 content: message.content().to_string(),
-                sender: MemberService::find_by_id(&mut conn, token.claims.member_id)
+                sender: member_service
+                    .find_by_id(token.claims.member_id)
                     .unwrap()
                     .unwrap(),
                 created_at: message.created_at(),
@@ -50,7 +52,12 @@ pub fn create(
 }
 
 #[get("/<message_id>")]
-pub fn get(token: JWT, pool: &State<DbPool>, message_id: i32) -> CustomResponse<ResponseMessage> {
+pub fn get(
+    token: JWT,
+    pool: &State<DbPool>,
+    member_service: &State<MemberService>,
+    message_id: i32,
+) -> CustomResponse<ResponseMessage> {
     let mut conn = get_db_connection(pool)?;
 
     // Get message details
@@ -75,7 +82,8 @@ pub fn get(token: JWT, pool: &State<DbPool>, message_id: i32) -> CustomResponse<
             ResponseMessage {
                 id: message.id(),
                 content: message.content().to_string(),
-                sender: MemberService::find_by_id(&mut conn, token.claims.member_id)
+                sender: member_service
+                    .find_by_id(token.claims.member_id)
                     .unwrap()
                     .unwrap(),
                 created_at: message.created_at(),
@@ -94,6 +102,7 @@ pub fn get(token: JWT, pool: &State<DbPool>, message_id: i32) -> CustomResponse<
 pub fn update(
     token: JWT,
     pool: &State<DbPool>,
+    member_service: &State<MemberService>,
     form: Form<Lenient<NewMessage>>,
     message_id: i32,
 ) -> CustomResponse<ResponseMessage> {
@@ -120,7 +129,8 @@ pub fn update(
             ResponseMessage {
                 id: message.id(),
                 content: message.content().to_string(),
-                sender: MemberService::find_by_id(&mut conn, token.claims.member_id)
+                sender: member_service
+                    .find_by_id(token.claims.member_id)
                     .unwrap()
                     .unwrap(),
                 created_at: message.created_at(),
