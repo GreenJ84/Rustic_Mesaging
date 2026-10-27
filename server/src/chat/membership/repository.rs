@@ -25,7 +25,7 @@ impl ChatMembershipRepository {
     }
 
     // Create
-    pub(crate) fn add(
+    pub(crate) fn create(
         conn: &mut DbConn,
         new_membership: NewChatMember,
     ) -> Result<ChatMember, DbError> {
@@ -36,7 +36,7 @@ impl ChatMembershipRepository {
             .map_err(DbError::from)
     }
 
-    pub(crate) fn add_many(
+    pub(crate) fn create_many(
         conn: &mut DbConn,
         new_memberships: NewChatMembers,
     ) -> Result<Vec<ChatMember>, DbError> {
@@ -48,7 +48,7 @@ impl ChatMembershipRepository {
     }
 
     // Read
-    pub(crate) fn find(
+    pub(crate) fn read(
         conn: &mut DbConn,
         member_id: MemberId,
         chat_id: ChatId,
@@ -66,8 +66,38 @@ impl ChatMembershipRepository {
             .map_err(DbError::from)
     }
 
+    pub(crate) fn read_many(
+        conn: &mut DbConn,
+        chat_id: ChatId,
+    ) -> Result<Vec<ChatMemberDetails>, DbError> {
+        mc_dsl::member_chat
+            .filter(mc_dsl::chat_id.eq(chat_id))
+            .inner_join(m_dsl::member.on(mc_dsl::member_id.eq(m_dsl::id)))
+            .select((ChatMember::as_select(), MemberShort::as_select()))
+            .load::<(ChatMember, MemberShort)>(conn)
+            .map(|memberships| {
+                memberships
+                    .into_iter()
+                    .map(|(membership, member)| ChatMemberDetails {
+                        chat_id: membership.chat_id,
+                        member,
+                        joined_at: membership.joined_at,
+                    })
+                    .collect()
+            })
+            .map_err(DbError::from)
+    }
+
+    pub(crate) fn read_member_counts(conn: &mut DbConn, chat_id: ChatId) -> Result<i64, DbError> {
+        mc_dsl::member_chat
+            .filter(mc_dsl::chat_id.eq(chat_id))
+            .count()
+            .get_result::<i64>(conn)
+            .map_err(DbError::from)
+    }
+
     // Delete
-    pub(crate) fn remove(
+    pub(crate) fn delete(
         conn: &mut DbConn,
         chat_id: ChatId,
         member_id: MemberId,
