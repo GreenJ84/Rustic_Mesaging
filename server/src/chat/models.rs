@@ -2,7 +2,6 @@ use chrono::NaiveDateTime;
 use diesel::{AsChangeset, Identifiable, Insertable, Queryable, Selectable};
 use serde::{Deserialize, Serialize};
 
-use crate::chat::membership::models::ChatMemberInput;
 use crate::member::models::{MemberId, MemberShort};
 use crate::schema::chat;
 use crate::utils::{Page, Validator};
@@ -14,7 +13,7 @@ pub(crate) type ChatId = i32;
 #[derive(FromForm, Debug)]
 pub(crate) struct NewChatInput {
     pub(crate) name: String,
-    pub(crate) members: Vec<MemberId>,
+    pub(crate) member_ids: Vec<MemberId>,
 }
 
 #[derive(Insertable, Debug)]
@@ -24,10 +23,11 @@ pub(crate) struct NewChat {
     name: String,
 }
 impl NewChat {
-    fn new(input: NewChatInput) -> Result<(Self, ChatMemberInput), ChatError> {
+    pub fn new(input: NewChatInput) -> Result<(Self, Vec<MemberId>), ChatError> {
         let name = Validator::validate_text(input.name, Some(3), Some(80))
             .map_err(|e| ChatError::InvalidInput(format!("Chat name {}", e.message())))?;
-        Ok((Self { name }, ChatMemberInput { member_ids: input.members }))
+
+        Ok((Self { name }, input.member_ids ))
     }
 }
 

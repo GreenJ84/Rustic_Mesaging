@@ -6,12 +6,7 @@ use crate::chat::models::ChatId;
 use crate::member::models::{MemberId, MemberShort};
 use crate::schema::member_chat;
 
-use super::error::ChatMembershipError;
-
-#[derive(Debug, FromForm)]
-pub(crate) struct ChatMemberInput {
-    pub(crate) member_ids: Vec<MemberId>,
-}
+use crate::chat::error::ChatError;
 
 #[derive(Insertable, Debug)]
 #[diesel(table_name = member_chat)]
@@ -34,14 +29,14 @@ impl NewChatMembers {
     }
 }
 impl TryFrom<(ChatId, Vec<MemberId>)> for NewChatMembers {
-    type Error = ChatMembershipError;
+    type Error = ChatError;
 
     fn try_from((chat_id, member_ids): (ChatId, Vec<MemberId>)) -> Result<Self, Self::Error> {
         let mut unique_ids = member_ids;
         unique_ids.sort_unstable();
         unique_ids.dedup();
         if unique_ids.is_empty() {
-            return Err(ChatMembershipError::InvalidInput(
+            return Err(ChatError::InvalidInput(
                 "At least one member is required".into(),
             ));
         }
@@ -80,3 +75,5 @@ impl From<(ChatMember, MemberShort)> for ChatMemberDetails {
         }
     }
 }
+
+pub type MultiChatMemberDetails = Vec<ChatMemberDetails>;
