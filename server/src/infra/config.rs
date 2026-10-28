@@ -2,18 +2,20 @@ use dotenv::dotenv;
 use std::env;
 
 #[derive(Debug)]
-pub enum ConfigError {
+pub(crate) enum ConfigError {
+    #[allow(dead_code)]
     Missing(String),
+    #[allow(dead_code)]
     Invalid(String),
 }
 
 #[derive(Clone, Debug)]
-pub struct AppConfig {
-    pub database_url: String,
-    pub jwt_secret: String,
-    pub administration_key: String,
-    pub cookie_secure: bool,
-    pub allowed_origins: Vec<String>,
+pub(crate) struct AppConfig {
+    pub(crate) database_url: String,
+    pub(crate) jwt_secret: String,
+    pub(crate) administration_key: String,
+    pub(crate) cookie_secure: bool,
+    pub(crate) allowed_origins: Vec<String>,
 }
 
 impl AppConfig {
