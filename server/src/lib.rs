@@ -5,6 +5,7 @@
 extern crate rocket;
 
 pub(crate) mod api_error;
+pub(crate) mod api;
 pub mod app;
 pub(crate) mod config;
 pub(crate) mod cors;
