@@ -1,6 +1,8 @@
 use jsonwebtoken::errors::{Error as JwtError, ErrorKind};
 
-use crate::{api::ApiError, auth::session::AuthCredentials, database::DbError};
+use crate::api::ApiError;
+use crate::auth::session::AuthCredentials;
+use crate::infra::DbError;
 
 pub(super) enum RotationResult {
     Rotated(AuthCredentials),

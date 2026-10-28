@@ -2,7 +2,7 @@ use diesel::Connection;
 
 use crate::server::models::MultiServer;
 use crate::utils::SearchValidation;
-use crate::{auth::system_roles::SystemRoleService, database::Database, utils::Validator};
+use crate::{auth::system_roles::SystemRoleService, infra::Database, utils::Validator};
 
 use super::{
     error::{DeletionBlock, MemberError},

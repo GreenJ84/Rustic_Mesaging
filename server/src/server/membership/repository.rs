@@ -2,7 +2,7 @@ use diesel::{
     ExpressionMethods, JoinOnDsl, OptionalExtension, QueryDsl, RunQueryDsl, SelectableHelper,
 };
 
-use crate::database::{Database, DbConn, DbError};
+use crate::infra::{DbConn, DbError};
 use crate::member::models::{MemberId, MemberShort};
 use crate::schema::{member::dsl as m_dsl, server::dsl as s_dsl, server_membership::dsl as sm_dsl};
 use crate::server::models::{ServerId, ServerPreview};

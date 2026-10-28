@@ -1,6 +1,6 @@
 use diesel::{QueryDsl, RunQueryDsl, SelectableHelper};
 
-use crate::database::{DbConn, DbError};
+use crate::infra::{DbConn, DbError};
 use crate::schema::chat::dsl as c_dsl;
 
 use super::models::{Chat, ChatChangeset, ChatId, NewChat};

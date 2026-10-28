@@ -8,7 +8,7 @@ use super::{
 
 use crate::auth::error::AuthError;
 use crate::auth::session::NewAuthSession;
-use crate::database::{DbConn, DbError};
+use crate::infra::{DbConn, DbError};
 use crate::member::models::MemberId;
 
 #[derive(Clone)]

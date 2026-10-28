@@ -1,5 +1,5 @@
 use crate::api::ApiError;
-use crate::database::{DbError, DieselError};
+use crate::infra::{DbError, DieselError};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum SystemRoleError {

@@ -1,8 +1,7 @@
 use rocket::{Build, Rocket};
 
 use crate::api;
-use crate::database::Database;
-use crate::infra::{AppConfig, IdGenerator};
+use crate::infra::{AppConfig, IdGenerator, Database};
 
 use crate::auth::system_roles::get_system_role_routes;
 use crate::auth::{get_auth_routes, service::AuthService};

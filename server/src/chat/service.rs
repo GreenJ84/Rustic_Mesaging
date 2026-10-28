@@ -1,6 +1,6 @@
 use diesel::Connection;
 
-use crate::database::{Database, DbConn, DbError};
+use crate::infra::{Database, DbConn, DbError};
 use crate::member::models::{MemberId, MemberShort};
 
 use super::error::ChatError;

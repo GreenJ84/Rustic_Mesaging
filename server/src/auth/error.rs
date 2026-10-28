@@ -1,9 +1,11 @@
-use crate::api::ApiError;
-use crate::auth::password::PasswordError;
-use crate::auth::session::SessionError;
-use crate::auth::system_roles::SystemRoleError;
-use crate::database::{DbError, DieselError};
 use rocket::http::Status;
+
+use crate::api::ApiError;
+use crate::infra::{DbError, DieselError};
+
+use super::password::PasswordError;
+use super::session::SessionError;
+use super::system_roles::SystemRoleError;
 
 #[derive(Debug)]
 pub enum AuthError {

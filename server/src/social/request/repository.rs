@@ -4,7 +4,7 @@ use diesel::{
 };
 
 use super::models::{FriendRequest, NewFriendRequest};
-use crate::database::{DbConn, DbError};
+use crate::infra::{DbConn, DbError};
 use crate::member::models::{MemberId, MemberShort};
 use crate::schema::{friend_request::dsl as f_dsl, member::dsl as m_dsl};
 use crate::social::request::models::{IncomingRequests, OutgoingRequests, RequestDetails};

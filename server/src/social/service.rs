@@ -1,7 +1,7 @@
 use diesel::Connection;
 use serde::{Deserialize, Serialize};
 
-use crate::database::{Database, DbError};
+use crate::infra::{Database, DbError};
 use crate::member::models::MemberId;
 use crate::member::repository::MemberRepository;
 use crate::social::error::SocialError;

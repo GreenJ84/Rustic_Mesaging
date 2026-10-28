@@ -1,4 +1,4 @@
-use crate::database::Database;
+use crate::infra::{Database, DbConn};
 use crate::member::{models::MemberId, repository::MemberRepository};
 use crate::server::channel::{models::ChannelId, repository::ChannelRepository};
 use crate::server::membership::repository::ServerMembershipRepository;
@@ -18,7 +18,7 @@ impl PostService {
 
     fn validated_and_authorized(
         &self,
-        conn: &mut crate::database::DbConn,
+        conn: &mut DbConn,
         member_id: MemberId,
         server_id: ServerId,
         channel_id: ChannelId,

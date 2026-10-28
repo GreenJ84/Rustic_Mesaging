@@ -1,7 +1,5 @@
-use diesel::result::Error as DieselError;
-
 use crate::api::ApiError;
-use crate::database::DbError;
+use crate::infra::{DbError, DieselError};
 
 #[derive(Debug)]
 pub(crate) enum PostError {

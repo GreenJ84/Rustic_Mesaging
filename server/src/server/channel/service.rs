@@ -1,10 +1,11 @@
 use diesel::Connection;
 
+use crate::infra::Database;
 use crate::member::models::MemberId;
 use crate::server::channel::models::{ChannelChangeset, MultiChannelDetails};
 use crate::server::membership::repository::ServerMembershipRepository;
+use crate::server::models::ServerId;
 use crate::server::repository::ServerRepository;
-use crate::{database::Database, server::models::ServerId};
 
 use super::error::ChannelError;
 use super::models::{

@@ -1,7 +1,7 @@
 use diesel::prelude::*;
 
 use crate::auth::system_roles::BuiltInSystemRole;
-use crate::database::{DbConn, DbError};
+use crate::infra::{DbConn, DbError};
 use crate::member::models::MemberId;
 use crate::schema::{member_system_role::dsl as assignments, system_role::dsl as roles};
 

@@ -1,6 +1,6 @@
 use diesel::prelude::*;
 
-use crate::database::{DbConn, DbError};
+use crate::infra::{DbConn, DbError};
 use crate::schema::auth_session::dsl as sessions;
 
 use super::SessionClock;

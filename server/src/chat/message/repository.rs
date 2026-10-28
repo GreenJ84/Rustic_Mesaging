@@ -1,7 +1,7 @@
 use super::models::{Message, MessageChangeset, MessageDetails, MessageId, NewMessage};
 use crate::chat::message::models::MultiMessageDetails;
 use crate::chat::models::ChatId;
-use crate::database::{DbConn, DbError};
+use crate::infra::{DbConn, DbError};
 use crate::member::models::MemberShort;
 use crate::schema::{member::dsl as m_dsl, message::dsl as ms_dsl};
 use crate::utils::Paginator;

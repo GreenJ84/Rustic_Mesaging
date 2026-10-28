@@ -1,7 +1,7 @@
 use diesel::Connection;
 
 use crate::auth::session::SessionClock;
-use crate::database::DbConn;
+use crate::infra::DbConn;
 use crate::member::models::MemberId;
 use crate::member::repository::MemberRepository;
 

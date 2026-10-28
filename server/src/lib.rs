@@ -7,7 +7,6 @@ pub(crate) mod api;
 pub mod app;
 pub(crate) mod infra;
 
-pub(crate) mod database;
 pub(crate) mod schema;
 pub(crate) mod utils;
 

@@ -1,9 +1,6 @@
-use crate::{
-    api::ApiError,
-    auth::system_roles::SystemRoleError,
-    database::{DbError, DieselError},
-    utils::ValidationError,
-};
+use crate::api::ApiError;
+use crate::auth::system_roles::SystemRoleError;
+use crate::infra::{DbError, DieselError};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DeletionBlock {
@@ -77,7 +74,7 @@ impl From<MemberError> for ApiError {
 mod tests {
     use super::{DeletionBlock, MemberError};
     use crate::api::ApiError;
-    use crate::database::DbError;
+    use crate::infra::DbError;
     use rocket::http::Status;
 
     #[test]

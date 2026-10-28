@@ -2,7 +2,7 @@ use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SelectableHelp
 
 use crate::chat::membership::models::ChatMemberDetails;
 use crate::chat::models::ChatId;
-use crate::database::{DbConn, DbError};
+use crate::infra::{DbConn, DbError};
 use crate::member::models::{MemberId, MemberShort};
 use crate::schema::{member::dsl as m_dsl, member_chat::dsl as mc_dsl};
 

@@ -1,6 +1,6 @@
 use diesel::{dsl, ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper};
 
-use crate::database::{sql::lower, DbConn, DbError};
+use crate::infra::{sql::lower, DbConn, DbError};
 use crate::schema::channel::dsl as c_dsl;
 use crate::server::models::ServerId;
 

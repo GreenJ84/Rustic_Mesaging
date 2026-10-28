@@ -10,7 +10,7 @@ use super::error::*;
 use super::password::{PasswordManager, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH};
 
 use crate::auth::session::AuthCredentials;
-use crate::database::DbConn;
+use crate::infra::DbConn;
 use crate::member::models::{MemberProfile, NewMember};
 use crate::member::repository::MemberRepository;
 

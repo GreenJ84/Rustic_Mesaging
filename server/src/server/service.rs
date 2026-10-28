@@ -1,6 +1,6 @@
 use diesel::Connection;
 
-use crate::database::Database;
+use crate::infra::Database;
 use crate::member::models::{MemberId, MultiMemberPreview};
 use crate::server::membership::error::MembershipError;
 use crate::server::membership::repository::ServerMembershipRepository;

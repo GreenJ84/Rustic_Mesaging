@@ -1,8 +1,7 @@
 use diesel::Connection;
 
 use crate::auth::system_roles::SystemRoleId;
-use crate::database::{Database, DbConn, DbError, DieselError};
-use crate::infra::IdGenerator;
+use crate::infra::{Database, DbConn, DbError, DieselError, IdGenerator};
 use crate::member::models::{MemberId, MemberProfile};
 use crate::member::repository::MemberRepository;
 

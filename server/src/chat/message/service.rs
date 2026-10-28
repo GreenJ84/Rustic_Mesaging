@@ -1,4 +1,4 @@
-use crate::database::{Database, DbConn};
+use crate::infra::{Database, DbConn};
 use crate::member::models::MemberId;
 
 use crate::chat::membership::repository::ChatMembershipRepository;

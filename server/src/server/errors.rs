@@ -1,5 +1,5 @@
 use crate::api::ApiError;
-use crate::database::{DbError, DieselError};
+use crate::infra::{DbError, DieselError};
 use crate::member::error::MemberError;
 
 use super::membership::error::MembershipError;
@@ -100,7 +100,7 @@ impl From<ServerError> for ApiError {
 mod tests {
     use super::ServerError;
     use crate::api::ApiError;
-    use crate::database::{DbError, DieselError};
+    use crate::infra::{DbError, DieselError};
     use rocket::http::Status;
 
     #[test]

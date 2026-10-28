@@ -5,7 +5,7 @@ use diesel::{
     SelectableHelper, TextExpressionMethods,
 };
 
-use crate::database::{Database, DbConn, DbError};
+use crate::infra::{DbConn, DbError};
 use crate::member::models::MemberId;
 use crate::schema::server::dsl as s_dsl;
 use crate::utils::{Paginator, SearchValidation};

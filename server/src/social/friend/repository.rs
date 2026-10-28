@@ -8,7 +8,7 @@ use super::models::{
     normalize_friendship, Friend, FriendPreview, Friendship, MultiFriend, MultiFriendPreview,
     NewFriend,
 };
-use crate::database::{DbConn, DbError};
+use crate::infra::{DbConn, DbError};
 use crate::member::models::{MemberId, MemberProfile, MemberShort};
 use crate::schema::friend::dsl as friend_dsl;
 use crate::schema::member::dsl as member_dsl;
