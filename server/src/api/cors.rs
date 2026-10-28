@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use rocket::http;
 use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions, Method};
 
