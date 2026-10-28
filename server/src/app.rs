@@ -2,8 +2,7 @@ use rocket::{Build, Rocket};
 
 use crate::api;
 use crate::database::Database;
-use crate::id_generator::IdGenerator;
-use crate::infra;
+use crate::infra::{AppConfig, IdGenerator};
 
 use crate::auth::system_roles::get_system_role_routes;
 use crate::auth::{get_auth_routes, service::AuthService};
@@ -18,7 +17,7 @@ use crate::social::{get_friend_routes, get_request_routes, service::SocialServic
 // use crate::server::routes as server_routes;
 
 pub fn build() -> Rocket<Build> {
-    let config = infra::AppConfig::load().expect("Failed to read configuration file");
+    let config = AppConfig::load().expect("Failed to read configuration file");
 
     let database = Database::new(&config.database_url)
         .map_err(|e| {
