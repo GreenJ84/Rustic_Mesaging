@@ -27,7 +27,7 @@ impl NewChat {
         let name = Validator::validate_text(input.name, Some(3), Some(80))
             .map_err(|e| ChatError::InvalidInput(format!("Chat name {}", e.message())))?;
 
-        Ok((Self { name }, input.member_ids ))
+        Ok((Self { name }, input.member_ids))
     }
 }
 

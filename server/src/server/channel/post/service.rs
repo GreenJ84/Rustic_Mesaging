@@ -47,8 +47,7 @@ impl PostService {
 
         self.validated_and_authorized(&mut conn, member_id, server_id, channel_id)?;
 
-        PostRepository::create(&mut conn, new_post)
-            .map_err(PostError::from)
+        PostRepository::create(&mut conn, new_post).map_err(PostError::from)
     }
 
     // Read
@@ -63,8 +62,7 @@ impl PostService {
 
         self.validated_and_authorized(&mut conn, member_id, server_id, channel_id)?;
 
-        PostRepository::read(&mut conn, channel_id, post_id)
-            .map_err(PostError::from)
+        PostRepository::read(&mut conn, channel_id, post_id).map_err(PostError::from)
     }
 
     pub fn get_post_detail(
@@ -78,8 +76,7 @@ impl PostService {
 
         self.validated_and_authorized(&mut conn, member_id, server_id, channel_id)?;
 
-        PostRepository::read_detail(&mut conn, channel_id, post_id)
-            .map_err(PostError::from)
+        PostRepository::read_detail(&mut conn, channel_id, post_id).map_err(PostError::from)
     }
 
     pub fn get_post_page(
@@ -113,8 +110,7 @@ impl PostService {
             return Err(PostError::PermissionDenied);
         }
 
-        PostRepository::update(&mut conn, channel_id, post_id, changeset)
-            .map_err(PostError::from)
+        PostRepository::update(&mut conn, channel_id, post_id, changeset).map_err(PostError::from)
     }
 
     // Delete

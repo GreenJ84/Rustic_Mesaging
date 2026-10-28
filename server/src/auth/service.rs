@@ -251,11 +251,7 @@ impl AuthService {
         authority_level: i32,
     ) -> Result<SystemRole, SystemRoleError> {
         let mut conn = self.database.get_connection()?;
-        SystemRoleService::create_role(
-            &mut conn,
-            requested_name,
-            authority_level,
-        )
+        SystemRoleService::create_role(&mut conn, requested_name, authority_level)
     }
 
     pub(crate) fn get_roles(&self) -> Result<Vec<SystemRole>, SystemRoleError> {
@@ -270,12 +266,7 @@ impl AuthService {
         authority_level: i32,
     ) -> Result<SystemRole, SystemRoleError> {
         let mut conn = self.database.get_connection()?;
-        SystemRoleService::update_role(
-            &mut conn,
-            role_id,
-            requested_name,
-            authority_level,
-        )
+        SystemRoleService::update_role(&mut conn, role_id, requested_name, authority_level)
     }
 
     pub(crate) fn delete_role(

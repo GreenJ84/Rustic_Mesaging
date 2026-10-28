@@ -103,7 +103,7 @@ diesel::table! {
         id -> Int4,
         name -> Text,
         description -> Text,
-        icon -> Nullable<Text>,
+        icon -> Text,
         owner_id -> Int4,
         created_at -> Timestamp,
     }

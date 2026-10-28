@@ -70,8 +70,9 @@ impl ServerService {
     }
 
     pub fn search_servers(&self, search_term: String) -> Result<MultiServerPreview, ServerError> {
-        let search = Validator::validate_search_term(search_term)
-            .map_err(|e| ServerError::InvalidSearchTerm(format!("Servers search term {}", e.message())))?;
+        let search = Validator::validate_search_term(search_term).map_err(|e| {
+            ServerError::InvalidSearchTerm(format!("Servers search term {}", e.message()))
+        })?;
 
         let mut conn = self.database.get_connection()?;
         ServerRepository::search(&mut conn, search)

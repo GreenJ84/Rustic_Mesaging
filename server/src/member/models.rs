@@ -136,7 +136,7 @@ impl TryFrom<MemberUpdateInput> for MemberChangeset {
             ));
         }
         let username = if let Some(username) = input.username {
-            let username = Validator::validate_text(username, Some(3), Some(25))
+            let username = Validator::validate_text(username, Some(3), Some(125))
                 .map_err(|e| MemberError::InvalidChangeset(format!("Username {}", e.message())))?;
             Some(username)
         } else {

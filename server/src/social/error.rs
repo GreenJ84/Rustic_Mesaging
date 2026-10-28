@@ -63,15 +63,10 @@ impl From<SocialError> for ApiError {
                 ApiError::BadRequest("You cannot befriend yourself".into())
             }
             SocialError::MemberNotFound => ApiError::NotFound("Member not found".into()),
-            SocialError::FriendshipNotFound => {
-                ApiError::NotFound("Friendship not found".into())
-            }
-            SocialError::RequestNotFound => {
-                ApiError::NotFound("Friend request not found".into())
-            }
-            SocialError::AlreadyFriends => {
-                ApiError::Conflict("Friendship already exists".into())
-            } SocialError::RequestAlreadyExists => {
+            SocialError::FriendshipNotFound => ApiError::NotFound("Friendship not found".into()),
+            SocialError::RequestNotFound => ApiError::NotFound("Friend request not found".into()),
+            SocialError::AlreadyFriends => ApiError::Conflict("Friendship already exists".into()),
+            SocialError::RequestAlreadyExists => {
                 ApiError::Conflict("Friend request already exists".into())
             }
             SocialError::NotRequestRecipient | SocialError::NotRequestSender => {

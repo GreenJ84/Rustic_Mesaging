@@ -1,6 +1,6 @@
+mod catchers;
 mod pagination;
 mod validation;
-mod catchers;
 
 pub use pagination::{Page, Paginator};
 pub use validation::{SearchValidation, ValidationError, Validator};

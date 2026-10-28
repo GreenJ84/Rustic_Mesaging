@@ -29,7 +29,7 @@ impl From<DieselError> for DbError {
 
                 DatabaseErrorKind::ReadOnlyTransaction => Self::Transaction(error),
 
-                DatabaseErrorKind::SerializationFailure =>  Self::RetryableTransaction(error),
+                DatabaseErrorKind::SerializationFailure => Self::RetryableTransaction(error),
 
                 DatabaseErrorKind::UnableToSendCommand
                 | DatabaseErrorKind::ClosedConnection
