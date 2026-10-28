@@ -5,6 +5,8 @@ extern crate rocket;
 
 pub(crate) mod api;
 pub mod app;
+pub(crate) mod infra;
+
 pub(crate) mod config;
 pub(crate) mod database;
 pub(crate) mod id_generator;
