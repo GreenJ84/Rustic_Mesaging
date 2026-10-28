@@ -1,12 +1,12 @@
 use rocket::Request;
 
 #[catch(401)]
-pub fn unauthorized(req: &Request) -> String {
+pub fn unauthorized(_req: &Request) -> String {
     String::from("Who are you? You can't be here unless we know you...")
 }
 
 #[catch(403)]
-pub fn forbidden(req: &Request) -> String {
+pub fn forbidden(_req: &Request) -> String {
     String::from("We know who you are and you are not supposed to be here... Go away!")
 }
 
@@ -45,7 +45,7 @@ pub fn conflict(req: &Request) -> String {
 }
 
 #[catch(424)]
-pub fn failed_dependency(req: &Request) -> String {
+pub fn failed_dependency(_req: &Request) -> String {
     String::from("The operation failed because a dependency failed, not me.")
 }
 

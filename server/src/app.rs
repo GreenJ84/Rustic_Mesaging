@@ -6,11 +6,10 @@ use std::sync::Arc;
 use rocket::{http, Build, Rocket};
 use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions, Method};
 
-use crate::cors;
 use crate::database::Database;
 use crate::id_generator::IdGenerator;
 use crate::schema::server;
-use crate::utils::get_catchers;
+use crate::api;
 
 use crate::auth::system_roles::get_system_role_routes;
 use crate::auth::{get_auth_routes, service::AuthService};
@@ -50,7 +49,7 @@ pub fn build() -> Rocket<Build> {
     let message_service = MessageService::new(database.clone());
     let post_service = PostService::new(database.clone());
 
-    let cors = cors::create_cors(&config.allowed_origins)
+    let cors = api::create_cors(&config.allowed_origins)
         .to_cors()
         .expect("error creating CORS options");
 
@@ -71,7 +70,7 @@ pub fn build() -> Rocket<Build> {
         .mount("/requests", get_request_routes())
         .mount("/servers", get_server_routes())
         .mount("/chat", crate::chat::get_chat_routes())
-        .register("/", get_catchers())
+        .register("/", api::get_catchers())
 }
 
 // use crate::models::web_socket::WebSocketManager;
