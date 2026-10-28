@@ -4,7 +4,7 @@ use rocket::response::status;
 use rocket::State;
 
 use super::service::AuthService;
-use crate::api_error::ApiError;
+use crate::api::ApiError;
 use crate::auth::guards::{ClientMetadata, RegistrationRole};
 use crate::auth::models::{
     AuthOutcome, AuthenticationResponse, ChangePasswordInput, LoginInput, RegisterInput,

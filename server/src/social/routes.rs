@@ -4,7 +4,7 @@ use rocket::response::status;
 use rocket::serde::json::Json;
 use rocket::State;
 
-use crate::api_error::ApiError;
+use crate::api::ApiError;
 use crate::auth::SystemUser;
 use crate::member::models::MemberId;
 use crate::social::friend::models::MultiFriendPreview;

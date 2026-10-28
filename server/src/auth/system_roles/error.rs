@@ -1,4 +1,4 @@
-use crate::api_error::ApiError;
+use crate::api::ApiError;
 use crate::database::{DbError, DieselError};
 
 #[derive(Debug, Clone, PartialEq, Eq)]

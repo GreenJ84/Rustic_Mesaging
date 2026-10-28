@@ -1,6 +1,6 @@
 use diesel::result::Error as DieselError;
 
-use crate::{api_error::ApiError, database::DbError};
+use crate::{api::ApiError, database::DbError};
 
 #[derive(Debug)]
 pub(crate) enum SocialError {

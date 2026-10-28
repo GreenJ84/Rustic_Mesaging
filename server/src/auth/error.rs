@@ -1,4 +1,4 @@
-use crate::api_error::ApiError;
+use crate::api::ApiError;
 use crate::auth::password::PasswordError;
 use crate::auth::session::SessionError;
 use crate::auth::system_roles::SystemRoleError;

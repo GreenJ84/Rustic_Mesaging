@@ -1,4 +1,4 @@
-use crate::{api_error::ApiError, database::DbError};
+use crate::{api::ApiError, database::DbError};
 use diesel::result::Error as DieselError;
 
 #[derive(Debug)]

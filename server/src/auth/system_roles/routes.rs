@@ -4,7 +4,7 @@ use rocket::serde::json::Json;
 use rocket::State;
 use serde::Deserialize;
 
-use crate::api_error::ApiError;
+use crate::api::ApiError;
 use crate::auth::guards::SystemAdmin;
 use crate::member::models::MemberId;
 

@@ -1,5 +1,5 @@
 use crate::{
-    api_error::ApiError,
+    api::ApiError,
     auth::system_roles::SystemRoleError,
     database::{DbError, DieselError},
     utils::ValidationError,
@@ -76,7 +76,7 @@ impl From<MemberError> for ApiError {
 #[cfg(test)]
 mod tests {
     use super::{DeletionBlock, MemberError};
-    use crate::api_error::ApiError;
+    use crate::api::ApiError;
     use crate::database::DbError;
     use rocket::http::Status;
 

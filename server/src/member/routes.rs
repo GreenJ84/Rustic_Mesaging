@@ -3,7 +3,7 @@ use rocket::http::Status;
 use rocket::response::status;
 use rocket::State;
 
-use crate::api_error::ApiError;
+use crate::api::ApiError;
 use crate::auth::SystemUser;
 
 use super::models::{MemberProfile, MemberShort, MemberUpdateInput, MultiMemberPreview};
