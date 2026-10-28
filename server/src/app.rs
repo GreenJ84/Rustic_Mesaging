@@ -1,14 +1,7 @@
-use std::collections::HashSet;
-use std::env;
-use std::str::FromStr;
-use std::sync::Arc;
-
-use rocket::{http, Build, Rocket};
-use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions, Method};
+use rocket::{Build, Rocket};
 
 use crate::database::Database;
 use crate::id_generator::IdGenerator;
-use crate::schema::server;
 use crate::api;
 
 use crate::auth::system_roles::get_system_role_routes;
@@ -107,14 +100,3 @@ pub fn build() -> Rocket<Build> {
 //         report_routes::download_server_membership_report
 //     ],
 // )
-// .register(
-//     "/",
-//     catchers![
-//         catchers::unauthorized_catcher,
-//         catchers::not_found,
-//         catchers::conflict_catcher,
-//         catchers::failed_dependency,
-//         catchers::internal_error
-//     ],
-// )
-// }
