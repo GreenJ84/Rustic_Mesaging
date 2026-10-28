@@ -16,6 +16,7 @@ pub(crate) mod utils;
 pub(crate) mod auth;
 pub(crate) mod chat;
 pub(crate) mod member;
+pub(crate) mod realtime;
 pub(crate) mod server;
 pub(crate) mod social;
 pub(crate) mod audit;
