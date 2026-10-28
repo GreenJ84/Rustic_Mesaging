@@ -4,15 +4,14 @@ use std::env;
 use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome};
 use rocket::Request;
+use rocket::State;
 
 use super::service::AuthService;
 use crate::auth::error::AuthError;
 use crate::auth::session::{AuthenticatedPrincipal, SessionId, SessionMetadata};
+use crate::infra::AdminCredential;
 use crate::auth::system_roles::{BuiltInSystemRole, RegistrationRoleKind, SystemRoleError};
 use crate::member::models::MemberId;
-
-const ADMINISTRATION_HEADER: &str = "Administration-Key";
-const ADMINISTRATION_ENV: &str = "ADMINISTRATION_KEY";
 
 /// Registration capability selected from the rotating platform secret. An
 /// omitted key means ordinary user registration; an invalid supplied key is
@@ -28,23 +27,16 @@ impl<'r> FromRequest<'r> for RegistrationRole {
     type Error = AuthError;
 
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        let Some(provided) = request.headers().get_one(ADMINISTRATION_HEADER) else {
-            return Outcome::Success(Self(RegistrationRoleKind::User));
-        };
-        let configured = match env::var(ADMINISTRATION_ENV) {
-            Ok(value) if !value.is_empty() => value,
-            _ => {
-                log::error!("{ADMINISTRATION_ENV} is required for administrator registration");
-                return Outcome::Error((
-                    Status::InternalServerError,
-                    AuthError::from(SystemRoleError::ConfigurationFailure),
-                ));
-            }
+        let admin_credentials = match request.guard::<&State<AdminCredential>>().await {
+            Outcome::Success(config) => config,
+            Outcome::Error(error) => return Outcome::Error((error.0, AuthError::PersistenceFailure)),
+            Outcome::Forward(status) => return Outcome::Forward(status),
         };
 
-        let supplied_hash = blake3::hash(provided.as_bytes());
-        let configured_hash = blake3::hash(configured.as_bytes());
-        if constant_time_eq(supplied_hash.as_bytes(), configured_hash.as_bytes()) {
+        let Some(provided) = request.headers().get_one("Administration-Key") else {
+            return Outcome::Success(Self(RegistrationRoleKind::User));
+        };
+        if admin_credentials.matches(provided) {
             Outcome::Success(Self(RegistrationRoleKind::Administrator))
         } else {
             Outcome::Error((Status::Unauthorized, AuthError::InvalidAdministrationKey))

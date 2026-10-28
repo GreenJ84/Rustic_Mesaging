@@ -1,3 +1,4 @@
+use blake3::Hash;
 use dotenv::dotenv;
 use std::env;
 
@@ -9,28 +10,77 @@ pub(crate) enum ConfigError {
     Invalid(String),
 }
 
-#[derive(Clone, Debug)]
-pub(crate) struct AppConfig {
-    pub(crate) database_url: String,
-    pub(crate) jwt_secret: String,
-    pub(crate) administration_key: String,
-    pub(crate) cookie_secure: bool,
-    pub(crate) allowed_origins: Vec<String>,
+#[derive(Clone)]
+pub(crate) struct AppSettings {
+    database_url: String,
+    jwt_secret: String,
+    cookie_secure: bool,
+    allowed_origins: Vec<String>,
+}
+impl AppSettings {
+    pub(crate) fn database_url(&self) -> &str {
+        &self.database_url
+    }
+
+    pub(crate) fn jwt_secret(&self) -> &str {
+        &self.jwt_secret
+    }
+
+    pub(crate) fn cookie_secure(&self) -> bool {
+        self.cookie_secure
+    }
+
+    pub(crate) fn allowed_origins(&self) -> &[String] {
+        &self.allowed_origins
+    }
 }
 
+#[derive(Clone)]
+pub(crate) struct AdminCredential {
+    administration_key: Hash,
+}
+impl AdminCredential {
+    pub(crate) fn matches(&self, input: &str) -> bool {
+        let input = blake3::hash(input.as_bytes());
+        let provided = input.as_bytes();
+        let key = self.administration_key.as_bytes();
+        if key.len() != provided.len() || !Self::constant_time_eq(provided, key) {
+            return false;
+        }
+        true
+    }
+    fn constant_time_eq(left: &[u8], right: &[u8]) -> bool {
+        if left.len() != right.len() {
+            return false;
+        }
+        left.iter()
+            .zip(right)
+            .fold(0u8, |difference, (left, right)| difference | (left ^ right))
+            == 0
+    }
+}
+
+pub(crate) struct AppConfig {
+    pub(crate) env: AppSettings,
+    pub(crate) admin_key: AdminCredential,
+}
 impl AppConfig {
-    pub fn load() -> Result<Self, ConfigError> {
+    pub(crate) fn load() -> Result<Self, ConfigError> {
         dotenv().ok();
 
         Ok(Self {
-            database_url: required("DATABASE_URL")?,
-            jwt_secret: required("JWT_SECRET")?,
-            administration_key: required("ADMINISTRATION_KEY")?,
-            cookie_secure: optional_bool("COOKIE_SECURE", !cfg!(debug_assertions))?,
-            allowed_origins: optional_list(
-                "ALLOWED_ORIGINS",
-                vec!["http://localhost:3000".to_string()],
-            ),
+            env: AppSettings {
+                database_url: required("DATABASE_URL")?,
+                jwt_secret: required("JWT_SECRET")?,
+                cookie_secure: optional_bool("COOKIE_SECURE", !cfg!(debug_assertions))?,
+                allowed_origins: optional_list(
+                    "ALLOWED_ORIGINS",
+                    vec!["http://localhost:3000".to_string()],
+                ),
+            },
+            admin_key: AdminCredential {
+                administration_key: blake3::hash(required("ADMINISTRATION_KEY")?.as_bytes()),
+            },
         })
     }
 }

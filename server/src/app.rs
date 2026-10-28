@@ -1,7 +1,7 @@
 use rocket::{Build, Rocket};
 
 use crate::api;
-use crate::infra::{AppConfig, IdGenerator, Database};
+use crate::infra::{AppConfig, Database, IdGenerator};
 
 use crate::auth::system_roles::get_system_role_routes;
 use crate::auth::{get_auth_routes, service::AuthService};
@@ -16,9 +16,12 @@ use crate::social::{get_friend_routes, get_request_routes, service::SocialServic
 // use crate::server::routes as server_routes;
 
 pub fn build() -> Rocket<Build> {
-    let config = AppConfig::load().expect("Failed to read configuration file");
+    let AppConfig {
+        env,
+        admin_key,
+    } = AppConfig::load().expect("Failed to read configuration file");
 
-    let database = Database::new(&config.database_url)
+    let database = Database::new(&env.database_url())
         .map_err(|e| {
             log::error!("Failed to connect to the database: {:?}", e);
             e
@@ -29,8 +32,8 @@ pub fn build() -> Rocket<Build> {
     let auth_service = AuthService::new(
         database.clone(),
         id_generator,
-        config.jwt_secret.as_bytes(),
-        config.cookie_secure,
+        env.jwt_secret().as_bytes(),
+        env.cookie_secure(),
     );
     let member_service = MemberService::new(database.clone());
     let social_service = SocialService::new(database.clone());
@@ -40,12 +43,13 @@ pub fn build() -> Rocket<Build> {
     let message_service = MessageService::new(database.clone());
     let post_service = PostService::new(database.clone());
 
-    let cors = api::create_cors(&config.allowed_origins)
+    let cors = api::create_cors(&env.allowed_origins())
         .to_cors()
         .expect("error creating CORS options");
 
     rocket::build()
         .attach(cors)
+        .manage(admin_key)
         .manage(auth_service)
         .manage(member_service)
         .manage(social_service)

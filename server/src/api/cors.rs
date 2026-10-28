@@ -1,7 +1,7 @@
 use rocket::http;
 use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions, Method};
 
-pub fn create_cors(allowed_origins: &Vec<String>) -> CorsOptions {
+pub fn create_cors(allowed_origins: &[String]) -> CorsOptions {
     let allowed_origins = AllowedOrigins::some_exact(allowed_origins);
     CorsOptions::default()
         .allowed_origins(allowed_origins)
