@@ -25,7 +25,7 @@ impl SessionRepository {
             .get_result(conn)
             .map_err(|e| {
                 let error = DbError::from(e);
-                error.log_query_error("Creating new session");
+                error.log_error("Creating new session");
                 error
             })
     }
@@ -44,7 +44,7 @@ impl SessionRepository {
             .optional()
             .map_err(|e| {
                 let error = DbError::from(e);
-                error.log_query_error("Locking session for refresh rotation");
+                error.log_error("Locking session for refresh rotation");
                 error
             })
     }
@@ -64,7 +64,7 @@ impl SessionRepository {
         .get_result(conn)
         .map_err(|e| {
             let error = DbError::from(e);
-            error.log_query_error("Checking if session is active");
+            error.log_error("Checking if session is active");
             error
         })
     }
@@ -94,7 +94,7 @@ impl SessionRepository {
         .execute(conn)
         .map_err(|e| {
             let error = DbError::from(e);
-            error.log_query_error("Marking current session as replaced during rotation");
+            error.log_error("Marking current session as replaced during rotation");
             error
         })?;
 
@@ -122,7 +122,7 @@ impl SessionRepository {
         .map(|_| ())
         .map_err(|e| {
             let error = DbError::from(e);
-            error.log_query_error("Revoking session");
+            error.log_error("Revoking session");
             error
         })
     }
@@ -142,7 +142,7 @@ impl SessionRepository {
         .map(|_| ())
         .map_err(|e| {
             let error = DbError::from(e);
-            error.log_query_error("Revoking session");
+            error.log_error("Revoking session");
             error
         })
     }
@@ -159,7 +159,7 @@ impl SessionRepository {
         .map(|_| ())
         .map_err(|e| {
             let error = DbError::from(e);
-            error.log_query_error("Revoking all sessions for member");
+            error.log_error("Revoking all sessions for member");
             error
         })
     }

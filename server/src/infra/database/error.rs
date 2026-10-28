@@ -2,8 +2,9 @@ pub(crate) use diesel::result::{DatabaseErrorKind, Error as DieselError};
 
 #[derive(Debug)]
 pub enum DbError {
-    ConnectionError(String),
+    #[allow(dead_code)]
     PoolError(String),
+    ConnectionError(String),
 
     NotFound,
     Conflict(DieselError),
@@ -55,8 +56,17 @@ impl From<DieselError> for DbError {
     }
 }
 impl DbError {
-    pub(crate) fn log_query_error(&self, operation: &str) {
+    pub(crate) fn log_error(&self, operation: &str) {
         match self {
+            Self::ConnectionError(msg) => {
+                log::error!(
+                    "{msg:?}, operation={operation}"
+                );
+            }
+            Self::NotFound => {
+                log::warn!("Database not found: operation={operation}");
+            }
+
             Self::Conflict(error) => {
                 log::warn!("Database conflict: operation={operation}, error={error:?}");
             }
@@ -64,6 +74,12 @@ impl DbError {
             Self::ConstraintViolation(error) => {
                 log::error!(
                     "Database constraint violation: operation={operation}, error={error:?}"
+                );
+            }
+
+            Self::RetryableTransaction(error) => {
+                log::warn!(
+                    "Database retryable transaction: operation={operation}, error={error:?}"
                 );
             }
 
