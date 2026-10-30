@@ -1,6 +1,6 @@
-use rocket::form::{Form, Strict};
 use rocket::http::{Cookie, CookieJar, SameSite, Status};
 use rocket::response::status;
+use rocket::serde::json::Json;
 use rocket::State;
 
 use super::service::AuthService;
@@ -14,31 +14,27 @@ use crate::member::models::{MemberId, MemberProfile};
 
 const REFRESH_COOKIE: &str = "refresh_token";
 
-#[post("/register", data = "<form>")]
+#[post("/register", data = "<input>")]
 pub(crate) fn register(
     service: &State<AuthService>,
     cookies: &CookieJar<'_>,
     metadata: ClientMetadata,
     registration_role: RegistrationRole,
-    form: Form<Strict<RegisterInput>>,
+    input: Json<RegisterInput>,
 ) -> Result<status::Custom<AuthenticationResponse>, ApiError> {
-    let outcome = service.register(
-        form.into_inner().into_inner(),
-        registration_role.kind(),
-        metadata.0,
-    )?;
+    let outcome = service.register(input.into_inner(), registration_role.kind(), metadata.0)?;
     let response = into_response(cookies, service, outcome);
     Ok(status::Custom(Status::Created, response))
 }
 
-#[post("/login", data = "<form>")]
+#[post("/login", data = "<input>")]
 pub(crate) fn login(
     service: &State<AuthService>,
     cookies: &CookieJar<'_>,
     metadata: ClientMetadata,
-    form: Form<Strict<LoginInput>>,
+    input: Json<LoginInput>,
 ) -> Result<AuthenticationResponse, ApiError> {
-    let outcome = service.login(form.into_inner().into_inner(), metadata.0)?;
+    let outcome = service.login(input.into_inner(), metadata.0)?;
     Ok(into_response(cookies, service, outcome))
 }
 
@@ -87,14 +83,14 @@ pub(crate) fn logout_all(
     Ok(status::NoContent)
 }
 
-#[put("/password", data = "<form>")]
+#[put("/password", data = "<input>")]
 pub(crate) fn update_password(
     service: &State<AuthService>,
     cookies: &CookieJar<'_>,
     principal: AuthenticatedPrincipal,
-    form: Form<Strict<ChangePasswordInput>>,
+    input: Json<ChangePasswordInput>,
 ) -> Result<status::NoContent, ApiError> {
-    service.change_password(&principal, form.into_inner().into_inner())?;
+    service.change_password(&principal, input.into_inner())?;
     clear_refresh_cookie(cookies);
     Ok(status::NoContent)
 }

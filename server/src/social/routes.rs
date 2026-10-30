@@ -1,4 +1,3 @@
-use rocket::form::{Form, Strict};
 use rocket::http::Status;
 use rocket::response::status;
 use rocket::serde::json::Json;
@@ -25,9 +24,9 @@ pub(crate) fn create_request(
     user: SystemUser,
     social_service: &State<SocialService>,
     receiver_id: MemberId,
-    form: Form<Strict<String>>,
+    form: Json<String>,
 ) -> ApiResponse<Json<RequestCreation>> {
-    let note = form.into_inner().into_inner();
+    let note = form.into_inner();
 
     let response = social_service.send_friend_request(user.member_id(), receiver_id, note)?;
     Ok(status::Custom(Status::Created, Json(response)))
@@ -57,14 +56,14 @@ pub(crate) fn get_friend_requests(
     Ok(status::Custom(Status::Ok, requests))
 }
 
-#[put("/<receiver_id>", data = "<form>")]
+#[put("/<receiver_id>", data = "<input>")]
 pub(crate) fn update_request(
     user: SystemUser,
     social_service: &State<SocialService>,
     receiver_id: MemberId,
-    form: Form<Strict<String>>,
+    input: Json<String>,
 ) -> ApiResponse<()> {
-    let note = form.into_inner().into_inner();
+    let note = input.into_inner();
     let request = social_service.update_request(user.member_id(), receiver_id, note)?;
     Ok(status::Custom(Status::Ok, ()))
 }

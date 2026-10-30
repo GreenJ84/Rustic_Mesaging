@@ -108,7 +108,7 @@ const ALLOWED_AVATARS: &[&str] = &[
     "pikachu",
     "default",
 ];
-#[derive(FromForm)]
+#[derive(Serialize, Deserialize, Debug)]
 pub(crate) struct MemberUpdateInput {
     pub username: Option<String>,
     pub email: Option<String>,

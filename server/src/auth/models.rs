@@ -14,13 +14,11 @@ use crate::infra::DbConn;
 use crate::member::models::{MemberProfile, NewMember};
 use crate::member::repository::MemberRepository;
 
-#[derive(Serialize, Deserialize, Debug, FromForm)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct RegisterInput {
     pub username: String,
-    #[field(validate = len(MIN_PASSWORD_LENGTH..=MAX_PASSWORD_LENGTH).or_else(msg!(format!("Password must be between {MIN_PASSWORD_LENGTH} and {MAX_PASSWORD_LENGTH} characters long."))))]
     pub password: String,
     pub confirm_password: String,
-    #[field(validate = contains('@').or_else(msg!("Invalid email address")))]
     pub email: String,
 }
 impl TryInto<NewMember> for RegisterInput {
@@ -59,17 +57,15 @@ impl RegisterInput {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, FromForm)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct LoginInput {
-    #[field(validate = len(3..=125).or_else(msg!("Usernames are between 3 and 125 characters long.")))]
     pub username: String,
     pub password: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, FromForm)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct ChangePasswordInput {
     pub current_password: String,
-    #[field(validate = len(MIN_PASSWORD_LENGTH..=MAX_PASSWORD_LENGTH).or_else(msg!(format!("Password must be between {MIN_PASSWORD_LENGTH} and {MAX_PASSWORD_LENGTH} characters long."))))]
     pub new_password: String,
     pub confirm_password: String,
 }

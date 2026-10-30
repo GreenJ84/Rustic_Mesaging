@@ -1,7 +1,7 @@
-use rocket::form::{Form, Strict};
 use rocket::http::Status;
 use rocket::response::status;
 use rocket::State;
+use rocket::serde::json::Json;
 
 use crate::api::ApiError;
 use crate::auth::SystemUser;
@@ -26,13 +26,13 @@ pub fn get(user: SystemUser, member_service: &State<MemberService>) -> ApiRespon
         .map_err(ApiError::from)
 }
 
-#[patch("/", data = "<form>")]
+#[patch("/", data = "<input>")]
 pub fn update(
     user: SystemUser,
     member_service: &State<MemberService>,
-    form: Form<Strict<MemberUpdateInput>>,
+    input: Json<MemberUpdateInput>,
 ) -> ApiResponse<MemberProfile> {
-    let input = form.into_inner().into_inner();
+    let input = input.into_inner();
     member_service
         .update(user.member_id(), input)
         .map(|member| status::Custom(Status::Ok, member))
