@@ -27,7 +27,7 @@ INSERT INTO server (name, description, icon, owner_id, created_at) VALUES
 ('Fitness Hub', 'Community of fitness enthusiasts', 'building:pink', 5, '2024-01-05 17:00:00'),
 ('Crypto Crunch', 'For crypto enthusiasts and traders', 'building:green', 6, '2024-01-06 18:00:00'),
 ('CodeMasters', 'Programming and coding discussions', 'bug:orange', 7, '2024-01-07 19:00:00'),
-('Travel Tribe', 'For travel lovers sharing experiences', NULL, 8, '2024-01-08 20:00:00');
+('Travel Tribe', 'For travel lovers sharing experiences', 'default:white', 8, '2024-01-08 20:00:00');
 
 -- Insert server memberships: Each member joins ~5 servers
 INSERT INTO server_membership (member_id, server_id, joined_at) VALUES
@@ -512,8 +512,8 @@ INSERT INTO friend (member_id, friend_id, created_at) VALUES
 (4, 5, '2024-03-09 09:00:00'), (4, 7, '2024-03-09 09:00:00'), (4, 8, '2024-03-09 09:00:00'), (4, 16, '2024-03-09 09:00:00'),
 (5, 6, '2024-03-09 09:00:00'), (5, 7, '2024-03-09 09:00:00'), (5, 10, '2024-03-09 09:00:00'),
 (6, 7, '2024-03-09 09:00:00'), (6, 11, '2024-03-09 09:00:00'), (6, 12, '2024-03-09 09:00:00'),
-(7, 13, '2024-03-09 09:00:00'),
-(8, 7, '2024-03-09 09:00:00'), (8, 14, '2024-03-09 09:00:00'),
+(7, 13, '2024-03-09 09:00:00'), (7, 8, '2024-03-09 09:00:00'),
+(8, 14, '2024-03-09 09:00:00'),
 (9, 10, '2024-03-09 09:00:00'),
 (10, 11, '2024-03-09 09:00:00'),
 (11, 12, '2024-03-09 09:00:00'),
