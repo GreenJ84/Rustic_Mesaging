@@ -2,6 +2,7 @@ use rocket::http::Status;
 
 use crate::api::ApiError;
 use crate::infra::{DbError, DieselError};
+use crate::member::error::MemberError;
 
 use super::password::PasswordError;
 use super::session::SessionError;
@@ -10,9 +11,7 @@ use super::system_roles::SystemRoleError;
 #[derive(Debug)]
 pub enum AuthError {
     // Registration Errors
-    InvalidInput(String),
-    UsernameTaken,
-    EmailTaken,
+    Member(MemberError),
     PasswordRejected(PasswordError),
     PasswordConfirmationMismatch,
     InvalidAdministrationKey,
@@ -39,9 +38,7 @@ pub enum AuthError {
 impl AuthError {
     pub fn message(&self) -> String {
         match self {
-            Self::InvalidInput(message) => message.to_string(),
-            Self::UsernameTaken => "Username is already taken.".to_string(),
-            Self::EmailTaken => "Email is already taken.".to_string(),
+            Self::Member(error) => error.message(),
             Self::PasswordRejected(violation) => violation.message(),
             Self::PasswordConfirmationMismatch => {
                 "Password confirmation does not match.".to_string()
@@ -68,8 +65,7 @@ impl AuthError {
 
     pub(crate) fn status(&self) -> Status {
         match self {
-            Self::InvalidInput(_) => Status::BadRequest,
-            Self::UsernameTaken | Self::EmailTaken => Status::Conflict,
+            Self::Member(error) => error.status(),
             Self::PasswordRejected(_) | Self::PasswordConfirmationMismatch => Status::BadRequest,
             Self::InvalidAdministrationKey => Status::Unauthorized,
             Self::InvalidCredentials
@@ -79,8 +75,8 @@ impl AuthError {
             Self::InsufficientPrivileges => Status::Forbidden,
             Self::AccountNotFound => Status::NotFound,
             Self::AccountDisabled => Status::Forbidden,
-            Self::SystemRole(e) => ApiError::from(e.to_owned()).status(),
-            Self::Session(e) => ApiError::from(e.to_owned()).status(),
+            Self::SystemRole(error) => error.status(),
+            Self::Session(error) => error.status(),
             Self::PersistenceFailure | Self::InternalError(_) => Status::InternalServerError,
         }
     }
@@ -117,13 +113,16 @@ impl From<SystemRoleError> for AuthError {
         Self::SystemRole(error)
     }
 }
+impl From<MemberError> for AuthError {
+    fn from(error: MemberError) -> Self {
+        Self::Member(error)
+    }
+}
 
 impl From<AuthError> for ApiError {
     fn from(err: AuthError) -> Self {
         match err {
-            AuthError::InvalidInput(msg) => ApiError::BadRequest(msg),
-            AuthError::UsernameTaken => ApiError::Conflict(err.message()),
-            AuthError::EmailTaken => ApiError::Conflict(err.message()),
+            AuthError::Member(error) => ApiError::from(error),
             AuthError::PasswordRejected(violation) => ApiError::BadRequest(violation.message()),
             AuthError::InvalidAdministrationKey => ApiError::Unauthorized(err.message()),
             AuthError::PasswordConfirmationMismatch => ApiError::BadRequest(err.message()),

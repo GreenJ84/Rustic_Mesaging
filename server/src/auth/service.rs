@@ -2,6 +2,7 @@ use diesel::Connection;
 
 use crate::auth::system_roles::SystemRoleId;
 use crate::infra::{Database, DbConn, DbError, DieselError, IdGenerator};
+use crate::member::error::MemberError;
 use crate::member::models::{MemberId, MemberProfile};
 use crate::member::repository::MemberRepository;
 
@@ -235,8 +236,8 @@ fn map_role_auth_error(error: SystemRoleError) -> AuthError {
 fn map_registration_write_error(error: DbError) -> AuthError {
     if let DbError::Conflict(DieselError::DatabaseError(_, information)) = &error {
         return match information.constraint_name() {
-            Some("member_username_key") => AuthError::UsernameTaken,
-            Some("member_email_key") => AuthError::EmailTaken,
+            Some("member_username_key") => AuthError::Member(MemberError::UsernameTaken),
+            Some("member_email_key") => AuthError::Member(MemberError::EmailTaken),
             _ => AuthError::PersistenceFailure,
         };
     }
