@@ -9,25 +9,19 @@ use yew::{html, Html};
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct UpdateMember {
     username: String,
-    password: String,
     email: String,
     avatar: Option<String>,
-    is_admin: bool,
 }
 impl UpdateMember {
     pub fn new(
         username: String,
-        password: String,
         email: String,
-        is_admin: bool,
         avatar: Option<String>,
     ) -> Self {
         Self {
             username,
-            password,
             email,
             avatar,
-            is_admin,
         }
     }
 }
@@ -38,7 +32,6 @@ pub struct Member {
     pub(crate) username: String,
     pub(crate) email: String,
     pub(crate) avatar: Option<String>,
-    pub(crate) is_admin: bool,
     #[serde(
         serialize_with = "serialize_naive_date_time",
         deserialize_with = "deserialize_naive_date_time"
@@ -51,7 +44,6 @@ impl Member {
         username: String,
         email: String,
         avatar: Option<String>,
-        is_admin: bool,
         created_at: NaiveDateTime,
     ) -> Self {
         Self {
@@ -59,7 +51,6 @@ impl Member {
             username,
             email,
             avatar,
-            is_admin,
             created_at,
         }
     }
@@ -69,7 +60,6 @@ impl Member {
             "guest".to_string(),
             "member.email@provider".to_string(),
             None,
-            false,
             NaiveDateTime::default(),
         )
     }

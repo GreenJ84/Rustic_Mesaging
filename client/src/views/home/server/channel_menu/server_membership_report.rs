@@ -63,7 +63,6 @@ pub fn report_table() -> Html {
                         <tr>
                             <td>{ &item.member.username }</td>
                             <td>{ &item.member.email }</td>
-                            <td>{ if item.member.is_admin {"Admin"} else {"Member"} }</td>
                             <td>{ format_date(&item.member.created_at) }</td>
                             <td>{ format_date(&item.timestamp) }</td>
                         </tr>
