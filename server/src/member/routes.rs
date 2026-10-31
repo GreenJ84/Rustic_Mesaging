@@ -19,10 +19,10 @@ pub fn head(_principal: SystemUser) -> ApiResponse<()> {
 
 /// Member creation ONLY through authenticating Registration route
 #[get("/")]
-pub fn get(user: SystemUser, member_service: &State<MemberService>) -> ApiResponse<MemberProfile> {
+pub fn get(user: SystemUser, member_service: &State<MemberService>) -> ApiResponse<Json<MemberProfile>> {
     member_service
         .get(user.member_id())
-        .map(|member| status::Custom(Status::Ok, member))
+        .map(|member| status::Custom(Status::Ok, Json(member)))
         .map_err(ApiError::from)
 }
 
@@ -31,11 +31,11 @@ pub fn update(
     user: SystemUser,
     member_service: &State<MemberService>,
     input: Json<MemberUpdateInput>,
-) -> ApiResponse<MemberProfile> {
+) -> ApiResponse<Json<MemberProfile>> {
     let input = input.into_inner();
     member_service
         .update(user.member_id(), input)
-        .map(|member| status::Custom(Status::Ok, member))
+        .map(|member| status::Custom(Status::Ok, Json(member)))
         .map_err(ApiError::from)
 }
 
@@ -58,9 +58,9 @@ pub fn get_by_username(
     _user: SystemUser,
     member_service: &State<MemberService>,
     username: String,
-) -> ApiResponse<MemberShort> {
+) -> ApiResponse<Json<MemberShort>> {
     match member_service.find_by_username(username)? {
-        Some(member) => Ok(status::Custom(Status::Ok, member)),
+        Some(member) => Ok(status::Custom(Status::Ok, Json(member))),
         None => Err(ApiError::NotFound("Member not found".to_string())),
     }
 }
@@ -70,7 +70,7 @@ pub fn search_members(
     _user: SystemUser,
     member_service: &State<MemberService>,
     search_term: String,
-) -> ApiResponse<MultiMemberPreview> {
+) -> ApiResponse<Json<MultiMemberPreview>> {
     let members = member_service.search_members(search_term)?;
-    Ok(status::Custom(Status::Ok, members))
+    Ok(status::Custom(Status::Ok, Json(members)))
 }

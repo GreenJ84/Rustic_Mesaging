@@ -182,11 +182,7 @@ pub struct MemberProfile {
     pub avatar: String,
     pub created_at: NaiveDateTime,
 }
-impl<'r> Responder<'r, 'r> for MemberProfile {
-    fn respond_to(self, req: &'r rocket::Request<'_>) -> rocket::response::Result<'r> {
-        Response::build_from(Json(self).respond_to(req)?).ok()
-    }
-}
+
 #[derive(Serialize, Deserialize, Queryable, Selectable, Debug, Clone)]
 #[diesel(table_name = member)]
 pub struct MemberShort {
@@ -194,21 +190,12 @@ pub struct MemberShort {
     pub username: String,
     pub avatar: String,
 }
-impl<'r> Responder<'r, 'r> for MemberShort {
-    fn respond_to(self, req: &'r rocket::Request<'_>) -> rocket::response::Result<'r> {
-        Response::build_from(Json(self).respond_to(req)?).ok()
-    }
-}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct MemberList<T> {
     pub members: Vec<T>,
 }
-impl<'r, T: Serialize> Responder<'r, 'r> for MemberList<T> {
-    fn respond_to(self, req: &'r rocket::Request<'_>) -> rocket::response::Result<'static> {
-        Response::build_from(Json(self).respond_to(req)?).ok()
-    }
-}
+
 pub type MultiMember = MemberList<MemberProfile>;
 pub type MultiMemberPreview = MemberList<MemberShort>;
 

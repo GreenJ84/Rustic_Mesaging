@@ -75,6 +75,45 @@ pub(crate) struct AuthOutcome {
     pub credentials: AuthCredentials,
 }
 
+// Secret Administration passkey
+pub struct AdminKey {
+    pub(crate) passkey: bool,
+}
+#[rocket::async_trait]
+impl<'r> FromRequest<'r> for AdminKey {
+    type Error = status::Custom<String>;
+    async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+        let admin_secret_key = env::var("ADMIN_SECRET_KEY").expect("ADMIN_SECRET_KEY not set");
+        return if let Some(header_value) = req.headers().get_one("Admin-Key") {
+            if header_value == admin_secret_key {
+                Outcome::Success(AdminKey { passkey: true })
+            } else {
+                Outcome::Success(AdminKey { passkey: false })
+            }
+        } else {
+            Outcome::Success(AdminKey { passkey: false })
+        };
+    }
+}
+
+// Response
+#[derive(Serialize, Deserialize, Debug)]
+pub struct AuthenticationResponse {
+    pub member: MemberProfile,
+    pub token: String, // String JWT encoding
+}
+impl<'r> Responder<'r, 'r> for AuthenticationResponse {
+    fn respond_to(self, req: &'r Request<'_>) -> rocket::response::Result<'r> {
+        Response::build_from(Json(self.member).respond_to(req)?)
+            .header(Header::new(
+                "Authorization",
+                format!("Bearer {}", self.token),
+            ))
+            .ok()
+    }
+}
+
+
 // ======================================================
 // Old Implementations
 // ======================================================
@@ -172,40 +211,3 @@ impl JWT {
     }
 }
 
-// Secret Administration passkey
-pub struct AdminKey {
-    pub(crate) passkey: bool,
-}
-#[rocket::async_trait]
-impl<'r> FromRequest<'r> for AdminKey {
-    type Error = status::Custom<String>;
-    async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        let admin_secret_key = env::var("ADMIN_SECRET_KEY").expect("ADMIN_SECRET_KEY not set");
-        return if let Some(header_value) = req.headers().get_one("Admin-Key") {
-            if header_value == admin_secret_key {
-                Outcome::Success(AdminKey { passkey: true })
-            } else {
-                Outcome::Success(AdminKey { passkey: false })
-            }
-        } else {
-            Outcome::Success(AdminKey { passkey: false })
-        };
-    }
-}
-
-// Response
-#[derive(Serialize, Deserialize, Debug)]
-pub struct AuthenticationResponse {
-    pub member: MemberProfile,
-    pub token: String, // String JWT encoding
-}
-impl<'r> Responder<'r, 'r> for AuthenticationResponse {
-    fn respond_to(self, req: &'r Request<'_>) -> rocket::response::Result<'r> {
-        Response::build_from(Json(self.member).respond_to(req)?)
-            .header(Header::new(
-                "Authorization",
-                format!("Bearer {}", self.token),
-            ))
-            .ok()
-    }
-}
