@@ -22,10 +22,10 @@ pub(crate) fn register(
     metadata: ClientMetadata,
     registration_role: RegistrationRole,
     input: Json<RegisterInput>,
-) -> ApiResponse<Json<AuthenticationResponse>> {
+) -> ApiResponse<AuthenticationResponse> {
     let outcome = service.register(input.into_inner(), registration_role.kind(), metadata.0)?;
     let response = into_response(cookies, service, outcome);
-    Ok(status::Custom(Status::Created, Json(response)))
+    Ok(status::Custom(Status::Created, response))
 }
 
 #[post("/login", data = "<input>")]
@@ -34,10 +34,10 @@ pub(crate) fn login(
     cookies: &CookieJar<'_>,
     metadata: ClientMetadata,
     input: Json<LoginInput>,
-) -> ApiResponse<Json<AuthenticationResponse>> {
+) -> ApiResponse<AuthenticationResponse> {
     let outcome = service.login(input.into_inner(), metadata.0)?;
     let response = into_response(cookies, service, outcome);
-    Ok(status::Custom(Status::Ok, Json(response)))
+    Ok(status::Custom(Status::Ok, response))
 }
 
 #[post("/refresh/<member_id>")]
@@ -46,7 +46,7 @@ pub(crate) fn refresh(
     cookies: &CookieJar<'_>,
     metadata: ClientMetadata,
     member_id: MemberId,
-) -> ApiResponse<Json<AuthenticationResponse>> {
+) -> ApiResponse<AuthenticationResponse> {
     let refresh_token = cookies
         .get(REFRESH_COOKIE)
         .map(|cookie| cookie.value().to_owned())
@@ -55,7 +55,7 @@ pub(crate) fn refresh(
     match service.refresh(member_id, refresh_token, metadata.0) {
         Ok(outcome) => {
             let response = into_response(cookies, service, outcome);
-            Ok(status::Custom(Status::Ok, Json(response)))
+            Ok(status::Custom(Status::Ok, response))
         }
         Err(error) => {
             clear_refresh_cookie(cookies);
