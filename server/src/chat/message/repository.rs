@@ -2,7 +2,7 @@ use super::models::{Message, MessageChangeset, MessageDetails, MessageId, NewMes
 use crate::chat::message::models::MultiMessageDetails;
 use crate::chat::models::ChatId;
 use crate::infra::{DbConn, DbError};
-use crate::member::models::MemberShort;
+use crate::member::models::{Member, MemberShort};
 use crate::schema::{member::dsl as m_dsl, message::dsl as ms_dsl};
 use crate::utils::Paginator;
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SelectableHelper};
@@ -30,9 +30,12 @@ impl MessageRepository {
             .filter(ms_dsl::id.eq(id))
             .filter(ms_dsl::chat_id.eq(chat_id))
             .inner_join(m_dsl::member.on(ms_dsl::sender_id.eq(m_dsl::id)))
-            .select((Message::as_select(), MemberShort::as_select()))
-            .first::<(Message, MemberShort)>(conn)
-            .map(MessageDetails::from)
+            .select((Message::as_select(), Member::as_select()))
+            .first(conn)
+            .map(|(message, member)| {
+                let member_profile = MemberShort::from(member);
+                MessageDetails::from((message, member_profile))
+            })
             .map_err(DbError::from)
     }
     pub(crate) fn read_author_id(
@@ -60,9 +63,17 @@ impl MessageRepository {
             .limit(page_size)
             .offset(page_offset)
             .inner_join(m_dsl::member.on(ms_dsl::sender_id.eq(m_dsl::id)))
-            .select((Message::as_select(), MemberShort::as_select()))
-            .load::<(Message, MemberShort)>(conn)
-            .map(|messages| messages.into_iter().map(MessageDetails::from).collect())
+            .select((Message::as_select(), Member::as_select()))
+            .load(conn)
+            .map(|messages| {
+                messages
+                    .into_iter()
+                    .map(|(message, member)| {
+                        let member_profile = MemberShort::from(member);
+                        MessageDetails::from((message, member_profile))
+                    })
+                    .collect()
+            })
             .map_err(DbError::from)
     }
 

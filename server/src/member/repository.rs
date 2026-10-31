@@ -102,8 +102,9 @@ impl MemberRepository {
             .filter(m_dsl::username.ilike(&contains).escape('\\'))
             .order_by((relevance.asc(), m_dsl::username.asc()))
             .limit(25)
-            .select(MemberShort::as_select())
+            .select(Member::as_select())
             .load(conn)
+            .map(|results| results.into_iter().map(MemberShort::from).collect())
             .map_err(DbError::from)
     }
     fn escape_like_pattern(value: &str) -> String {

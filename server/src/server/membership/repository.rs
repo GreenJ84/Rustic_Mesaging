@@ -3,7 +3,7 @@ use diesel::{
 };
 
 use crate::infra::{DbConn, DbError};
-use crate::member::models::{MemberId, MemberShort};
+use crate::member::models::{Member, MemberId, MemberShort};
 use crate::schema::{member::dsl as m_dsl, server::dsl as s_dsl, server_membership::dsl as sm_dsl};
 use crate::server::models::{ServerId, ServerPreview};
 use crate::utils::Paginator;
@@ -35,7 +35,7 @@ impl ServerMembershipRepository {
         diesel::dsl::select(diesel::dsl::exists(
             sm_dsl::server_membership.find((member_id, server_id)),
         ))
-        .get_result::<bool>(conn)
+        .get_result(conn)
         .map_err(DbError::from)
     }
     pub(in crate::server) fn get_member_servers(
@@ -68,8 +68,9 @@ impl ServerMembershipRepository {
             .order_by((m_dsl::username.asc(), m_dsl::id.desc()))
             .limit(page_size)
             .offset(page_offset)
-            .select(MemberShort::as_select())
+            .select(Member::as_select())
             .load(conn)
+            .map(|results| results.into_iter().map(MemberShort::from).collect())
             .map_err(DbError::from)
     }
 

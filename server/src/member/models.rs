@@ -74,51 +74,28 @@ impl Member {
     pub fn avatar(&self) -> &str {
         &self.avatar
     }
-
-    pub fn into_profile(self) -> MemberProfile {
+}
+impl From<Member> for MemberProfile {
+    fn from(member: Member) -> MemberProfile {
         MemberProfile {
-            id: self.id,
-            username: self.username,
-            email: self.email,
-            avatar: self.avatar,
-            created_at: self.created_at,
+            id: member.id,
+            username: member.username,
+            email: member.email,
+            avatar: member.avatar,
+            created_at: member.created_at,
         }
     }
-    pub fn into_short(self) -> MemberShort {
+}
+impl From<Member> for MemberShort {
+    fn from(member: Member) -> MemberShort {
         MemberShort {
-            id: self.id,
-            username: self.username,
-            avatar: self.avatar,
+            id: member.id,
+            username: member.username,
+            avatar: member.avatar,
         }
     }
 }
 
-const ALLOWED_AVATARS: &[&str] = &[
-    "mouse",
-    "panda",
-    "bear",
-    "bunny",
-    "dog",
-    "gorilla",
-    "koala",
-    "robot",
-    "astronaut",
-    "cat",
-    "eagle",
-    "pikachu",
-    "default",
-];
-#[derive(Serialize, Deserialize, Debug)]
-pub(crate) struct MemberUpdateInput {
-    pub username: Option<String>,
-    pub email: Option<String>,
-    pub avatar: Option<String>,
-}
-impl MemberUpdateInput {
-    pub fn is_empty(&self) -> bool {
-        self.username.is_none() && self.email.is_none() && self.avatar.is_none()
-    }
-}
 #[derive(AsChangeset, Debug)]
 #[diesel(table_name = member)]
 pub(crate) struct MemberChangeset {
@@ -173,8 +150,33 @@ impl TryFrom<MemberUpdateInput> for MemberChangeset {
     }
 }
 // Data Transfer Objects ==========================
-#[derive(Serialize, Deserialize, Queryable, Selectable, Debug, Clone)]
-#[diesel(table_name = member)]
+const ALLOWED_AVATARS: &[&str] = &[
+    "mouse",
+    "panda",
+    "bear",
+    "bunny",
+    "dog",
+    "gorilla",
+    "koala",
+    "robot",
+    "astronaut",
+    "cat",
+    "eagle",
+    "pikachu",
+    "default",
+];
+#[derive(Serialize, Deserialize, Debug)]
+pub(crate) struct MemberUpdateInput {
+    pub username: Option<String>,
+    pub email: Option<String>,
+    pub avatar: Option<String>,
+}
+impl MemberUpdateInput {
+    pub fn is_empty(&self) -> bool {
+        self.username.is_none() && self.email.is_none() && self.avatar.is_none()
+    }
+}
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MemberProfile {
     pub id: MemberId,
     pub username: String,
@@ -183,8 +185,7 @@ pub struct MemberProfile {
     pub created_at: NaiveDateTime,
 }
 
-#[derive(Serialize, Deserialize, Queryable, Selectable, Debug, Clone)]
-#[diesel(table_name = member)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MemberShort {
     pub id: MemberId,
     pub username: String,

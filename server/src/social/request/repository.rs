@@ -5,7 +5,7 @@ use diesel::{
 
 use super::models::{FriendRequest, NewFriendRequest};
 use crate::infra::{DbConn, DbError};
-use crate::member::models::{MemberId, MemberShort};
+use crate::member::models::{Member, MemberId, MemberShort};
 use crate::schema::{friend_request::dsl as f_dsl, member::dsl as m_dsl};
 use crate::social::request::models::{IncomingRequests, OutgoingRequests, RequestDetails};
 
@@ -61,10 +61,10 @@ impl RequestRepository {
         f_dsl::friend_request
             .find((sender_id, receiver_id))
             .inner_join(m_dsl::member.on(m_dsl::id.eq(f_dsl::sender_id)))
-            .select((MemberShort::as_select(), f_dsl::note, f_dsl::created_at))
-            .first::<(MemberShort, Option<String>, NaiveDateTime)>(conn)
+            .select((Member::as_select(), f_dsl::note, f_dsl::created_at))
+            .first(conn)
             .map(|(member, note, created_at)| RequestDetails {
-                member,
+                member: MemberShort::from(member),
                 note,
                 created_at,
             })
@@ -77,15 +77,15 @@ impl RequestRepository {
         f_dsl::friend_request
             .filter(f_dsl::receiver_id.eq(member_id))
             .inner_join(m_dsl::member.on(m_dsl::id.eq(f_dsl::sender_id)))
-            .select((MemberShort::as_select(), f_dsl::note, f_dsl::created_at))
+            .select((Member::as_select(), f_dsl::note, f_dsl::created_at))
             .limit(25)
             .order_by(f_dsl::created_at.desc())
-            .load::<(MemberShort, Option<String>, NaiveDateTime)>(conn)
+            .load(conn)
             .map(|requests| {
                 requests
                     .into_iter()
                     .map(|(member, note, created_at)| RequestDetails {
-                        member,
+                        member: MemberShort::from(member),
                         note,
                         created_at,
                     })
@@ -101,15 +101,15 @@ impl RequestRepository {
         f_dsl::friend_request
             .filter(f_dsl::sender_id.eq(member_id))
             .inner_join(m_dsl::member.on(m_dsl::id.eq(f_dsl::receiver_id)))
-            .select((MemberShort::as_select(), f_dsl::note, f_dsl::created_at))
+            .select((Member::as_select(), f_dsl::note, f_dsl::created_at))
             .limit(25)
             .order_by(f_dsl::created_at.desc())
-            .load::<(MemberShort, Option<String>, NaiveDateTime)>(conn)
+            .load(conn)
             .map(|requests| {
                 requests
                     .into_iter()
                     .map(|(member, note, created_at)| RequestDetails {
-                        member,
+                        member: MemberShort::from(member),
                         note,
                         created_at,
                     })
@@ -125,7 +125,7 @@ impl RequestRepository {
     ) -> Result<FriendRequest, DbError> {
         diesel::update(f_dsl::friend_request.find((update.sender_id, update.receiver_id)))
             .set(f_dsl::note.eq(update.note))
-            .get_result::<FriendRequest>(conn)
+            .get_result(conn)
             .map_err(DbError::from)
     }
 

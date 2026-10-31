@@ -9,7 +9,7 @@ use super::models::{
     NewFriend,
 };
 use crate::infra::{DbConn, DbError};
-use crate::member::models::{MemberId, MemberProfile, MemberShort};
+use crate::member::models::{Member, MemberId, MemberProfile, MemberShort};
 use crate::schema::friend::dsl as friend_dsl;
 use crate::schema::member::dsl as member_dsl;
 
@@ -23,7 +23,7 @@ impl FriendRepository {
         diesel::insert_into(friend_dsl::friend)
             .values(&new_friendship)
             .returning(Friendship::as_returning())
-            .get_result::<Friendship>(conn)
+            .get_result(conn)
             .map_err(DbError::from)
     }
     // Get
@@ -53,10 +53,10 @@ impl FriendRepository {
             .filter(friend_dsl::member_id.eq(member_id))
             .filter(friend_dsl::friend_id.eq(friend_id))
             .inner_join(member_dsl::member.on(member_dsl::id.eq(other_member_id)))
-            .select((MemberProfile::as_select(), friend_dsl::created_at))
-            .first::<(MemberProfile, NaiveDateTime)>(conn)
+            .select((Member::as_select(), friend_dsl::created_at))
+            .first(conn)
             .map(|(member, created_at)| Friend {
-                friend: member,
+                friend: MemberProfile::from(member),
                 created_at,
             })
             .map_err(DbError::from)
@@ -76,15 +76,15 @@ impl FriendRepository {
                     .or(friend_dsl::friend_id.eq(member_id)), // Find all friend relationships
             )
             .inner_join(member_dsl::member.on(member_dsl::id.eq(other_member_id)))
-            .select((MemberProfile::as_select(), friend_dsl::created_at))
+            .select((Member::as_select(), friend_dsl::created_at))
             .order_by(friend_dsl::created_at.desc())
             .limit(25)
-            .load::<(MemberProfile, NaiveDateTime)>(conn)
+            .load(conn)
             .map(|results| MultiFriend {
                 friends: results
                     .into_iter()
                     .map(|(member, created_at)| Friend {
-                        friend: member,
+                        friend: MemberProfile::from(member),
                         created_at,
                     })
                     .collect::<Vec<Friend>>(),
@@ -106,15 +106,15 @@ impl FriendRepository {
                     .or(friend_dsl::friend_id.eq(member_id)), // Find all friend relationships
             )
             .inner_join(member_dsl::member.on(member_dsl::id.eq(other_member_id)))
-            .select((MemberShort::as_select(), friend_dsl::created_at))
+            .select((Member::as_select(), friend_dsl::created_at))
             .order_by(friend_dsl::created_at.desc())
             .limit(25)
-            .load::<(MemberShort, NaiveDateTime)>(conn)
+            .load(conn)
             .map(|results| MultiFriendPreview {
                 friends: results
                     .into_iter()
                     .map(|(member, created_at)| FriendPreview {
-                        friend: member,
+                        friend: MemberShort::from(member),
                         created_at,
                     })
                     .collect::<Vec<FriendPreview>>(),

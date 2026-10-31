@@ -3,7 +3,7 @@ use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SelectableHelp
 use crate::chat::membership::models::ChatMemberDetails;
 use crate::chat::models::ChatId;
 use crate::infra::{DbConn, DbError};
-use crate::member::models::{MemberId, MemberShort};
+use crate::member::models::{Member, MemberId, MemberShort};
 use crate::schema::{member::dsl as m_dsl, member_chat::dsl as mc_dsl};
 
 use super::models::{ChatMember, NewChatMember, NewChatMembers};
@@ -56,9 +56,12 @@ impl ChatMembershipRepository {
         mc_dsl::member_chat
             .find((chat_id, member_id))
             .inner_join(m_dsl::member.on(mc_dsl::member_id.eq(m_dsl::id)))
-            .select((ChatMember::as_select(), MemberShort::as_select()))
-            .first::<(ChatMember, MemberShort)>(conn)
-            .map(ChatMemberDetails::from)
+            .select((ChatMember::as_select(), Member::as_select()))
+            .first(conn)
+            .map(|(chat_member, member)| {
+                let member_profile = MemberShort::from(member);
+                ChatMemberDetails::from((chat_member, member_profile))
+            })
             .map_err(DbError::from)
     }
 
@@ -69,12 +72,15 @@ impl ChatMembershipRepository {
         mc_dsl::member_chat
             .filter(mc_dsl::chat_id.eq(chat_id))
             .inner_join(m_dsl::member.on(mc_dsl::member_id.eq(m_dsl::id)))
-            .select((ChatMember::as_select(), MemberShort::as_select()))
-            .load::<(ChatMember, MemberShort)>(conn)
+            .select((ChatMember::as_select(), Member::as_select()))
+            .load(conn)
             .map(|memberships| {
                 memberships
                     .into_iter()
-                    .map(ChatMemberDetails::from)
+                    .map(|(chat_member, member)| {
+                        let member_profile = MemberShort::from(member);
+                        ChatMemberDetails::from((chat_member, member_profile))
+                    })
                     .collect()
             })
             .map_err(DbError::from)

@@ -66,7 +66,7 @@ impl AuthService {
                 self.sessions
                     .issue(conn, session_id, family_id, member.id(), metadata)?;
             Ok(AuthOutcome {
-                member: member.into_profile(),
+                member: member.into(),
                 credentials,
             })
         })
@@ -91,7 +91,7 @@ impl AuthService {
             metadata,
         )?;
         Ok(AuthOutcome {
-            member: member.into_profile(),
+            member: member.into(),
             credentials,
         })
     }
@@ -115,7 +115,7 @@ impl AuthService {
         )?;
 
         Ok(AuthOutcome {
-            member: member.into_profile(),
+            member: member.into(),
             credentials,
         })
     }
@@ -203,7 +203,7 @@ impl AuthService {
         let mut conn = self.database.get_connection()?;
         Self::require_role(&mut conn, principal.member_id, BuiltInSystemRole::User)?;
         MemberRepository::find_by_id(&mut conn, principal.member_id)?
-            .map(|member| member.into_profile())
+            .map(|member| member.into())
             .ok_or(AuthError::AccountNotFound)
     }
 

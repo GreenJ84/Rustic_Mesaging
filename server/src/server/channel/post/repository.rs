@@ -1,7 +1,7 @@
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SelectableHelper};
 
 use crate::infra::{DbConn, DbError};
-use crate::member::models::{MemberId, MemberShort};
+use crate::member::models::{Member, MemberId, MemberShort};
 use crate::schema::{channel::dsl as c_dsl, member::dsl as m_dsl, post::dsl as p_dsl};
 use crate::server::channel::models::ChannelId;
 use crate::server::channel::post::models::PostChangeset;
@@ -44,7 +44,7 @@ impl PostRepository {
             .find(post_id)
             .filter(p_dsl::channel_id.eq(channel_id))
             .select(p_dsl::author_id)
-            .first::<MemberId>(conn)
+            .first(conn)
             .map_err(DbError::from)
     }
     pub(super) fn read_detail(
@@ -56,9 +56,12 @@ impl PostRepository {
             .find(post_id)
             .filter(p_dsl::channel_id.eq(channel_id))
             .inner_join(m_dsl::member.on(p_dsl::author_id.eq(m_dsl::id)))
-            .select((Post::as_select(), MemberShort::as_select()))
-            .first::<(Post, MemberShort)>(conn)
-            .map(|(post, member)| PostDetail::from((post, member)))
+            .select((Post::as_select(), Member::as_select()))
+            .first(conn)
+            .map(|(post, member)| {
+                let member_short = MemberShort::from(member);
+                PostDetail::from((post, member_short))
+            })
             .map_err(DbError::from)
     }
     pub(super) fn read_page(
@@ -75,12 +78,15 @@ impl PostRepository {
             .order_by((p_dsl::created_at.desc(), p_dsl::id.desc()))
             .limit(page_size)
             .offset(page_offset)
-            .select((Post::as_select(), MemberShort::as_select()))
-            .load::<(Post, MemberShort)>(conn)
+            .select((Post::as_select(), Member::as_select()))
+            .load(conn)
             .map(|results| {
                 results
                     .into_iter()
-                    .map(|(post, member)| PostDetail::from((post, member)))
+                    .map(|(post, member)| {
+                        let member_short = MemberShort::from(member);
+                        PostDetail::from((post, member_short))
+                    })
                     .collect()
             })
             .map_err(DbError::from)

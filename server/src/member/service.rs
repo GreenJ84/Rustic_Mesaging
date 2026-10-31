@@ -26,7 +26,7 @@ impl MemberService {
     pub fn get(&self, member_id: MemberId) -> Result<MemberProfile, MemberError> {
         let mut conn = self.database.get_connection()?;
         if let Some(member) = MemberRepository::find_by_id(&mut conn, member_id)? {
-            Ok(member.into_profile())
+            Ok(member.into())
         } else {
             Err(MemberError::NotFound)
         }
@@ -34,7 +34,7 @@ impl MemberService {
     pub fn find_by_username(&self, username: String) -> Result<Option<MemberShort>, MemberError> {
         let mut conn = self.database.get_connection()?;
         if let Some(member) = MemberRepository::find_by_username(&mut conn, &username)? {
-            Ok(Some(member.into_short()))
+            Ok(Some(member.into()))
         } else {
             Ok(None)
         }
@@ -70,7 +70,7 @@ impl MemberService {
                 }
             };
             let updated_member = MemberRepository::update(conn, member_id, input)?;
-            Ok(updated_member.into_profile())
+            Ok(updated_member.into())
         })
     }
 
