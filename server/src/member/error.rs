@@ -1,3 +1,5 @@
+use rocket::http::Status;
+
 use crate::api::ApiError;
 use crate::auth::system_roles::SystemRoleError;
 use crate::infra::{DbError, DieselError};
@@ -20,6 +22,7 @@ pub enum MemberError {
 
     UsernameTaken,
     EmailTaken,
+    InvalidInput(String),
     InvalidChangeset(String),
     InvalidSearchTerm(String),
 
@@ -27,6 +30,38 @@ pub enum MemberError {
     DeletionBlocked(DeletionBlock),
 
     PersistenceFailure,
+}
+impl MemberError {
+    pub fn message(&self) -> String {
+        match self {
+            Self::NotFound => "Member not found".to_string(),
+            Self::UsernameTaken => "Username is already taken".to_string(),
+            Self::EmailTaken => "Email is already taken".to_string(),
+            Self::InvalidInput(msg) => msg.to_string(),
+            Self::InvalidChangeset(msg) => msg.to_string(),
+            Self::InvalidSearchTerm(msg) => msg.to_string(),
+            Self::SystemRoleError(e) => e.message().to_string(),
+            Self::DeletionBlocked(block) => block.message().to_string(),
+            Self::PersistenceFailure => "Database error".to_string(),
+        }
+    }
+
+    pub fn status(&self) -> Status {
+        match self {
+            MemberError::NotFound => Status::NotFound,
+            MemberError::UsernameTaken
+            | MemberError::EmailTaken
+            | MemberError::DeletionBlocked(_) => Status::Conflict,
+            MemberError::InvalidInput(_)
+            | MemberError::InvalidChangeset(_)
+            | MemberError::InvalidSearchTerm(_) => Status::BadRequest,
+            MemberError::SystemRoleError(error) => match error {
+                SystemRoleError::MemberNotFound => Status::NotFound,
+                _ => Status::InternalServerError,
+            },
+            MemberError::PersistenceFailure => Status::InternalServerError,
+        }
+    }
 }
 impl From<DbError> for MemberError {
     fn from(error: DbError) -> Self {
@@ -52,7 +87,10 @@ impl From<DieselError> for MemberError {
 }
 impl From<SystemRoleError> for MemberError {
     fn from(error: SystemRoleError) -> Self {
-        Self::SystemRoleError(error)
+        match error {
+            SystemRoleError::MemberNotFound => Self::NotFound,
+            _ => Self::SystemRoleError(error),
+        }
     }
 }
 impl From<MemberError> for ApiError {
@@ -61,6 +99,7 @@ impl From<MemberError> for ApiError {
             MemberError::NotFound => ApiError::NotFound("Member not found".to_string()),
             MemberError::UsernameTaken => ApiError::Conflict("Username already taken".to_string()),
             MemberError::EmailTaken => ApiError::Conflict("Email already taken".to_string()),
+            MemberError::InvalidInput(msg) => ApiError::BadRequest(msg),
             MemberError::InvalidChangeset(msg) => ApiError::BadRequest(msg),
             MemberError::InvalidSearchTerm(msg) => ApiError::BadRequest(msg),
             MemberError::SystemRoleError(e) => e.into(),
