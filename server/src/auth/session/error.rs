@@ -1,3 +1,4 @@
+use rocket::http::Status;
 use jsonwebtoken::errors::{Error as JwtError, ErrorKind};
 
 use crate::api::ApiError;
@@ -35,6 +36,21 @@ impl SessionError {
             Self::RefreshTokenReused => "Refresh token has been reused".to_string(),
             Self::CodecFailure => "Failed to encode or decode session data".to_string(),
             Self::PersistenceFailure => "Failed to persist session data".to_string(),
+        }
+    }
+
+    pub(crate) fn status(&self) -> Status {
+        match self {
+            Self::InvalidAccessToken
+            | Self::ExpiredAccessToken
+            | Self::InvalidRefreshToken
+            | Self::ExpiredRefreshToken
+            | Self::SessionRevoked
+            | Self::RefreshTokenReused => Status::Unauthorized,
+
+            Self::CodecFailure | Self::PersistenceFailure => {
+                Status::InternalServerError
+            }
         }
     }
 }

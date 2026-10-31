@@ -1,3 +1,5 @@
+use rocket::http::Status;
+
 use crate::api::ApiError;
 use crate::infra::{DbError, DieselError};
 
@@ -60,6 +62,25 @@ impl SystemRoleError {
             Self::ConfigurationFailure | Self::PersistenceFailure => {
                 "The system role operation could not be completed.".to_string()
             }
+        }
+    }
+
+    pub fn status(&self) -> Status {
+        match self {
+            Self::InsufficientPrivileges => Status::Forbidden,
+
+            Self::InvalidRoleName | Self::InvalidAuthorityLevel(_) => Status::BadRequest,
+            Self::RoleAlreadyExists | Self::AssignmentAlreadyExists => Status::Conflict,
+
+            Self::MemberNotFound | Self::RoleNotFound | Self::AssignmentNotFound => {
+                Status::NotFound
+            }
+
+            Self::CannotModifyBuiltInRole
+            | Self::CannotDeleteBuiltInRole
+            | Self::CannotRevokeLastAdministrator => Status::Conflict,
+
+            Self::ConfigurationFailure | Self::PersistenceFailure => Status::InternalServerError,
         }
     }
 }
