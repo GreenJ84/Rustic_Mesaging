@@ -1,27 +1,24 @@
 use rocket::http::Header;
 use rocket::request::{FromRequest, Outcome};
+use rocket::response::status;
 use rocket::response::Responder;
 use rocket::serde::json::Json;
 use rocket::Request;
 use rocket::Response;
 use serde::{Deserialize, Serialize};
+use std::env;
+
+use crate::auth::session::AuthCredentials;
+use crate::infra::DbConn;
+use crate::member::error::MemberError;
+use crate::member::models::{ChangePasswordInput, MemberProfile, NewMember, NewMemberInput};
+use crate::member::repository::MemberRepository;
+use crate::utils::Validator;
 
 use super::error::*;
 use super::password::{PasswordManager, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH};
 
-use crate::auth::session::AuthCredentials;
-use crate::infra::DbConn;
-use crate::member::models::{MemberProfile, NewMember};
-use crate::member::repository::MemberRepository;
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct RegisterInput {
-    pub username: String,
-    pub password: String,
-    pub confirm_password: String,
-    pub email: String,
-}
-impl TryInto<NewMember> for RegisterInput {
+impl TryFrom<NewMemberInput> for NewMember {
     type Error = AuthError;
     fn try_from(input: NewMemberInput) -> Result<Self, AuthError> {
         let password_hash = PasswordManager::validate(&input)?;
@@ -37,7 +34,7 @@ impl TryInto<NewMember> for RegisterInput {
     }
 }
 
-impl RegisterInput {
+impl NewMemberInput {
     pub fn validate(self, conn: &mut DbConn) -> Result<NewMember, AuthError> {
         if self.password.ne(&self.confirm_password) {
             return Err(AuthError::PasswordConfirmationMismatch);
@@ -61,13 +58,6 @@ impl RegisterInput {
 pub struct LoginInput {
     pub username: String,
     pub password: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct ChangePasswordInput {
-    pub current_password: String,
-    pub new_password: String,
-    pub confirm_password: String,
 }
 
 pub(crate) struct AuthOutcome {

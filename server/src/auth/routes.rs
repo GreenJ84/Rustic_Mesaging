@@ -6,11 +6,9 @@ use rocket::State;
 use super::service::AuthService;
 use crate::api::ApiError;
 use crate::auth::guards::{ClientMetadata, RegistrationRole};
-use crate::auth::models::{
-    AuthOutcome, AuthenticationResponse, ChangePasswordInput, LoginInput, RegisterInput,
-};
+use crate::auth::models::{AuthOutcome, AuthenticationResponse, LoginInput};
 use crate::auth::session::AuthenticatedPrincipal;
-use crate::member::models::{MemberId, MemberProfile};
+use crate::member::models::{ChangePasswordInput, MemberId, MemberProfile, NewMemberInput};
 use crate::ApiResponse;
 
 const REFRESH_COOKIE: &str = "refresh_token";
@@ -21,7 +19,7 @@ pub(crate) fn register(
     cookies: &CookieJar<'_>,
     metadata: ClientMetadata,
     registration_role: RegistrationRole,
-    input: Json<RegisterInput>,
+    input: Json<NewMemberInput>,
 ) -> ApiResponse<AuthenticationResponse> {
     let outcome = service.register(input.into_inner(), registration_role.kind(), metadata.0)?;
     let response = into_response(cookies, service, outcome);

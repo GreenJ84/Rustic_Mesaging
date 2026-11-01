@@ -5,7 +5,7 @@ use argon2::{
     PasswordVerifier,
 };
 
-use crate::auth::models::RegisterInput;
+use crate::member::models::{ChangePasswordInput, NewMemberInput};
 
 /// Password violation rules
 pub const MIN_PASSWORD_LENGTH: usize = 15;
@@ -42,7 +42,7 @@ impl From<PasswordHashError> for PasswordError {
 
 pub struct PasswordManager;
 impl PasswordManager {
-    pub fn validate(input: &RegisterInput) -> Result<String, PasswordError> {
+    pub fn validate(input: &NewMemberInput) -> Result<String, PasswordError> {
         Self::validate_candidate(&input.password, &input.username, &input.email)?;
         Self::hash(&input.password)
     }

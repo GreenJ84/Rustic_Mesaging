@@ -3,11 +3,11 @@ use diesel::Connection;
 use crate::auth::system_roles::SystemRoleId;
 use crate::infra::{Database, DbConn, DbError, DieselError, IdGenerator};
 use crate::member::error::MemberError;
-use crate::member::models::{MemberId, MemberProfile};
+use crate::member::models::{ChangePasswordInput, MemberId, MemberProfile, NewMemberInput};
 use crate::member::repository::MemberRepository;
 
 use super::error::AuthError;
-use super::models::{AuthOutcome, ChangePasswordInput, LoginInput, RegisterInput};
+use super::models::{AuthOutcome, LoginInput};
 use super::password::PasswordManager;
 use super::session::{AuthenticatedPrincipal, SessionConfig, SessionMetadata, SessionService};
 use super::system_roles::{
@@ -49,7 +49,7 @@ impl AuthService {
 
     pub(crate) fn register(
         &self,
-        input: RegisterInput,
+        input: NewMemberInput,
         registration_role: RegistrationRoleKind,
         metadata: SessionMetadata,
     ) -> Result<AuthOutcome, AuthError> {
