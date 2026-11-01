@@ -6,24 +6,26 @@ use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
 use yew::{html, Html};
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-pub struct UpdateMember {
-    username: String,
-    email: String,
-    avatar: Option<String>,
+#[derive(Serialize, Deserialize, Debug)]
+pub struct NewMemberInput {
+    pub username: String,
+    pub password: String,
+    pub confirm_password: String,
+    pub email: String,
 }
-impl UpdateMember {
-    pub fn new(
-        username: String,
-        email: String,
-        avatar: Option<String>,
-    ) -> Self {
-        Self {
-            username,
-            email,
-            avatar,
-        }
-    }
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ChangePasswordInput {
+    pub current_password: String,
+    pub new_password: String,
+    pub confirm_password: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+pub struct MemberUpdateInput {
+    username: Option<String>,
+    email: Option<String>,
+    avatar: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -32,36 +34,17 @@ pub struct Member {
     pub(crate) username: String,
     pub(crate) email: String,
     pub(crate) avatar: Option<String>,
-    #[serde(
-        serialize_with = "serialize_naive_date_time",
-        deserialize_with = "deserialize_naive_date_time"
-    )]
     pub(crate) created_at: NaiveDateTime,
 }
 impl Member {
-    pub fn new(
-        id: i32,
-        username: String,
-        email: String,
-        avatar: Option<String>,
-        created_at: NaiveDateTime,
-    ) -> Self {
-        Self {
-            id,
-            username,
-            email,
-            avatar,
-            created_at,
-        }
-    }
     pub fn default() -> Self {
-        Self::new(
-            0,
-            "guest".to_string(),
-            "member.email@provider".to_string(),
-            None,
-            NaiveDateTime::default(),
-        )
+        Self {
+            id: 0,
+            username: "guest".to_string(),
+            email: "member.email@provider".to_string(),
+            avatar: None,
+            created_at: NaiveDateTime::default(),
+        }
     }
 
     pub fn avatar(self, class_name: &str, size: &str) -> Html {
@@ -85,15 +68,12 @@ pub struct MemberShort {
     pub(crate) avatar: Option<String>,
 }
 impl MemberShort {
-    pub fn new(id: i32, username: String, avatar: Option<String>) -> Self {
-        Self {
-            id,
-            username,
-            avatar,
-        }
-    }
     pub fn default() -> Self {
-        Self::new(0, "guest".to_string(), None)
+        Self {
+            id: 0,
+            username: "guest".to_string(),
+            avatar: None,
+        }
     }
     pub fn avatar(self, class_name: &str, size: &str) -> Html {
         match self.avatar {
@@ -114,10 +94,7 @@ pub struct MultiMember {
     pub(crate) members: Vec<MemberShort>,
 }
 impl MultiMember {
-    pub fn new(members: Vec<MemberShort>) -> Self {
-        Self { members }
-    }
     pub fn default() -> Self {
-        Self::new(Vec::<MemberShort>::new())
+        Self { members: Vec::<MemberShort>::new() }
     }
 }
