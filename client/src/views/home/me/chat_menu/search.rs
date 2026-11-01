@@ -1,5 +1,5 @@
 use crate::comps::modal::Modal;
-use crate::models::member::{Member, MemberShort, MultiMember};
+use crate::models::member::{Member, MemberShort, MultiMember, MemberDefaults};
 use crate::models::server::{MultiServer, Server};
 use crate::utils::api_requests::api_get;
 use crate::views::home::me::chat_menu::search_item::SearchItem;

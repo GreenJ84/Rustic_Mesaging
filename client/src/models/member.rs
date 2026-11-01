@@ -33,7 +33,7 @@ pub struct Member {
     pub(crate) id: i32,
     pub(crate) username: String,
     pub(crate) email: String,
-    pub(crate) avatar: Option<String>,
+    pub(crate) avatar: String,
     pub(crate) created_at: NaiveDateTime,
 }
 impl MemberDefaults for Member {
@@ -42,23 +42,17 @@ impl MemberDefaults for Member {
             id: 0,
             username: "guest".to_string(),
             email: "member.email@provider".to_string(),
-            avatar: None,
+            avatar: String::from("default"),
             created_at: NaiveDateTime::default(),
         }
     }
 }
 impl AvatarRedndering for Member {
     fn avatar(self, class_name: &str, size: &str) -> Html {
-        match self.avatar {
-            Some(option) => member_avatars(&class_name, &size)
-                .get(&option)
-                .unwrap()
-                .to_owned(),
-            None => member_avatars(&class_name, &size)
-                .get("default")
-                .unwrap()
-                .to_owned(),
-        }
+        member_avatars(&class_name, &size)
+            .get(&self.avatar)
+            .unwrap()
+            .to_owned()
     }
 }
 
@@ -66,29 +60,23 @@ impl AvatarRedndering for Member {
 pub struct MemberShort {
     pub(crate) id: i32,
     pub(crate) username: String,
-    pub(crate) avatar: Option<String>,
+    pub(crate) avatar: String,
 }
 impl MemberDefaults for MemberShort {
     fn default() -> Self {
         Self {
             id: 0,
             username: "guest".to_string(),
-            avatar: None,
+            avatar: String::from("default"),
         }
     }
 }
 impl AvatarRedndering for MemberShort {
     fn avatar(self, class_name: &str, size: &str) -> Html {
-        match self.avatar {
-            Some(option) => member_avatars(&class_name, &size)
-                .get(&option)
-                .unwrap()
-                .to_owned(),
-            None => member_avatars(&class_name, &size)
-                .get("default")
-                .unwrap()
-                .to_owned(),
-        }
+        member_avatars(&class_name, &size)
+            .get(&self.avatar)
+            .unwrap()
+            .to_owned()
     }
 }
 
@@ -96,9 +84,11 @@ impl AvatarRedndering for MemberShort {
 pub struct MultiMember {
     pub(crate) members: Vec<MemberShort>,
 }
-impl MultiMember {
-    pub fn default() -> Self {
-        Self { members: Vec::<MemberShort>::new() }
+impl MemberDefaults for MultiMember {
+    fn default() -> Self {
+        Self {
+            members: Vec::<MemberShort>::new(),
+        }
     }
 }
 
