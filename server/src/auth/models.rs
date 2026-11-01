@@ -23,15 +23,17 @@ pub struct RegisterInput {
 }
 impl TryInto<NewMember> for RegisterInput {
     type Error = AuthError;
-    fn try_into(self) -> Result<NewMember, AuthError> {
-        let password_hash = PasswordManager::validate(&self)?;
-        let username = Validator::validate_text(self.username, Some(3), Some(125))
-            .map_err(|e| AuthError::InvalidInput(format!("Username {}", e.message())))?;
-        Ok(NewMember::new(
-            username.to_string(),
-            password_hash,
-            self.email.to_string(),
-        ))
+    fn try_from(input: NewMemberInput) -> Result<Self, AuthError> {
+        let password_hash = PasswordManager::validate(&input)?;
+        let username = Validator::validate_text(input.username, Some(3), Some(125))
+            .map_err(|e| MemberError::InvalidInput(format!("Username {}", e.message())))?;
+        let email = Validator::validate_text(input.email, Some(6), Some(254))
+            .map_err(|e| MemberError::InvalidInput(format!("Email {}", e.message())))?;
+
+        if !email.contains('@') {
+            return Err(MemberError::InvalidInput("Email must contain '@'".into()).into());
+        }
+        Ok(Self::new(username, password_hash, email))
     }
 }
 
@@ -40,19 +42,17 @@ impl RegisterInput {
         if self.password.ne(&self.confirm_password) {
             return Err(AuthError::PasswordConfirmationMismatch);
         }
-        match MemberRepository::identity_exists(conn, &self.username, &self.email) {
+        let new_member = NewMember::try_from(self)?;
+        match MemberRepository::identity_exists(conn, new_member.username(), new_member.email()) {
             Err(err) => Err(AuthError::InternalError(format!("{err:?}"))),
             Ok(Some(username)) => {
-                if username == self.username {
-                    Err(AuthError::UsernameTaken)
+                if username == new_member.username() {
+                    Err(MemberError::UsernameTaken.into())
                 } else {
-                    Err(AuthError::EmailTaken)
+                    Err(MemberError::EmailTaken.into())
                 }
             }
-            Ok(None) => {
-                let new_member = RegisterInput::try_into(self)?;
-                Ok(new_member)
-            }
+            Ok(None) => Ok(new_member),
         }
     }
 }
