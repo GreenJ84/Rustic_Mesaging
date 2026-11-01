@@ -3,6 +3,7 @@ use crate::contexts::chat_context::{get_message_thread, ChatDispatch, TChatConte
 use crate::contexts::member_context::TMemberContext;
 use crate::contexts::server_context::TServerContext;
 use crate::models::message::Message;
+use crate::models::member::AvatarRedndering;
 use crate::utils::api_requests::api_put;
 use wasm_bindgen::JsCast;
 use web_sys::HtmlTextAreaElement;

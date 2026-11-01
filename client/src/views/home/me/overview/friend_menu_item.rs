@@ -2,6 +2,7 @@ use crate::comps::icon::Icon;
 use crate::comps::modal::Modal;
 use crate::contexts::member_context::{get_friends, MemberDispatch, TMemberContext};
 use crate::models::friends::FullFriend;
+use crate::models::member::AvatarRedndering;
 use crate::utils::api_requests::api_delete;
 use crate::utils::format_date;
 use gloo::net::http::Request;

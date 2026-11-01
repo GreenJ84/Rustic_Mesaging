@@ -1,6 +1,6 @@
 use crate::models::chat::Chat;
 use crate::models::friend_request::RequestDetailed;
-use crate::models::member::{Member, MemberShort};
+use crate::models::member::{Member, MemberShort, MemberDefaults};
 use crate::models::{deserialize_naive_date_time, serialize_naive_date_time};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display, Formatter};

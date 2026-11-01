@@ -1,6 +1,7 @@
 use crate::comps::modal::toggle_modal;
 use yew::prelude::*;
 
+use crate::models::member::AvatarRedndering;
 use crate::contexts::member_context::TMemberContext;
 
 #[function_component(MemberBar)]

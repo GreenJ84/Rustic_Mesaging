@@ -36,8 +36,8 @@ pub struct Member {
     pub(crate) avatar: Option<String>,
     pub(crate) created_at: NaiveDateTime,
 }
-impl Member {
-    pub fn default() -> Self {
+impl MemberDefaults for Member {
+    fn default() -> Self {
         Self {
             id: 0,
             username: "guest".to_string(),
@@ -46,8 +46,9 @@ impl Member {
             created_at: NaiveDateTime::default(),
         }
     }
-
-    pub fn avatar(self, class_name: &str, size: &str) -> Html {
+}
+impl AvatarRedndering for Member {
+    fn avatar(self, class_name: &str, size: &str) -> Html {
         match self.avatar {
             Some(option) => member_avatars(&class_name, &size)
                 .get(&option)
@@ -67,15 +68,17 @@ pub struct MemberShort {
     pub(crate) username: String,
     pub(crate) avatar: Option<String>,
 }
-impl MemberShort {
-    pub fn default() -> Self {
+impl MemberDefaults for MemberShort {
+    fn default() -> Self {
         Self {
             id: 0,
             username: "guest".to_string(),
             avatar: None,
         }
     }
-    pub fn avatar(self, class_name: &str, size: &str) -> Html {
+}
+impl AvatarRedndering for MemberShort {
+    fn avatar(self, class_name: &str, size: &str) -> Html {
         match self.avatar {
             Some(option) => member_avatars(&class_name, &size)
                 .get(&option)
@@ -97,4 +100,11 @@ impl MultiMember {
     pub fn default() -> Self {
         Self { members: Vec::<MemberShort>::new() }
     }
+}
+
+pub(crate) trait MemberDefaults {
+    fn default() -> Self;
+}
+pub(crate) trait AvatarRedndering {
+    fn avatar(self, class_name: &str, size: &str) -> Html;
 }

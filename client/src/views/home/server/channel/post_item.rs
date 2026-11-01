@@ -1,6 +1,7 @@
 use crate::comps::icon::Icon;
 use crate::contexts::member_context::TMemberContext;
 use crate::contexts::server_context::{get_channel_thread, ServerDispatch, TServerContext};
+use crate::models::member::AvatarRedndering;
 use crate::models::post::{Post, PostDetail};
 use crate::utils::api_requests::api_put;
 use wasm_bindgen::JsCast;

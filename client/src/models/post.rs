@@ -1,5 +1,5 @@
 use crate::models::friend_request::RequestDetailed;
-use crate::models::member::MemberShort;
+use crate::models::member::{MemberShort, MemberDefaults};
 use crate::models::{deserialize_naive_date_time, serialize_naive_date_time};
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};

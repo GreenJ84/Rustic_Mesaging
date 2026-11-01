@@ -1,5 +1,5 @@
 use crate::models::channel::Channel;
-use crate::models::member::Member;
+use crate::models::member::{Member, MemberDefaults};
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 

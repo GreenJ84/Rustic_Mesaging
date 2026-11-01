@@ -1,4 +1,4 @@
-use crate::models::member::{Member, MemberShort};
+use crate::models::member::{Member, MemberShort, MemberDefaults};
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use yew::Properties;

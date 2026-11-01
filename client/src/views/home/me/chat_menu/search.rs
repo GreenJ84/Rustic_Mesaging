@@ -3,6 +3,7 @@ use crate::models::member::{Member, MemberShort, MultiMember};
 use crate::models::server::{MultiServer, Server};
 use crate::utils::api_requests::api_get;
 use crate::views::home::me::chat_menu::search_item::SearchItem;
+use crate::models::member::AvatarRedndering;
 use wasm_bindgen::JsCast;
 use web_sys::{HtmlElement, HtmlInputElement};
 use yew::platform::spawn_local;
