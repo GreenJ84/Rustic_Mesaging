@@ -7,7 +7,7 @@ use crate::member::models::{ChangePasswordInput, MemberId, MemberProfile, NewMem
 use crate::member::repository::MemberRepository;
 
 use super::error::AuthError;
-use super::models::{AuthOutcome, LoginInput};
+use super::models::{AuthOutcome, LoginInput, ValidateRegistration};
 use super::password::PasswordManager;
 use super::session::{AuthenticatedPrincipal, SessionConfig, SessionMetadata, SessionService};
 use super::system_roles::{

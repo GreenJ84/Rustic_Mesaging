@@ -34,8 +34,11 @@ impl TryFrom<NewMemberInput> for NewMember {
     }
 }
 
-impl NewMemberInput {
-    pub fn validate(self, conn: &mut DbConn) -> Result<NewMember, AuthError> {
+pub trait ValidateRegistration {
+    fn validate(self, conn: &mut DbConn) -> Result<NewMember, AuthError>;
+}
+impl ValidateRegistration for NewMemberInput {
+    fn validate(self, conn: &mut DbConn) -> Result<NewMember, AuthError> {
         if self.password.ne(&self.confirm_password) {
             return Err(AuthError::PasswordConfirmationMismatch);
         }
