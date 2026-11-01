@@ -74,7 +74,7 @@ fn reports_duplicate_email_registration() {
             let body = response
                 .into_json::<serde_json::Value>()
                 .expect("conflicts return a JSON error");
-            assert_eq!(body["message"], "Email is already taken.");
+            assert_eq!(body["message"], "Email is already taken");
         }
     }
 }

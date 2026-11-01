@@ -96,9 +96,9 @@ impl From<SystemRoleError> for MemberError {
 impl From<MemberError> for ApiError {
     fn from(error: MemberError) -> Self {
         match error {
-            MemberError::NotFound => ApiError::NotFound("Member not found".to_string()),
-            MemberError::UsernameTaken => ApiError::Conflict("Username already taken".to_string()),
-            MemberError::EmailTaken => ApiError::Conflict("Email already taken".to_string()),
+            MemberError::NotFound => ApiError::NotFound(error.message()),
+            MemberError::UsernameTaken => ApiError::Conflict(error.message()),
+            MemberError::EmailTaken => ApiError::Conflict(error.message()),
             MemberError::InvalidInput(msg) => ApiError::BadRequest(msg),
             MemberError::InvalidChangeset(msg) => ApiError::BadRequest(msg),
             MemberError::InvalidSearchTerm(msg) => ApiError::BadRequest(msg),
