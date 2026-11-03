@@ -8,7 +8,8 @@ members = [
 resolver = "2"
 
 [workspace.package]
-authors = ["Jesse Greenough"]
+version = "0.1.0"
+authors = ["GreenJ84"]
 description = "Real-Time Chatting Application"
 
 
