@@ -6,36 +6,13 @@ use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
 use yew::{html, Html};
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct NewMemberInput {
-    pub username: String,
-    pub password: String,
-    pub confirm_password: String,
-    pub email: String,
-}
+pub(crate) use shared::member::NewMemberInput;
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct ChangePasswordInput {
-    pub current_password: String,
-    pub new_password: String,
-    pub confirm_password: String,
-}
+pub(crate) use shared::member::ChangePasswordInput;
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-pub struct MemberUpdateInput {
-    username: Option<String>,
-    email: Option<String>,
-    avatar: Option<String>,
-}
+pub(crate) use shared::member::MemberUpdateInput;
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct Member {
-    pub(crate) id: i32,
-    pub(crate) username: String,
-    pub(crate) email: String,
-    pub(crate) avatar: String,
-    pub(crate) created_at: NaiveDateTime,
-}
+pub(crate) use shared::member::MemberProfile as Member;
 impl MemberDefaults for Member {
     fn default() -> Self {
         Self {
@@ -56,12 +33,7 @@ impl AvatarRendering for Member {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct MemberShort {
-    pub(crate) id: i32,
-    pub(crate) username: String,
-    pub(crate) avatar: String,
-}
+pub(crate) use shared::member::MemberShort;
 impl MemberDefaults for MemberShort {
     fn default() -> Self {
         Self {
@@ -80,10 +52,7 @@ impl AvatarRendering for MemberShort {
     }
 }
 
-#[derive(Deserialize, Debug, PartialEq)]
-pub struct MultiMember {
-    pub(crate) members: Vec<MemberShort>,
-}
+pub(crate) use shared::member::MultiMemberPreview as MultiMember;
 impl MemberDefaults for MultiMember {
     fn default() -> Self {
         Self {
