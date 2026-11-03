@@ -6,6 +6,7 @@ authors.workspace = true
 description.workspace = true
 
 [dependencies]
+shared = { path = "../crates/shared" }
 # Server
 rocket = { version = "0.5.1", features = ["json", "serde_json"] }
 rocket_cors = "0.6.0"

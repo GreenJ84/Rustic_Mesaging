@@ -3,7 +3,8 @@ members = [
     "server",
     "client",
     "app_startup",
-    "testing_startup"
+    "testing_startup",
+    "crates/shared"
 ]
 resolver = "2"
 
