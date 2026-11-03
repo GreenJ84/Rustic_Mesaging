@@ -47,7 +47,7 @@ impl MemberDefaults for Member {
         }
     }
 }
-impl AvatarRedndering for Member {
+impl AvatarRendering for Member {
     fn avatar(self, class_name: &str, size: &str) -> Html {
         member_avatars(&class_name, &size)
             .get(&self.avatar)
@@ -71,7 +71,7 @@ impl MemberDefaults for MemberShort {
         }
     }
 }
-impl AvatarRedndering for MemberShort {
+impl AvatarRendering for MemberShort {
     fn avatar(self, class_name: &str, size: &str) -> Html {
         member_avatars(&class_name, &size)
             .get(&self.avatar)
@@ -95,6 +95,6 @@ impl MemberDefaults for MultiMember {
 pub(crate) trait MemberDefaults {
     fn default() -> Self;
 }
-pub(crate) trait AvatarRedndering {
+pub(crate) trait AvatarRendering {
     fn avatar(self, class_name: &str, size: &str) -> Html;
 }

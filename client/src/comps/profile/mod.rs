@@ -7,7 +7,7 @@ use crate::comps::profile::member_activity_report::MemberActivityReport;
 use crate::contexts::member_context::{
     get_friends, get_requests, get_servers, MemberDispatch, TMemberContext,
 };
-use crate::models::member::{Member, AvatarRedndering};
+use crate::models::member::{Member, AvatarRendering};
 use crate::models::server::Server;
 use crate::utils::api_requests::{api_delete, api_put};
 use crate::views::home::HomeRoute;
