@@ -1,7 +1,7 @@
 use crate::infra::{Database, DbConn};
 use crate::member::models::MemberId;
 
-use crate::chat::membership::repository::ChatMembershipRepository;
+use crate::chat::participant::repository::ChatParticipantRepository;
 use crate::chat::models::ChatId;
 use crate::chat::repository::ChatRepository;
 
@@ -29,7 +29,7 @@ impl MessageService {
         if !ChatRepository::exists(conn, chat_id)? {
             return Err(MessageError::ChatNotFound);
         }
-        if !ChatMembershipRepository::exists(conn, member_id, chat_id)? {
+        if !ChatParticipantRepository::exists(conn, member_id, chat_id)? {
             return Err(MessageError::MembershipRequired);
         }
         Ok(())

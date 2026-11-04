@@ -601,7 +601,7 @@ INSERT INTO chat (name, created_at) VALUES
 ('Sustainable Living', '2024-03-10 01:00:00');
 
 -- Insert member-chat associations (at least 2 members per chat)
-INSERT INTO member_chat (chat_id, member_id, joined_at) VALUES
+INSERT INTO chat_participant (chat_id, member_id, joined_at) VALUES
 (1, 16, '2024-03-09 09:00:00'), (1, 2, '2024-03-09 09:00:00'),
 (2, 16, '2024-03-09 09:30:00'), (2, 3, '2024-03-09 09:30:00'),
 (3, 2, '2024-03-09 10:00:00'), (3, 4, '2024-03-09 10:00:00'),

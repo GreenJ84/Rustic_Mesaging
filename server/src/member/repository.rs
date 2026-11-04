@@ -8,7 +8,7 @@ use crate::infra::{DbConn, DbError};
 use crate::member::models::{Member, MemberChangeset, MemberId, MemberShort, NewMember};
 use crate::schema::{
     chat::dsl as c_dsl, friend::dsl as f_dsl, friend_request::dsl as fr_dsl, member::dsl as m_dsl,
-    member_chat::dsl as mc_dsl, server::dsl as s_dsl, server_membership::dsl as sm_dsl,
+    chat_participant::dsl as cp_dsl, server::dsl as s_dsl, server_membership::dsl as sm_dsl,
 };
 use crate::utils::SearchValidation;
 
@@ -156,10 +156,10 @@ impl MemberRepository {
     }
 
     // TODO: Move to sub-services ===============
-    pub fn get_member_chats(conn: &mut DbConn, member_id: i32) -> Result<Vec<Chat>, DbError> {
-        mc_dsl::member_chat
-            .filter(mc_dsl::member_id.eq(member_id))
-            .inner_join(c_dsl::chat.on(mc_dsl::chat_id.eq(c_dsl::id)))
+    pub fn get_chat_participants(conn: &mut DbConn, member_id: i32) -> Result<Vec<Chat>, DbError> {
+        cp_dsl::chat_participant
+            .filter(cp_dsl::member_id.eq(member_id))
+            .inner_join(c_dsl::chat.on(cp_dsl::chat_id.eq(c_dsl::id)))
             .select(Chat::as_select())
             .load::<Chat>(conn)
             .map_err(DbError::from)

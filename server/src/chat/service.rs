@@ -4,10 +4,10 @@ use crate::infra::{Database, DbConn, DbError};
 use crate::member::models::{MemberId, MemberShort};
 
 use super::error::ChatError;
-use super::membership::models::{
-    ChatMember, ChatMemberDetails, MultiChatMemberDetails, NewChatMember, NewChatMembers,
+use super::participant::models::{
+    ChatParticipant, ChatParticipantDetails, MultiChatParticipantDetails, NewChatParticipant, NewChatParticipants,
 };
-use super::membership::repository::ChatMembershipRepository;
+use super::participant::repository::ChatParticipantRepository;
 use super::models::{
     ChatChangeset, ChatChangesetInput, ChatDetails, ChatId, MultiChatDetails, NewChat, NewChatInput,
 };
@@ -37,9 +37,9 @@ impl ChatService {
         let mut conn = self.database.get_connection()?;
         conn.transaction::<ChatDetails, ChatError, _>(|conn| {
             let chat = ChatRepository::create(conn, new_chat)?;
-            let memberships = NewChatMembers::try_from((chat.id(), added_members))?;
+            let memberships = NewChatParticipants::try_from((chat.id(), added_members))?;
 
-            ChatMembershipRepository::create_many(conn, memberships)?;
+            ChatParticipantRepository::create_many(conn, memberships)?;
             Ok(chat.into())
         })
     }
@@ -84,7 +84,7 @@ impl ChatService {
         if !ChatRepository::exists(conn, chat_id)? {
             return Err(ChatError::NotFound);
         }
-        if !ChatMembershipRepository::exists(conn, member_id, chat_id)? {
+        if !ChatParticipantRepository::exists(conn, member_id, chat_id)? {
             return Err(ChatError::NotMember);
         }
         Ok(())
@@ -95,15 +95,15 @@ impl ChatService {
         &self,
         member_id: MemberId,
         chat_id: ChatId,
-    ) -> Result<ChatMember, ChatError> {
-        let memberships = NewChatMember::from((chat_id, member_id));
+    ) -> Result<ChatParticipant, ChatError> {
+        let memberships = NewChatParticipant::from((chat_id, member_id));
 
         let mut conn = self.database.get_connection()?;
-        conn.transaction::<ChatMember, ChatError, _>(|conn| {
+        conn.transaction::<ChatParticipant, ChatError, _>(|conn| {
             if !ChatRepository::exists(conn, chat_id)? {
                 return Err(ChatError::NotFound);
             }
-            ChatMembershipRepository::create(conn, memberships).map_err(ChatError::from)
+            ChatParticipantRepository::create(conn, memberships).map_err(ChatError::from)
         })
     }
 
@@ -112,12 +112,12 @@ impl ChatService {
         member_id: MemberId,
         member_ids: Vec<MemberId>,
         chat_id: ChatId,
-    ) -> Result<Vec<ChatMember>, ChatError> {
-        let memberships = NewChatMembers::try_from((chat_id, member_ids))?;
+    ) -> Result<Vec<ChatParticipant>, ChatError> {
+        let memberships = NewChatParticipants::try_from((chat_id, member_ids))?;
 
         let mut conn = self.database.get_connection()?;
         self.require_participant(&mut conn, member_id, chat_id)?;
-        ChatMembershipRepository::create_many(&mut conn, memberships).map_err(ChatError::from)
+        ChatParticipantRepository::create_many(&mut conn, memberships).map_err(ChatError::from)
     }
 
     // Read
@@ -125,10 +125,10 @@ impl ChatService {
         &self,
         member_id: MemberId,
         chat_id: ChatId,
-    ) -> Result<MultiChatMemberDetails, ChatError> {
+    ) -> Result<MultiChatParticipantDetails, ChatError> {
         let mut conn = self.database.get_connection()?;
         self.require_participant(&mut conn, member_id, chat_id)?;
-        ChatMembershipRepository::read_many(&mut conn, chat_id).map_err(ChatError::from)
+        ChatParticipantRepository::read_many(&mut conn, chat_id).map_err(ChatError::from)
     }
 
     // Delete
@@ -136,13 +136,13 @@ impl ChatService {
         let mut conn = self.database.get_connection()?;
         conn.transaction::<(), ChatError, _>(|conn| {
             self.require_participant(conn, member_id, chat_id)?;
-            ChatMembershipRepository::delete(conn, chat_id, member_id).map_err(
+            ChatParticipantRepository::delete(conn, chat_id, member_id).map_err(
                 |error| match error {
                     DbError::NotFound => ChatError::NotMember,
                     error => ChatError::from(error),
                 },
             )?;
-            if ChatMembershipRepository::read_member_counts(conn, chat_id)? == 0 {
+            if ChatParticipantRepository::read_member_counts(conn, chat_id)? == 0 {
                 ChatRepository::delete(conn, chat_id)?;
             }
             Ok(())

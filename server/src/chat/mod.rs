@@ -4,7 +4,7 @@ pub(crate) mod repository;
 pub(crate) mod routes;
 pub(crate) mod service;
 
-pub(crate) mod membership;
+pub(crate) mod participant;
 pub(crate) mod message;
 
 pub fn get_chat_routes() -> Vec<rocket::Route> {
