@@ -65,8 +65,3 @@ pub struct MultiFriendRequest {
     pub incoming: IncomingRequests,
     pub outgoing: OutgoingRequests,
 }
-impl<'r> Responder<'r, 'r> for MultiFriendRequest {
-    fn respond_to(self, req: &'r rocket::Request<'_>) -> rocket::response::Result<'r> {
-        Response::build_from(Json(self).respond_to(req)?).ok()
-    }
-}

@@ -67,34 +67,17 @@ pub struct Friend {
     pub friend: MemberProfile,
     pub created_at: NaiveDateTime,
 }
-impl<'r> Responder<'r, 'r> for Friend {
-    fn respond_to(self, req: &'r rocket::Request<'_>) -> rocket::response::Result<'r> {
-        Response::build_from(Json(self).respond_to(req)?).ok()
-    }
-}
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct FriendPreview {
     pub friend: MemberShort,
     pub created_at: NaiveDateTime,
 }
-impl<'r> Responder<'r, 'r> for FriendPreview {
-    fn respond_to(self, req: &'r rocket::Request<'_>) -> rocket::response::Result<'r> {
-        Response::build_from(Json(self).respond_to(req)?).ok()
-    }
-}
 
 #[derive(Serialize, Debug)]
 pub struct FriendList<T> {
     pub friends: Vec<T>,
 }
-impl<'r, T> Responder<'r, 'r> for FriendList<T>
-where
-    T: Serialize,
-{
-    fn respond_to(self, req: &'r rocket::Request<'_>) -> rocket::response::Result<'r> {
-        Response::build_from(Json(self).respond_to(req)?).ok()
-    }
-}
+
 pub type MultiFriend = FriendList<Friend>;
 pub type MultiFriendPreview = FriendList<FriendPreview>;

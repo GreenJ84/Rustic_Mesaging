@@ -51,9 +51,9 @@ pub(crate) fn get_request(
 pub(crate) fn get_friend_requests(
     user: SystemUser,
     social_service: &State<SocialService>,
-) -> ApiResponse<MultiFriendRequest> {
+) -> ApiResponse<Json<MultiFriendRequest>> {
     let requests = social_service.get_friend_requests(user.member_id())?;
-    Ok(status::Custom(Status::Ok, requests))
+    Ok(status::Custom(Status::Ok, Json(requests)))
 }
 
 #[put("/<receiver_id>", data = "<input>")]
@@ -106,17 +106,17 @@ pub fn get_friend_status(
     friend_id: i32,
 ) -> ApiResponse<Json<(bool, String)>> {
     let is_friend = social_service.is_friend(user.member_id(), friend_id)?;
-    Ok(status::Custom(
-        Status::Ok,
-        Json((
-            is_friend,
-            format!(
-                "You are {}a friend with member {}",
-                if is_friend { "" } else { "NOT " },
-                friend_id
-            ),
-        )),
-    ))
+
+    let (status, message) = if is_friend {
+        (Status::Ok, "You are a friend with this member.".into())
+    } else {
+        (
+            Status::NotFound,
+            "You are NOT a friend with this member.".into(),
+        )
+    };
+
+    Ok(status::Custom(status, Json((is_friend, message))))
 }
 #[get("/<friend_id>")]
 pub fn get_friend(
