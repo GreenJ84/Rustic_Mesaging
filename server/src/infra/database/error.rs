@@ -107,3 +107,58 @@ impl DbError {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use diesel::result::DatabaseErrorKind;
+
+    use super::{DbError, DieselError};
+
+    fn database_error(kind: DatabaseErrorKind) -> DieselError {
+        DieselError::DatabaseError(kind, Box::new("test database error".to_string()))
+    }
+
+    #[test]
+    fn maps_missing_rows_to_not_found() {
+        assert!(matches!(DbError::from(DieselError::NotFound), DbError::NotFound));
+    }
+
+    #[test]
+    fn maps_unique_violation_to_conflict() {
+        assert!(matches!(
+            DbError::from(database_error(DatabaseErrorKind::UniqueViolation)),
+            DbError::Conflict(_)
+        ));
+    }
+
+    #[test]
+    fn maps_integrity_violations_to_constraint_violation() {
+        for kind in [
+            DatabaseErrorKind::ForeignKeyViolation,
+            DatabaseErrorKind::NotNullViolation,
+            DatabaseErrorKind::CheckViolation,
+        ] {
+            assert!(matches!(DbError::from(database_error(kind)), DbError::ConstraintViolation(_)));
+        }
+    }
+
+    #[test]
+    fn maps_transaction_and_retryable_errors() {
+        assert!(matches!(
+            DbError::from(database_error(DatabaseErrorKind::ReadOnlyTransaction)),
+            DbError::Transaction(_)
+        ));
+        assert!(matches!(
+            DbError::from(database_error(DatabaseErrorKind::SerializationFailure)),
+            DbError::RetryableTransaction(_)
+        ));
+    }
+
+    #[test]
+    fn maps_unclassified_database_errors_to_database() {
+        assert!(matches!(
+            DbError::from(database_error(DatabaseErrorKind::UnableToSendCommand)),
+            DbError::Database(_)
+        ));
+    }
+}

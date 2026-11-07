@@ -109,3 +109,27 @@ impl AppConfig {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::AdminCredential;
+
+    #[test]
+    fn administration_credentials_match_only_the_original_secret() {
+        let credential = AdminCredential {
+            administration_key: blake3::hash(b"test-administration-key"),
+        };
+
+        assert!(credential.matches("test-administration-key"));
+        assert!(!credential.matches("wrong-key"));
+        assert!(!credential.matches(""));
+    }
+
+    #[test]
+    fn constant_time_comparison_rejects_different_lengths() {
+        assert!(AdminCredential::constant_time_eq(b"same", b"same"));
+        assert!(!AdminCredential::constant_time_eq(b"same", b"different"));
+    }
+}
+
+// Todo:: Add testing for AppConfig::load() to ensure it correctly loads configuration from environment variables and handles errors appropriately.
