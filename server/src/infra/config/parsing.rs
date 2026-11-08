@@ -1,21 +1,27 @@
 use super::error::ConfigError;
 use std::env;
+use std::env::VarError;
 
+fn get_env_var(name: &str) -> Result<String, VarError> {
+    env::var(name).map(|value| value.trim().to_string())
+}
+/// Reads required and optional string environment variables.
 pub(super) mod env_str {
-    use super::{env, ConfigError};
 
+    use super::{get_env_var, ConfigError};
+
+    /// Reads a non-empty environment variable.
     pub fn required(name: &str) -> Result<String, ConfigError> {
-        let value = env::var(name).map_err(|_| ConfigError::Missing(name.to_string()))?;
-
-        if value.trim().is_empty() {
+        let value = get_env_var(name).map_err(|_| ConfigError::Missing(name.to_string()))?;
+        if value.is_empty() {
             return Err(ConfigError::Missing(name.to_string()));
         }
-
         Ok(value)
     }
 
+    /// Reads an environment variable or returns the supplied default.
     pub fn optional(name: &str, default: String) -> String {
-        env::var(name).unwrap_or(default)
+        get_env_var(name).unwrap_or(default)
     }
 
     #[cfg(test)]
@@ -65,32 +71,37 @@ pub(super) mod env_str {
     }
 }
 
+/// Reads required and optional boolean environment variables.
 pub(super) mod env_bool {
-    use super::{env, ConfigError};
+    use super::{get_env_var, ConfigError};
+    /// Reads and parses a required boolean environment variable.
     pub fn required(name: &str) -> Result<bool, ConfigError> {
-        let value = env::var(name).map_err(|_| ConfigError::Missing(name.to_string()))?;
+        let value = get_env_var(name).map_err(|_| ConfigError::Missing(name.to_string()))?;
 
         value
             .parse::<bool>()
             .map_err(|_| ConfigError::Invalid(name.to_string()))
     }
 
+    /// Reads an optional boolean, defaulting to `false` when absent.
     pub fn optional(name: &str) -> Result<bool, ConfigError> {
-        match env::var(name) {
+        match get_env_var(name) {
             Ok(value) => parse(&value, name),
             Err(_) => Ok(false),
         }
     }
 
+    /// Parses a boolean value and reports the variable name on failure.
     fn parse(value: &str, name: &str) -> Result<bool, ConfigError> {
         value
+            .to_lowercase()
             .parse::<bool>()
             .map_err(|_| ConfigError::Invalid(name.to_string()))
     }
 
     #[cfg(test)]
     mod tests {
-        use super::{parse, optional, required};
+        use super::{optional, parse, required};
         use crate::infra::config::error::ConfigError;
 
         #[test]
@@ -132,28 +143,30 @@ pub(super) mod env_bool {
     }
 }
 
+/// Reads comma-separated required and optional string lists.
 pub(super) mod env_list {
-    use super::{env, ConfigError};
+    use super::{get_env_var, ConfigError};
 
+    /// Reads and parses a non-empty comma-separated list.
     pub fn required(name: &str) -> Result<Vec<String>, ConfigError> {
-        let value = env::var(name).map_err(|_| ConfigError::Missing(name.to_string()))?;
-
+        let value = get_env_var(name).map_err(|_| ConfigError::Missing(name.to_string()))?;
         let values: Vec<String> = parse(value);
         if values.is_empty() {
-            return Err(ConfigError::Missing(name.to_string()));
+            return Err(ConfigError::Invalid(name.to_string()));
         }
-
         Ok(values)
     }
 
+    /// Reads a comma-separated list or returns the default when absent or blank.
     pub fn optional(name: &str, default: Vec<String>) -> Vec<String> {
-        env::var(name)
+        get_env_var(name)
             .ok()
             .map(|value| parse(value))
             .filter(|values: &Vec<String>| !values.is_empty())
             .unwrap_or(default)
     }
 
+    /// Splits, trims, and removes empty entries from a list value.
     fn parse(value: String) -> Vec<String> {
         value
             .split(',')
@@ -165,7 +178,7 @@ pub(super) mod env_list {
 
     #[cfg(test)]
     mod tests {
-        use super::{parse, optional, required};
+        use super::{optional, parse, required};
 
         #[test]
         fn parses_and_trims_comma_separated_values() {
