@@ -20,6 +20,7 @@ impl IdGenerator {
         }
     }
 
+    /// Generates a new UUID v7 value using ContextV7.
     pub fn generate_uuid(&self) -> Uuid {
         let context = self
             .context
