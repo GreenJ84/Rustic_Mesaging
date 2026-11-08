@@ -77,7 +77,7 @@ impl From<DieselError> for DbError {
 }
 impl DbError {
     pub(crate) fn log_error(&self, operation: &str) {
-        log::error!("{self:?} operation={operation}");
+        log::error!("{self} operation={operation}");
     }
 }
 
