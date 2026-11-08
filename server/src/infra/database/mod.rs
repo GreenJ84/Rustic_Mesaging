@@ -17,9 +17,15 @@ pub(crate) struct Database {
 
 impl Database {
     pub(crate) fn new(database_url: &str) -> Result<Self, DbError> {
-        Ok(Self {
+        let database = Self {
             pool: Self::establish_pool(database_url)?,
-        })
+        };
+        database
+            .pool
+            .get()
+            .map(|_| ())
+            .map_err(|error| DbError::ConnectionError(error.to_string()))?;
+        Ok(database)
     }
 
     fn establish_pool(database_url: &str) -> Result<DbPool, DbError> {
