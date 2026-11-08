@@ -1,3 +1,5 @@
+use std::{error::Error, fmt::Display};
+
 pub(crate) use diesel::result::{DatabaseErrorKind, Error as DieselError};
 
 #[derive(Debug)]
@@ -16,6 +18,24 @@ pub enum DbError {
     Transaction(DieselError),
     Database(DieselError),
 }
+impl Display for DbError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::PoolError(msg) => write!(f, "Database pool error: {msg}"),
+            Self::ConnectionError(msg) => write!(f, "Database connection error: {msg}"),
+            Self::NotFound => write!(f, "Database not found"),
+            Self::Conflict(_) => write!(f, "Database conflict"),
+            Self::ConstraintViolation(_) => write!(f, "Database constraint violation"),
+            Self::RetryableTransaction(_) => write!(f, "Database retryable transaction"),
+            Self::Serialization(_) => write!(f, "Database serialization failure"),
+            Self::QueryBuilder(_) => write!(f, "Database query construction failure"),
+            Self::Transaction(_) => write!(f, "Database transaction failure"),
+            Self::Database(_) => write!(f, "Database operation failure"),
+        }
+    }
+}
+impl Error for DbError {}
+
 impl From<DieselError> for DbError {
     fn from(error: DieselError) -> Self {
         match error {
@@ -57,54 +77,7 @@ impl From<DieselError> for DbError {
 }
 impl DbError {
     pub(crate) fn log_error(&self, operation: &str) {
-        match self {
-            Self::ConnectionError(msg) => {
-                log::error!(
-                    "{msg:?}, operation={operation}"
-                );
-            }
-            Self::NotFound => {
-                log::warn!("Database not found: operation={operation}");
-            }
-
-            Self::Conflict(error) => {
-                log::warn!("Database conflict: operation={operation}, error={error:?}");
-            }
-
-            Self::ConstraintViolation(error) => {
-                log::error!(
-                    "Database constraint violation: operation={operation}, error={error:?}"
-                );
-            }
-
-            Self::RetryableTransaction(error) => {
-                log::warn!(
-                    "Database retryable transaction: operation={operation}, error={error:?}"
-                );
-            }
-
-            Self::Serialization(error) => {
-                log::error!(
-                    "Database serialization failure: operation={operation}, error={error:?}"
-                );
-            }
-
-            Self::QueryBuilder(error) => {
-                log::error!(
-                    "Database query construction failure: operation={operation}, error={error:?}"
-                );
-            }
-
-            Self::Transaction(error) => {
-                log::error!("Database transaction failure: operation={operation}, error={error:?}");
-            }
-
-            Self::Database(error) => {
-                log::error!("Database operation failure: operation={operation}, error={error:?}");
-            }
-
-            _ => {}
-        }
+        log::error!("{self:?} operation={operation}");
     }
 }
 
@@ -120,7 +93,10 @@ mod tests {
 
     #[test]
     fn maps_missing_rows_to_not_found() {
-        assert!(matches!(DbError::from(DieselError::NotFound), DbError::NotFound));
+        assert!(matches!(
+            DbError::from(DieselError::NotFound),
+            DbError::NotFound
+        ));
     }
 
     #[test]
@@ -138,7 +114,10 @@ mod tests {
             DatabaseErrorKind::NotNullViolation,
             DatabaseErrorKind::CheckViolation,
         ] {
-            assert!(matches!(DbError::from(database_error(kind)), DbError::ConstraintViolation(_)));
+            assert!(matches!(
+                DbError::from(database_error(kind)),
+                DbError::ConstraintViolation(_)
+            ));
         }
     }
 
