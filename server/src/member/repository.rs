@@ -154,16 +154,6 @@ impl MemberRepository {
             .map(|deleted| deleted == 1)
             .map_err(DbError::from)
     }
-
-    // TODO: Move to sub-services ===============
-    pub fn get_chat_participants(conn: &mut DbConn, member_id: i32) -> Result<Vec<Chat>, DbError> {
-        cp_dsl::chat_participant
-            .filter(cp_dsl::member_id.eq(member_id))
-            .inner_join(c_dsl::chat.on(cp_dsl::chat_id.eq(c_dsl::id)))
-            .select(Chat::as_select())
-            .load::<Chat>(conn)
-            .map_err(DbError::from)
-    }
 }
 
 #[cfg(test)]
