@@ -76,6 +76,10 @@ impl SessionService {
             )?
             .ok_or(DbError::NotFound)?;
 
+            // If the current session does not belong to the member, return invalid. This prevents token reuse attacks.
+            if current.member_id != member_id {
+                return Ok(RotationResult::Invalid);
+            }
             // If the current session is already revoked or replaced, revoke all sessions in the same family and return the reused result. This prevents token reuse attacks.
             if current.consumed_at.is_some()
                 || current.revoked_at.is_some()
@@ -83,9 +87,6 @@ impl SessionService {
             {
                 SessionRepository::revoke_family(conn, current.family_id)?;
                 return Ok(RotationResult::Reused);
-            }
-            if current.member_id != member_id {
-                return Ok(RotationResult::Invalid);
             }
             // If the current session is expired, prevent rotation. Access tokens live until their expiration.
             else if current.refresh_expires_at <= SessionClock::now_naive() {
