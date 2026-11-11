@@ -3,11 +3,13 @@ use diesel::Connection;
 use crate::auth::system_roles::SystemRoleId;
 use crate::infra::{Database, DbConn, DbError, DieselError, IdGenerator};
 use crate::member::error::MemberError;
-use crate::member::models::{ChangePasswordInput, MemberId, MemberProfile, NewMemberInput};
+use crate::member::models::{
+    ChangePasswordInput, MemberId, MemberProfile, NewMember, NewMemberInput,
+};
 use crate::member::repository::MemberRepository;
 
 use super::error::AuthError;
-use super::models::{AuthOutcome, LoginInput, ValidateRegistration};
+use super::models::{AuthOutcome, LoginInput};
 use super::password::PasswordManager;
 use super::session::{AuthenticatedPrincipal, SessionConfig, SessionMetadata, SessionService};
 use super::system_roles::{
@@ -58,7 +60,19 @@ impl AuthService {
         let family_id = self.id_generator.generate_uuid();
 
         conn.transaction(|conn| {
-            let new_member = input.validate(conn)?;
+            let new_member = NewMember::try_from(input)?;
+            match MemberRepository::identity_exists(conn, new_member.username(), new_member.email())
+            {
+                Err(err) => Err(AuthError::InternalError(format!("{err:?}"))),
+                Ok(Some(username)) => {
+                    if username == new_member.username() {
+                        Err(MemberError::UsernameTaken.into())
+                    } else {
+                        Err(MemberError::EmailTaken.into())
+                    }
+                }
+                Ok(None) => Ok(()),
+            }?;
             let member =
                 MemberRepository::create(conn, new_member).map_err(map_registration_write_error)?;
             SystemRoleService::issue_registration_role(conn, member.id(), registration_role)
