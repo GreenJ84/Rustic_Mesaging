@@ -7,11 +7,15 @@ use crate::infra::{DbError, DieselError};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DeletionBlock {
     LastAdministrator,
+    ServerOwner,
+    UnderInvestigation,
 }
 impl DeletionBlock {
     pub fn message(&self) -> &str {
         match self {
             DeletionBlock::LastAdministrator => "Cannot delete the last administrator",
+            DeletionBlock::ServerOwner => "Cannot delete the server owner",
+            DeletionBlock::UnderInvestigation => "Cannot delete a member under investigation",
         }
     }
 }
