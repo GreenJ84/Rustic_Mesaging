@@ -1,8 +1,9 @@
-use crate::models::friend_request::RequestDetailed;
-use crate::models::member::{MemberShort, MemberDefaults};
-use crate::models::{deserialize_naive_date_time, serialize_naive_date_time};
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
+
+use super::friend_request::RequestDetailed;
+use super::member::MemberShort;
+use super::{AvatarRendering, ContextDefault};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct NewPost {
@@ -17,10 +18,6 @@ pub struct Post {
     pub(crate) content: String,
     author_id: i32,
     channel_id: i32,
-    #[serde(
-        serialize_with = "serialize_naive_date_time",
-        deserialize_with = "deserialize_naive_date_time"
-    )]
     created_at: NaiveDateTime,
 }
 

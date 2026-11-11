@@ -1,7 +1,9 @@
-use crate::models::member::{Member, MemberShort, MemberDefaults};
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use yew::Properties;
+
+use super::member::{Member, MemberShort};
+use super::{AvatarRendering, ContextDefault};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct FullFriend {

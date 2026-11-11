@@ -1,7 +1,10 @@
-use crate::models::channel::Channel;
-use crate::models::member::{Member, MemberDefaults};
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
+
+use super::channel::Channel;
+use super::member::Member;
+use super::{AvatarRendering, ContextDefault};
+
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct FriendRequest {

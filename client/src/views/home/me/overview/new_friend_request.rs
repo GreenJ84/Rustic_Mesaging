@@ -4,9 +4,12 @@ use crate::comps::modal_portal::ModalPortal;
 use crate::contexts::member_context::{
     get_friends, get_requests, get_servers, MemberDispatch, TMemberContext,
 };
-use crate::models::friend_request::FriendRequest;
-use crate::models::member::{Member, MemberShort, MemberDefaults};
-use crate::models::server::Server;
+use crate::models::{
+    friend_request::FriendRequest,
+    member::{Member, MemberShort},
+    server::Server,
+    ContextDefault,
+};
 use crate::utils::api_requests::{api_get, api_post, PostResponse};
 use crate::views::home::HomeRoute;
 use gloo::net::http::Request;

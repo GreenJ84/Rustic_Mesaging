@@ -1,9 +1,12 @@
 use crate::comps::modal::Modal;
-use crate::models::member::{Member, MemberShort, MultiMember, MemberDefaults};
-use crate::models::server::{MultiServer, Server};
+use crate::models::AvatarRendering;
+use crate::models::{
+    member::{Member, MemberShort, MultiMember},
+    server::{MultiServer, Server},
+    ContextDefault,
+};
 use crate::utils::api_requests::api_get;
 use crate::views::home::me::chat_menu::search_item::SearchItem;
-use crate::models::member::AvatarRendering;
 use wasm_bindgen::JsCast;
 use web_sys::{HtmlElement, HtmlInputElement};
 use yew::platform::spawn_local;

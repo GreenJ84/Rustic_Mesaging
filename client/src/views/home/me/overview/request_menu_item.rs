@@ -1,8 +1,7 @@
 use crate::comps::icon::Icon;
 use crate::comps::modal::Modal;
 use crate::contexts::member_context::{get_friends, get_requests, MemberDispatch, TMemberContext};
-use crate::models::friend_request::RequestDetailed;
-use crate::models::member::{AvatarRendering, Member};
+use crate::models::{friend_request::RequestDetailed, member::Member, AvatarRendering};
 use crate::utils::api_requests::api_delete;
 use crate::utils::format_date;
 use crate::views::home::me::overview::edit_friend_request::EditFriendRequest;

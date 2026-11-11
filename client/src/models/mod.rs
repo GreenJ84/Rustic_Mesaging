@@ -1,5 +1,6 @@
 use chrono::NaiveDateTime;
 use serde::{de, Deserialize, Deserializer, Serializer};
+use yew::Html;
 
 pub(crate) mod channel;
 pub(crate) mod chat;
@@ -25,4 +26,11 @@ where
 {
     let s = String::deserialize(deserializer)?;
     NaiveDateTime::parse_from_str(&s, "%Y-%m-%dT%H:%M:%S%.f").map_err(de::Error::custom)
+}
+
+pub(crate) trait ContextDefault {
+    fn default() -> Self;
+}
+pub(crate) trait AvatarRendering {
+    fn avatar(self, class_name: &str, size: &str) -> Html;
 }

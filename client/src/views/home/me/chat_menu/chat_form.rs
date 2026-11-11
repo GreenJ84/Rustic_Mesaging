@@ -3,8 +3,8 @@ use crate::contexts::chat_context::{get_chat_previews, ChatDispatch, TChatContex
 use crate::contexts::member_context::TMemberContext;
 use crate::models::chat::Chat;
 use crate::models::friends::FullFriend;
-use crate::models::member::AvatarRendering;
 use crate::models::server::Server;
+use crate::models::AvatarRendering;
 use crate::utils::api_requests::{api_post, api_put, PostResponse};
 use crate::views::home::me::MeRoute;
 use crate::views::home::HomeRoute;

@@ -6,7 +6,8 @@ use yew::html::ChildrenProps;
 use yew::prelude::*;
 
 use crate::models::{
-    friend_request::MultiFriendRequest, friends::MultiFriend, member::{Member, MemberDefaults}, server::MultiServer,
+    friend_request::MultiFriendRequest, friends::MultiFriend, member::Member, server::MultiServer,
+    AvatarRendering, ContextDefault,
 };
 use crate::utils::api_requests::{api_get, api_head};
 

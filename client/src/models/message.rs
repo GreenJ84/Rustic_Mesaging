@@ -1,9 +1,10 @@
-use crate::models::chat::Chat;
-use crate::models::friend_request::RequestDetailed;
-use crate::models::member::{Member, MemberShort, MemberDefaults};
-use crate::models::{deserialize_naive_date_time, serialize_naive_date_time};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display, Formatter};
+
+use super::chat::Chat;
+use super::friend_request::RequestDetailed;
+use super::member::{Member, MemberShort};
+use super::{AvatarRendering, ContextDefault};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct NewMessage {
@@ -16,10 +17,6 @@ pub struct Message {
     pub(crate) id: i32,
     pub(crate) content: String,
     pub(crate) sender: MemberShort,
-    #[serde(
-        serialize_with = "serialize_naive_date_time",
-        deserialize_with = "deserialize_naive_date_time"
-    )]
     pub(crate) created_at: chrono::NaiveDateTime,
 }
 impl Message {
