@@ -144,3 +144,54 @@ impl From<AuthError> for ApiError {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::AuthError;
+    use crate::api::ApiError;
+    use rocket::http::Status;
+
+    #[test]
+    fn maps_authentication_failures_to_expected_statuses() {
+        let cases = [
+            (AuthError::InvalidCredentials, Status::Unauthorized),
+            (AuthError::MissingAuthorization, Status::Unauthorized),
+            (AuthError::MalformedAuthorization, Status::Unauthorized),
+            (AuthError::InsufficientPrivileges, Status::Forbidden),
+            (AuthError::AccountNotFound, Status::NotFound),
+            (AuthError::AccountDisabled, Status::Forbidden),
+            (AuthError::PersistenceFailure, Status::InternalServerError),
+        ];
+
+        for (error, status) in cases {
+            assert_eq!(error.status(), status);
+        }
+    }
+
+    #[test]
+    fn converts_authentication_failures_to_api_errors() {
+        assert!(matches!(
+            ApiError::from(AuthError::InvalidCredentials),
+            ApiError::Unauthorized(_)
+        ));
+        assert!(matches!(
+            ApiError::from(AuthError::InsufficientPrivileges),
+            ApiError::Forbidden(_)
+        ));
+        assert!(matches!(
+            ApiError::from(AuthError::AccountNotFound),
+            ApiError::NotFound(_)
+        ));
+        assert!(matches!(
+            ApiError::from(AuthError::PersistenceFailure),
+            ApiError::InternalError
+        ));
+    }
+
+    #[test]
+    fn does_not_expose_internal_error_details_in_api_conversion() {
+        let error = AuthError::InternalError("database password".to_string());
+        assert_eq!(error.status(), Status::InternalServerError);
+        assert!(matches!(ApiError::from(error), ApiError::InternalError));
+    }
+}
