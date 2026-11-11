@@ -15,7 +15,7 @@ impl Validator {
     }
 
     pub fn validate_search_term(term: String) -> Result<SearchValidation, ValidationError> {
-        let search = Self::validate_text(term, Some(1), Some(100))?;
+        let search = Self::validate_text(&term, Some(1), Some(100))?;
         let escaped = Self::escape_search_pattern(&search);
         Ok(SearchValidation {
             normalized: search,
@@ -24,7 +24,7 @@ impl Validator {
     }
 
     pub fn validate_text(
-        term: String,
+        term: &str,
         min_length: Option<usize>,
         max_length: Option<usize>,
     ) -> Result<String, ValidationError> {

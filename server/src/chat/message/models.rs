@@ -30,7 +30,7 @@ impl TryFrom<(ChatId, MemberId, MessageInput)> for NewMessage {
     fn try_from(
         (chat_id, sender_id, input): (ChatId, MemberId, MessageInput),
     ) -> Result<Self, Self::Error> {
-        let content = Validator::validate_text(input.content, None, Some(2000))
+        let content = Validator::validate_text(&input.content, None, Some(2000))
             .map_err(|e| MessageError::InvalidInput(format!("Message content {}", e.message())))?;
         Ok(Self {
             content,
@@ -58,7 +58,7 @@ impl TryFrom<MessageChangesetInput> for MessageChangeset {
         let Some(content) = input.content else {
             return Err(MessageError::InvalidChangeset("No changes provided".into()));
         };
-        let content = Validator::validate_text(content, None, Some(2000)).map_err(|e| {
+        let content = Validator::validate_text(&content, None, Some(2000)).map_err(|e| {
             MessageError::InvalidChangeset(format!("Message content {}", e.message()))
         })?;
         Ok(Self {

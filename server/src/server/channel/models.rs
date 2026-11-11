@@ -12,7 +12,7 @@ use super::error::ChannelError;
 pub type ChannelId = i32;
 
 fn validate_channel_name(name: String) -> Result<String, ValidationError> {
-    Validator::validate_text(name, Some(5), Some(10))
+    Validator::validate_text(&name, Some(5), Some(10))
 }
 
 #[derive(Deserialize, Serialize, Debug, FromForm)]

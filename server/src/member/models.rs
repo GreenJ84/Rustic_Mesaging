@@ -114,7 +114,7 @@ impl TryFrom<MemberUpdateInput> for MemberChangeset {
             ));
         }
         let username = if let Some(username) = input.username {
-            let username = Validator::validate_text(username, Some(3), Some(125))
+            let username = Validator::validate_text(&username, Some(3), Some(125))
                 .map_err(|e| MemberError::InvalidChangeset(format!("Username {}", e.message())))?;
             Some(username)
         } else {
@@ -122,7 +122,7 @@ impl TryFrom<MemberUpdateInput> for MemberChangeset {
         };
 
         let email = if let Some(email) = input.email {
-            let email = Validator::validate_text(email, Some(6), Some(254))
+            let email = Validator::validate_text(&email, Some(6), Some(254))
                 .map_err(|e| MemberError::InvalidChangeset(format!("Email {}", e.message())))?;
             if !email.contains('@') {
                 return Err(MemberError::InvalidChangeset(

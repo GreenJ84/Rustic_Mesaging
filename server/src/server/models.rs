@@ -12,10 +12,10 @@ use super::errors::ServerError;
 pub type ServerId = i32;
 
 fn validate_server_name(name: String) -> Result<String, ValidationError> {
-    Validator::validate_text(name, Some(5), Some(80))
+    Validator::validate_text(&name, Some(5), Some(80))
 }
 fn validate_server_description(description: String) -> Result<String, ValidationError> {
-    Validator::validate_text(description, Some(10), Some(300))
+    Validator::validate_text(&description, Some(10), Some(300))
 }
 fn validate_server_icon(icon: Option<String>) -> Result<Option<String>, String> {
     let Some(icon) = icon else {

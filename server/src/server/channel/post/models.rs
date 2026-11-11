@@ -39,7 +39,7 @@ impl TryFrom<(MemberId, ChannelId, NewPostInput)> for NewPost {
     fn try_from(
         (member_id, channel_id, input): (MemberId, ChannelId, NewPostInput),
     ) -> Result<Self, Self::Error> {
-        let content = Validator::validate_text(input.content, None, Some(500)).map_err(|e| {
+        let content = Validator::validate_text(&input.content, None, Some(500)).map_err(|e| {
             PostError::InvalidInput(format!("Post content {}", e.message().to_string()))
         })?;
         Ok(Self {
@@ -79,7 +79,7 @@ impl TryFrom<PostChangesetInput> for PostChangeset {
             ));
         }
         let content = if let Some(content) = input.content {
-            let validated = Validator::validate_text(content, None, Some(500)).map_err(|e| {
+            let validated = Validator::validate_text(&content, None, Some(500)).map_err(|e| {
                 PostError::InvalidChangeset(format!("Post content {}", e.message().to_string()))
             })?;
             Some(validated)

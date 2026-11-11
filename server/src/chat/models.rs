@@ -24,7 +24,7 @@ pub(crate) struct NewChat {
 }
 impl NewChat {
     pub fn new(input: NewChatInput) -> Result<(Self, Vec<MemberId>), ChatError> {
-        let name = Validator::validate_text(input.name, Some(3), Some(80))
+        let name = Validator::validate_text(&input.name, Some(3), Some(80))
             .map_err(|e| ChatError::InvalidInput(format!("Chat name {}", e.message())))?;
 
         Ok((Self { name }, input.member_ids))
@@ -49,7 +49,7 @@ impl TryFrom<ChatChangesetInput> for ChatChangeset {
         let Some(name) = input.name else {
             return Err(ChatError::InvalidChangeset("No changes provided".into()));
         };
-        let name = Validator::validate_text(name, Some(3), Some(80))
+        let name = Validator::validate_text(&name, Some(3), Some(80))
             .map_err(|e| ChatError::InvalidChangeset(format!("Chat name {}", e.message())))?;
         Ok(Self { name: Some(name) })
     }
