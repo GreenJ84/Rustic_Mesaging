@@ -11,7 +11,7 @@ use crate::member::error::MemberError;
 use crate::schema::member;
 use crate::utils::Validator;
 
-pub(crate) use shared::member::*;
+pub(crate) use shared::models::member::*;
 
 // Data Models ==========================
 #[derive(Insertable)]

@@ -6,13 +6,13 @@ use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
 use yew::{html, Html};
 
-pub(crate) use shared::member::NewMemberInput;
+pub(crate) use shared::models::member::NewMemberInput;
 
-pub(crate) use shared::member::ChangePasswordInput;
+pub(crate) use shared::models::member::ChangePasswordInput;
 
-pub(crate) use shared::member::MemberUpdateInput;
+pub(crate) use shared::models::member::MemberUpdateInput;
 
-pub(crate) use shared::member::MemberProfile as Member;
+pub(crate) use shared::models::member::MemberProfile as Member;
 impl MemberDefaults for Member {
     fn default() -> Self {
         Self {
@@ -33,7 +33,7 @@ impl AvatarRendering for Member {
     }
 }
 
-pub(crate) use shared::member::MemberShort;
+pub(crate) use shared::models::member::MemberShort;
 impl MemberDefaults for MemberShort {
     fn default() -> Self {
         Self {
@@ -52,7 +52,7 @@ impl AvatarRendering for MemberShort {
     }
 }
 
-pub(crate) use shared::member::MultiMemberPreview as MultiMember;
+pub(crate) use shared::models::member::MultiMemberPreview as MultiMember;
 impl MemberDefaults for MultiMember {
     fn default() -> Self {
         Self {
