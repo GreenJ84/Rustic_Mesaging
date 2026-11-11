@@ -202,24 +202,49 @@ fn bearer_token<'a>(request: &'a Request<'_>) -> Result<&'a str, AuthError> {
     Ok(token)
 }
 
-fn constant_time_eq(left: &[u8], right: &[u8]) -> bool {
-    if left.len() != right.len() {
-        return false;
-    }
-    left.iter()
-        .zip(right)
-        .fold(0u8, |difference, (left, right)| difference | (left ^ right))
-        == 0
-}
-
 #[cfg(test)]
 mod tests {
-    use super::constant_time_eq;
+    use super::bearer_token;
+    use crate::auth::error::AuthError;
+    use rocket::http::{Header, Method};
+    use rocket::local::blocking::Client;
 
     #[test]
-    fn compares_secret_digests() {
-        assert!(constant_time_eq(b"same", b"same"));
-        assert!(!constant_time_eq(b"same", b"diff"));
-        assert!(!constant_time_eq(b"short", b"longer"));
+    fn extracts_bearer_tokens() {
+        let client = Client::tracked(rocket::build()).unwrap();
+        let mut request = client.req(Method::Get, "/");
+        request.add_header(Header::new("Authorization", "Bearer access-token"));
+
+        assert_eq!(bearer_token(&request).unwrap(), "access-token");
+    }
+
+    #[test]
+    fn rejects_missing_and_malformed_authorization_headers() {
+        let client = Client::tracked(rocket::build()).unwrap();
+        let request = client.req(Method::Get, "/");
+        assert!(matches!(
+            bearer_token(&request),
+            Err(AuthError::MissingAuthorization)
+        ));
+
+        let mut request = client.req(Method::Get, "/");
+        request.add_header(Header::new("Authorization", "Basic token"));
+        assert!(matches!(
+            bearer_token(&request),
+            Err(AuthError::MalformedAuthorization)
+        ));
+    }
+
+    #[test]
+    fn rejects_empty_or_whitespace_bearer_tokens() {
+        let client = Client::tracked(rocket::build()).unwrap();
+        for value in ["Bearer ", "Bearer access token", "Bearer\taccess"] {
+            let mut request = client.req(Method::Get, "/");
+            request.add_header(Header::new("Authorization", value));
+            assert!(matches!(
+                bearer_token(&request),
+                Err(AuthError::MalformedAuthorization)
+            ));
+        }
     }
 }
