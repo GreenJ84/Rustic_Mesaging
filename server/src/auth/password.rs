@@ -87,3 +87,65 @@ impl PasswordManager {
             .map_err(|_| PasswordError::PasswordMismatch)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{PasswordError, PasswordManager, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH};
+
+    #[test]
+    fn accepts_passwords_at_length_boundaries() {
+        let minimum = "a".repeat(MIN_PASSWORD_LENGTH);
+        let maximum = "b".repeat(MAX_PASSWORD_LENGTH);
+
+        assert!(PasswordManager::validate_candidate(&minimum, "user", "user@example.com").is_ok());
+        assert!(PasswordManager::validate_candidate(&maximum, "user", "user@example.com").is_ok());
+    }
+
+    #[test]
+    fn rejects_passwords_outside_length_bounds() {
+        let too_short = "a".repeat(MIN_PASSWORD_LENGTH - 1);
+        let too_long = "b".repeat(MAX_PASSWORD_LENGTH + 1);
+
+        assert!(matches!(
+            PasswordManager::validate_candidate(&too_short, "user", "user@example.com"),
+            Err(PasswordError::InvalidLength)
+        ));
+        assert!(matches!(
+            PasswordManager::validate_candidate(&too_long, "user", "user@example.com"),
+            Err(PasswordError::InvalidLength)
+        ));
+    }
+
+    #[test]
+    fn rejects_passwords_containing_username_or_email_case_insensitively() {
+        assert!(matches!(
+            PasswordManager::validate_candidate("SecureALICEPassword", "alice", "other@example.com"),
+            Err(PasswordError::ContainsIdentity)
+        ));
+        assert!(matches!(
+            PasswordManager::validate_candidate("Secureuser@example.comPassword", "alice", "user@example.com"),
+            Err(PasswordError::ContainsIdentity)
+        ));
+    }
+
+    #[test]
+    fn hashes_and_verifies_passwords() {
+        let password = "a-secure-password-value";
+        let hash = PasswordManager::hash(password).unwrap();
+
+        assert_ne!(hash, password);
+        assert!(PasswordManager::verify(password, &hash).is_ok());
+        assert!(matches!(
+            PasswordManager::verify("wrong-password", &hash),
+            Err(PasswordError::PasswordMismatch)
+        ));
+    }
+
+    #[test]
+    fn rejects_malformed_password_hashes() {
+        assert!(matches!(
+            PasswordManager::verify("password", "not-a-password-hash"),
+            Err(PasswordError::HashingError)
+        ));
+    }
+}
