@@ -1,15 +1,13 @@
-use chrono::NaiveDateTime;
 use diesel::dsl::case_when;
 use diesel::prelude::*;
 use diesel::sql_types::Integer;
 
-use crate::chat::models::Chat;
-use crate::infra::{DbConn, DbError};
-use crate::member::models::{Member, MemberChangeset, MemberId, MemberShort, NewMember};
-use crate::schema::{
-    chat::dsl as c_dsl, friend::dsl as f_dsl, friend_request::dsl as fr_dsl, member::dsl as m_dsl,
-    chat_participant::dsl as cp_dsl, server::dsl as s_dsl, server_membership::dsl as sm_dsl,
+use super::models::{
+    MemberChangeset, MemberDetailed, MemberDetailedRow, MemberId, MemberRow, MemberShort,
+    MemberShortRow, NewMember,
 };
+use crate::infra::{DbConn, DbError};
+use crate::schema::member::dsl as m_dsl;
 use crate::utils::SearchValidation;
 
 enum MemberIdentifier<'a> {
@@ -59,34 +57,52 @@ impl MemberRepository {
     }
 
     /// Creation =============================
-    pub(crate) fn create(conn: &mut DbConn, new_member: NewMember) -> Result<Member, DbError> {
+    pub(crate) fn create(conn: &mut DbConn, new_member: NewMember) -> Result<MemberRow, DbError> {
         diesel::insert_into(m_dsl::member)
             .values(&new_member)
-            .get_result::<Member>(conn)
+            .get_result::<MemberRow>(conn)
             .map_err(DbError::from)
     }
 
     /// Reading Data =============================
-    fn read(conn: &mut DbConn, identifier: MemberIdentifier) -> Result<Option<Member>, DbError> {
+    fn read(conn: &mut DbConn, identifier: MemberIdentifier) -> Result<Option<MemberRow>, DbError> {
         match identifier {
-            MemberIdentifier::Id(id) => m_dsl::member.find(id).first::<Member>(conn).optional(),
+            MemberIdentifier::Id(id) => m_dsl::member.find(id).first::<MemberRow>(conn).optional(),
             MemberIdentifier::Username(username) => m_dsl::member
                 .filter(m_dsl::username.eq(username))
-                .first::<Member>(conn)
+                .first::<MemberRow>(conn)
                 .optional(),
         }
         .map_err(DbError::from)
     }
-    pub fn find_by_id(conn: &mut DbConn, id: MemberId) -> Result<Option<Member>, DbError> {
+    pub(crate) fn read_full_by_id(
+        conn: &mut DbConn,
+        id: MemberId,
+    ) -> Result<Option<MemberRow>, DbError> {
         Self::read(conn, MemberIdentifier::Id(id))
     }
-    pub(crate) fn find_by_username(
+    pub(crate) fn read_full_by_username(
         conn: &mut DbConn,
         username: &str,
-    ) -> Result<Option<Member>, DbError> {
+    ) -> Result<Option<MemberRow>, DbError> {
         Self::read(conn, MemberIdentifier::Username(username))
     }
-    pub fn search_usernames(
+
+    /// Reads the profile-safe projection for a member.
+    pub(crate) fn read_detailed(
+        conn: &mut DbConn,
+        id: MemberId,
+    ) -> Result<Option<MemberDetailed>, DbError> {
+        m_dsl::member
+            .find(id)
+            .select(MemberDetailedRow::as_select())
+            .first(conn)
+            .optional()
+            .map(|member| member.map(MemberDetailed::from))
+            .map_err(DbError::from)
+    }
+
+    pub(crate) fn search_usernames(
         conn: &mut DbConn,
         search: SearchValidation,
     ) -> Result<Vec<MemberShort>, DbError> {
@@ -102,32 +118,23 @@ impl MemberRepository {
             .filter(m_dsl::username.ilike(&contains).escape('\\'))
             .order_by((relevance.asc(), m_dsl::username.asc()))
             .limit(25)
-            .select(Member::as_select())
+            .select(MemberShortRow::as_select())
             .load(conn)
-            .map(|results| results.into_iter().map(MemberShort::from).collect())
+            .map(|results: Vec<MemberShortRow>| {
+                results.into_iter().map(MemberShort::from).collect()
+            })
             .map_err(DbError::from)
     }
-    fn escape_like_pattern(value: &str) -> String {
-        let mut escaped = String::with_capacity(value.len());
-        for character in value.chars() {
-            if matches!(character, '\\' | '%' | '_') {
-                escaped.push('\\');
-            }
-            escaped.push(character);
-        }
-        escaped
-    }
-
     // Updating Data =============================
     pub(super) fn update(
         conn: &mut DbConn,
         id: MemberId,
         entity: MemberChangeset,
-    ) -> Result<Member, DbError> {
+    ) -> Result<MemberRow, DbError> {
         // Update member details by id
         diesel::update(m_dsl::member.filter(m_dsl::id.eq(id)))
             .set(entity)
-            .get_result::<Member>(conn)
+            .get_result::<MemberRow>(conn)
             .map_err(DbError::from)
     }
     pub(crate) fn update_password(
@@ -153,23 +160,5 @@ impl MemberRepository {
             .execute(conn)
             .map(|deleted| deleted == 1)
             .map_err(DbError::from)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::MemberRepository;
-
-    #[test]
-    fn escapes_like_wildcards_and_escape_characters() {
-        assert_eq!(
-            MemberRepository::escape_like_pattern(r"50%_off\today"),
-            r"50\%\_off\\today"
-        );
-    }
-
-    #[test]
-    fn leaves_plain_search_terms_unchanged() {
-        assert_eq!(MemberRepository::escape_like_pattern("alice"), "alice");
     }
 }
