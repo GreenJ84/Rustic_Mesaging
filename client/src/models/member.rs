@@ -9,7 +9,7 @@ use yew::{html, Html};
 use super::{ContextDefault, AvatarRendering};
 
 pub(crate) use shared::models::member::{
-    ChangePasswordInput, MemberProfile as Member, MemberShort, MemberUpdateInput,
+    ChangePasswordInput, MemberDetailed as Member, MemberShort, MemberUpdateInput,
     MultiMemberPreview as MultiMember, NewMemberInput,
 };
 

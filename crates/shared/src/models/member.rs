@@ -48,7 +48,7 @@ impl MemberUpdateInput {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct MemberProfile {
+pub struct MemberDetailed {
     pub id: MemberId,
     pub username: String,
     pub email: String,
@@ -68,5 +68,5 @@ pub struct MemberList<T> {
     pub members: Vec<T>,
 }
 
-pub type MultiMember = MemberList<MemberProfile>;
+pub type MultiMember = MemberList<MemberDetailed>;
 pub type MultiMemberPreview = MemberList<MemberShort>;
