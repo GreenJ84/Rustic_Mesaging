@@ -1,17 +1,12 @@
 use chrono::NaiveDateTime;
 use diesel::AsChangeset;
 use diesel::{Identifiable, Insertable, Queryable, Selectable};
-use rocket::response::Responder;
-use rocket::serde::json::Json;
-use rocket::Response;
-use serde::{Deserialize, Serialize};
-
-use crate::auth::password;
-use crate::member::error::MemberError;
-use crate::schema::member;
-use crate::utils::Validator;
 
 pub(crate) use shared::models::member::*;
+
+use super::error::MemberError;
+use crate::schema::member;
+use crate::utils::Validator;
 
 // Data Models ==========================
 #[derive(Insertable)]
@@ -44,7 +39,7 @@ impl NewMember {
 #[derive(Identifiable, Queryable, Selectable)]
 #[diesel(table_name = member)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-pub(crate) struct Member {
+pub(crate) struct MemberRow {
     #[diesel(sql_type = Int4)]
     id: MemberId,
     #[diesel(sql_type = Text)]
@@ -58,27 +53,21 @@ pub(crate) struct Member {
     #[diesel(sql_type = Timestamp)]
     created_at: NaiveDateTime,
 }
-impl Member {
-    // Encapsulation (Getter for id)
-    pub fn id(&self) -> MemberId {
-        self.id
-    }
-    pub fn username(&self) -> &str {
-        &self.username
-    }
-    pub fn password_hash(&self) -> &str {
-        &self.password_hash
-    }
-    pub fn email(&self) -> &str {
-        &self.email
-    }
-    pub fn avatar(&self) -> &str {
-        &self.avatar
-    }
+
+/// Persistence projection for member profile responses.
+#[derive(Queryable, Selectable)]
+#[diesel(table_name = member)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub(crate) struct MemberDetailedRow {
+    id: MemberId,
+    username: String,
+    email: String,
+    avatar: String,
+    created_at: NaiveDateTime,
 }
-impl From<Member> for MemberProfile {
-    fn from(member: Member) -> MemberProfile {
-        MemberProfile {
+impl From<MemberDetailedRow> for MemberDetailed {
+    fn from(member: MemberDetailedRow) -> MemberDetailed {
+        MemberDetailed {
             id: member.id,
             username: member.username,
             email: member.email,
@@ -87,8 +76,18 @@ impl From<Member> for MemberProfile {
         }
     }
 }
-impl From<Member> for MemberShort {
-    fn from(member: Member) -> MemberShort {
+
+/// Persistence projection for public member previews.
+#[derive(Queryable, Selectable)]
+#[diesel(table_name = member)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub(crate) struct MemberShortRow {
+    id: MemberId,
+    username: String,
+    avatar: String,
+}
+impl From<MemberShortRow> for MemberShort {
+    fn from(member: MemberShortRow) -> MemberShort {
         MemberShort {
             id: member.id,
             username: member.username,
@@ -100,9 +99,9 @@ impl From<Member> for MemberShort {
 #[derive(AsChangeset, Debug)]
 #[diesel(table_name = member)]
 pub(crate) struct MemberChangeset {
-    pub username: Option<String>,
-    pub email: Option<String>,
-    pub avatar: Option<String>,
+    pub(super) username: Option<String>,
+    pub(super) email: Option<String>,
+    pub(super) avatar: Option<String>,
 }
 impl TryFrom<MemberUpdateInput> for MemberChangeset {
     type Error = MemberError;
@@ -153,8 +152,8 @@ impl TryFrom<MemberUpdateInput> for MemberChangeset {
 
 #[cfg(test)]
 mod tests {
-    use super::{MemberChangeset, NewMember};
-    use crate::member::{error::MemberError, models::MemberUpdateInput};
+    use super::{MemberChangeset, MemberDetailedRow, MemberRow, MemberShortRow, NewMember, MemberDetailed, MemberShort, MemberUpdateInput};
+    use crate::member::error::MemberError;
 
     #[test]
     fn new_member_exposes_its_registration_values() {
@@ -167,6 +166,37 @@ mod tests {
         assert_eq!(member.username(), "Alice");
         assert_eq!(member.password_hash(), "password-hash");
         assert_eq!(member.email(), "alice@example.com");
+    }
+
+    #[test]
+    fn detailed_rows_convert_to_detailed_contracts() {
+        let created_at = chrono::NaiveDateTime::default();
+        let detailed = MemberDetailed::from(MemberDetailedRow {
+            id: 7,
+            username: "alice".to_string(),
+            email: "alice@example.com".to_string(),
+            avatar: "robot".to_string(),
+            created_at,
+        });
+
+        assert_eq!(detailed.id, 7);
+        assert_eq!(detailed.username, "alice");
+        assert_eq!(detailed.email, "alice@example.com");
+        assert_eq!(detailed.avatar, "robot");
+        assert_eq!(detailed.created_at, created_at);
+    }
+
+    #[test]
+    fn short_rows_convert_to_short_contracts() {
+        let short = MemberShort::from(MemberShortRow {
+            id: 7,
+            username: "alice".to_string(),
+            avatar: "robot".to_string(),
+        });
+
+        assert_eq!(short.id, 7);
+        assert_eq!(short.username, "alice");
+        assert_eq!(short.avatar, "robot");
     }
 
     #[test]
