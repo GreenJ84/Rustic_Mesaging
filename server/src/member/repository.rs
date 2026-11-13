@@ -65,27 +65,23 @@ impl MemberRepository {
     }
 
     /// Reading Data =============================
-    fn read(conn: &mut DbConn, identifier: MemberIdentifier) -> Result<Option<MemberRow>, DbError> {
-        match identifier {
-            MemberIdentifier::Id(id) => m_dsl::member.find(id).first::<MemberRow>(conn).optional(),
-            MemberIdentifier::Username(username) => m_dsl::member
-                .filter(m_dsl::username.eq(username))
-                .first::<MemberRow>(conn)
-                .optional(),
-        }
-        .map_err(DbError::from)
+    pub(crate) fn read(conn: &mut DbConn, id: MemberId) -> Result<Option<MemberRow>, DbError> {
+        m_dsl::member
+            .find(id)
+            .first::<MemberRow>(conn)
+            .optional()
+            .map_err(DbError::from)
     }
-    pub(crate) fn read_full_by_id(
-        conn: &mut DbConn,
-        id: MemberId,
-    ) -> Result<Option<MemberRow>, DbError> {
-        Self::read(conn, MemberIdentifier::Id(id))
-    }
-    pub(crate) fn read_full_by_username(
+
+    pub(crate) fn read_by_username(
         conn: &mut DbConn,
         username: &str,
     ) -> Result<Option<MemberRow>, DbError> {
-        Self::read(conn, MemberIdentifier::Username(username))
+        m_dsl::member
+            .filter(m_dsl::username.eq(username))
+            .first::<MemberRow>(conn)
+            .optional()
+            .map_err(DbError::from)
     }
 
     /// Reads the profile-safe projection for a member.
