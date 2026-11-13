@@ -17,17 +17,17 @@ pub(crate) struct NewMember {
     email: String,
 }
 impl NewMember {
-    pub fn username(&self) -> &str {
+    pub(crate) fn username(&self) -> &str {
         &self.username
     }
-    pub fn password_hash(&self) -> &str {
+    pub(crate) fn password_hash(&self) -> &str {
         &self.password_hash
     }
-    pub fn email(&self) -> &str {
+    pub(crate) fn email(&self) -> &str {
         &self.email
     }
 
-    pub fn new(username: String, password_hash: String, email: String) -> Self {
+    pub(crate) fn new(username: String, password_hash: String, email: String) -> Self {
         Self {
             username,
             password_hash,
@@ -52,6 +52,46 @@ pub(crate) struct MemberRow {
     avatar: String,
     #[diesel(sql_type = Timestamp)]
     created_at: NaiveDateTime,
+}
+impl MemberRow {
+    pub(crate) fn id(&self) -> MemberId {
+        self.id
+    }
+    pub(crate) fn username(&self) -> &str {
+        &self.username
+    }
+    pub(crate) fn password_hash(&self) -> &str {
+        &self.password_hash
+    }
+    pub(crate) fn email(&self) -> &str {
+        &self.email
+    }
+    pub(crate) fn avatar(&self) -> &str {
+        &self.avatar
+    }
+    pub(crate) fn created_at(&self) -> &NaiveDateTime {
+        &self.created_at
+    }
+}
+impl From<MemberRow> for MemberDetailed {
+    fn from(member: MemberRow) -> MemberDetailed {
+        MemberDetailed {
+            id: member.id,
+            username: member.username,
+            email: member.email,
+            avatar: member.avatar,
+            created_at: member.created_at,
+        }
+    }
+}
+impl From<MemberRow> for MemberShort {
+    fn from(member: MemberRow) -> MemberShort {
+        MemberShort {
+            id: member.id,
+            username: member.username,
+            avatar: member.avatar,
+        }
+    }
 }
 
 /// Persistence projection for member profile responses.
