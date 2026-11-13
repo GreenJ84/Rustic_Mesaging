@@ -1,37 +1,48 @@
 use rocket::http::Status;
 use rocket::response::status;
-use rocket::State;
 use rocket::serde::json::Json;
+use rocket::State;
 
 use crate::api::ApiError;
 use crate::auth::SystemUser;
 
-use super::models::{MemberProfile, MemberShort, MemberUpdateInput, MultiMemberPreview};
+use super::models::{MemberDetailed, MemberShort, MemberUpdateInput, MultiMemberPreview};
 use super::service::MemberService;
 
-use crate::server::models::MultiServer;
 use crate::ApiResponse;
 
 #[head("/")]
-pub fn head(_principal: SystemUser) -> ApiResponse<()> {
+/// Health check endpoint to verify the service is running.
+fn head(_principal: SystemUser) -> ApiResponse<()> {
     Ok(status::Custom(Status::Ok, ()))
 }
 
-/// Member creation ONLY through authenticating Registration route
 #[get("/")]
-pub fn get(user: SystemUser, member_service: &State<MemberService>) -> ApiResponse<Json<MemberProfile>> {
+/// Returns the detailed information of the authenticated member.
+fn get(user: SystemUser, member_service: &State<MemberService>) -> ApiResponse<Json<MemberDetailed>> {
     member_service
-        .get(user.member_id())
+        .get_detailed(user.member_id())
         .map(|member| status::Custom(Status::Ok, Json(member)))
         .map_err(ApiError::from)
 }
 
+#[get("/search?<search_term>")]
+/// Searches for members based on the provided search term.
+fn search_members(
+    member_service: &State<MemberService>,
+    search_term: String,
+) -> ApiResponse<Json<MultiMemberPreview>> {
+    let members = member_service.search(search_term)?;
+    Ok(status::Custom(Status::Ok, Json(members)))
+}
+
 #[patch("/", data = "<input>")]
-pub fn update(
+/// Updates the authenticated member's information based on the provided input.
+fn update(
     user: SystemUser,
     member_service: &State<MemberService>,
     input: Json<MemberUpdateInput>,
-) -> ApiResponse<Json<MemberProfile>> {
+) -> ApiResponse<Json<MemberDetailed>> {
     let input = input.into_inner();
     member_service
         .update(user.member_id(), input)
@@ -40,7 +51,8 @@ pub fn update(
 }
 
 #[delete("/")]
-pub fn delete(user: SystemUser, member_service: &State<MemberService>) -> ApiResponse<String> {
+// TODO(Severe): Route account deletion through the authenticated account lifecycle guard.
+fn delete(user: SystemUser, member_service: &State<MemberService>) -> ApiResponse<String> {
     let member_id = user.member_id();
     member_service
         .delete(member_id)
@@ -53,24 +65,7 @@ pub fn delete(user: SystemUser, member_service: &State<MemberService>) -> ApiRes
         })
 }
 
-#[get("/<username>")]
-pub fn get_by_username(
-    _user: SystemUser,
-    member_service: &State<MemberService>,
-    username: String,
-) -> ApiResponse<Json<MemberShort>> {
-    match member_service.find_by_username(username)? {
-        Some(member) => Ok(status::Custom(Status::Ok, Json(member))),
-        None => Err(ApiError::NotFound("Member not found".to_string())),
-    }
-}
-
-#[get("/search?<search_term>")]
-pub fn search_members(
-    _user: SystemUser,
-    member_service: &State<MemberService>,
-    search_term: String,
-) -> ApiResponse<Json<MultiMemberPreview>> {
-    let members = member_service.search_members(search_term)?;
-    Ok(status::Custom(Status::Ok, Json(members)))
+/// Registers the private member HTTP handlers.
+pub(super) fn routes() -> Vec<rocket::Route> {
+    routes![head, get, search_members, update, delete]
 }
