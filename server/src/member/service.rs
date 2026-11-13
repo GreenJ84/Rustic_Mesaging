@@ -1,45 +1,46 @@
 use diesel::Connection;
 
-use crate::server::models::MultiServer;
-use crate::utils::SearchValidation;
 use crate::{auth::system_roles::SystemRoleService, infra::Database, utils::Validator};
 
 use super::{
     error::{DeletionBlock, MemberError},
     models::{
-        MemberChangeset, MemberId, MemberProfile, MemberShort, MemberUpdateInput,
+        MemberChangeset, MemberDetailed, MemberId, MemberRow, MemberShort, MemberUpdateInput,
         MultiMemberPreview,
     },
     repository::MemberRepository,
 };
 
-pub struct MemberService {
+pub(crate) struct MemberService {
     database: Database,
 }
 
 impl MemberService {
-    pub fn new(database: Database) -> Self {
+    pub(crate) fn new(database: Database) -> Self {
         Self { database }
     }
 
-    /// Member creation ONLY through authenticating Registration route
-    pub fn get(&self, member_id: MemberId) -> Result<MemberProfile, MemberError> {
+    // TODO(Critical): Require an authorized admin-level request guard.
+    pub(super) fn get(&self, member_id: MemberId) -> Result<MemberRow, MemberError> {
         let mut conn = self.database.get_connection()?;
-        if let Some(member) = MemberRepository::find_by_id(&mut conn, member_id)? {
-            Ok(member.into())
+        if let Some(member) = MemberRepository::read(&mut conn, member_id)? {
+            Ok(member)
         } else {
             Err(MemberError::NotFound)
         }
     }
-    pub fn find_by_username(&self, username: String) -> Result<Option<MemberShort>, MemberError> {
+
+    // TODO(Critical): Require an authorized request guard.
+    pub(super) fn get_detailed(&self, member_id: MemberId) -> Result<MemberDetailed, MemberError> {
         let mut conn = self.database.get_connection()?;
-        if let Some(member) = MemberRepository::find_by_username(&mut conn, &username)? {
-            Ok(Some(member.into()))
+        if let Some(member) = MemberRepository::read_detailed(&mut conn, member_id)? {
+            Ok(member)
         } else {
-            Ok(None)
+            Err(MemberError::NotFound)
         }
     }
-    pub fn search_members(&self, search_term: String) -> Result<MultiMemberPreview, MemberError> {
+
+    pub(super) fn search(&self, search_term: String) -> Result<MultiMemberPreview, MemberError> {
         let search = Validator::validate_search_term(search_term).map_err(|e| {
             MemberError::InvalidSearchTerm(format!("Members search term {}", e.message()))
         })?;
@@ -49,11 +50,11 @@ impl MemberService {
         })
     }
 
-    pub fn update(
+    pub(super) fn update(
         &self,
         member_id: MemberId,
         input: MemberUpdateInput,
-    ) -> Result<MemberProfile, MemberError> {
+    ) -> Result<MemberDetailed, MemberError> {
         let input = MemberChangeset::try_from(input)?;
         let mut conn = self.database.get_connection()?;
         conn.transaction(|conn| {
@@ -70,11 +71,12 @@ impl MemberService {
                 }
             };
             let updated_member = MemberRepository::update(conn, member_id, input)?;
-            Ok(updated_member.into())
+            Ok(MemberDetailed::from(updated_member))
         })
     }
 
-    pub fn delete(&self, member_id: MemberId) -> Result<(), MemberError> {
+    // TODO(Severe): Move full account deletion behind the authenticated account lifecycle flow.
+    pub(super) fn delete(&self, member_id: MemberId) -> Result<(), MemberError> {
         let mut conn = self.database.get_connection()?;
         conn.transaction::<(), MemberError, _>(|conn| {
             if !SystemRoleService::validate_member_deletion(conn, member_id)? {
