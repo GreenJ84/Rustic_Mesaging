@@ -3,7 +3,7 @@ use diesel::query_builder::AsChangeset;
 use diesel::{Associations, Identifiable, Insertable, Queryable, Selectable};
 use serde::{Deserialize, Serialize};
 
-use crate::member::models::{Member, MemberId};
+use crate::member::models::{MemberId, MemberRow};
 use crate::schema::server;
 use crate::utils::{ValidationError, Validator};
 
@@ -146,7 +146,7 @@ impl TryFrom<ServerChangesetInput> for ServerChangeset {
 
 #[derive(Identifiable, Queryable, Selectable, Associations)]
 #[diesel(table_name = server)]
-#[diesel(belongs_to(Member, foreign_key = owner_id))]
+#[diesel(belongs_to(MemberRow, foreign_key = owner_id))]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub(super) struct Server {
     id: ServerId,

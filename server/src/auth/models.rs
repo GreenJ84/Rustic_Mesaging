@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::auth::session::AuthCredentials;
 use crate::infra::{AppConfig, DbConn};
 use crate::member::error::MemberError;
-use crate::member::models::{ChangePasswordInput, MemberProfile, NewMember, NewMemberInput};
+use crate::member::models::{ChangePasswordInput, MemberDetailed, NewMember, NewMemberInput};
 use crate::member::repository::MemberRepository;
 use crate::utils::Validator;
 
@@ -42,13 +42,13 @@ pub struct LoginInput {
 }
 
 pub(crate) struct AuthOutcome {
-    pub member: MemberProfile,
+    pub member: MemberDetailed,
     pub credentials: AuthCredentials,
 }
 // Response
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AuthenticationResponse {
-    pub member: MemberProfile,
+    pub member: MemberDetailed,
     pub token: String, // String JWT encoding
 }
 impl<'r> Responder<'r, 'r> for AuthenticationResponse {

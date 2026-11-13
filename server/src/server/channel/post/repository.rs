@@ -1,7 +1,7 @@
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SelectableHelper};
 
 use crate::infra::{DbConn, DbError};
-use crate::member::models::{Member, MemberId, MemberShort};
+use crate::member::models::{MemberId, MemberShort, MemberShortRow};
 use crate::schema::{channel::dsl as c_dsl, member::dsl as m_dsl, post::dsl as p_dsl};
 use crate::server::channel::models::ChannelId;
 use crate::server::channel::post::models::PostChangeset;
@@ -56,7 +56,7 @@ impl PostRepository {
             .find(post_id)
             .filter(p_dsl::channel_id.eq(channel_id))
             .inner_join(m_dsl::member.on(p_dsl::author_id.eq(m_dsl::id)))
-            .select((Post::as_select(), Member::as_select()))
+            .select((Post::as_select(), MemberShortRow::as_select()))
             .first(conn)
             .map(|(post, member)| {
                 let member_short = MemberShort::from(member);
@@ -78,7 +78,7 @@ impl PostRepository {
             .order_by((p_dsl::created_at.desc(), p_dsl::id.desc()))
             .limit(page_size)
             .offset(page_offset)
-            .select((Post::as_select(), Member::as_select()))
+            .select((Post::as_select(), MemberShortRow::as_select()))
             .load(conn)
             .map(|results| {
                 results

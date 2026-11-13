@@ -3,7 +3,7 @@ use diesel::{
 };
 
 use crate::infra::{DbConn, DbError};
-use crate::member::models::{Member, MemberId, MemberShort};
+use crate::member::models::{MemberId, MemberShort, MemberShortRow};
 use crate::schema::{member::dsl as m_dsl, server::dsl as s_dsl, server_membership::dsl as sm_dsl};
 use crate::server::models::{ServerId, ServerPreview};
 use crate::utils::Paginator;
@@ -68,7 +68,7 @@ impl ServerMembershipRepository {
             .order_by((m_dsl::username.asc(), m_dsl::id.desc()))
             .limit(page_size)
             .offset(page_offset)
-            .select(Member::as_select())
+            .select(MemberShortRow::as_select())
             .load(conn)
             .map(|results| results.into_iter().map(MemberShort::from).collect())
             .map_err(DbError::from)

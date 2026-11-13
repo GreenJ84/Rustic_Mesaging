@@ -3,7 +3,7 @@ use diesel::{AsChangeset, Identifiable, Insertable, Queryable, Selectable};
 use serde::{Deserialize, Serialize};
 
 use crate::chat::models::{Chat, ChatId};
-use crate::member::models::{Member, MemberId, MemberShort};
+use crate::member::models::{MemberId, MemberRow, MemberShort};
 use crate::schema::message;
 use crate::utils::{Page, Validator};
 
@@ -70,7 +70,7 @@ impl TryFrom<MessageChangesetInput> for MessageChangeset {
 #[derive(Identifiable, Queryable, Selectable, Debug)]
 #[diesel(table_name = message)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-#[diesel(belongs_to(Member, foreign_key = sender_id))]
+#[diesel(belongs_to(MemberRow, foreign_key = sender_id))]
 pub(crate) struct Message {
     id: MessageId,
     content: String,

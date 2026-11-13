@@ -5,7 +5,7 @@ use rocket::serde::json::Json;
 use rocket::serde::{Deserialize, Serialize};
 use rocket::Response;
 
-use crate::member::models::{Member, MemberId};
+use crate::member::models::{MemberId, MemberRow};
 use crate::schema::server_membership;
 use crate::server::models::{Server, ServerId};
 
@@ -19,7 +19,7 @@ pub struct NewServerMembership {
 #[derive(Queryable, Associations, Serialize, Deserialize, Debug)]
 #[diesel(table_name = server_membership)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-#[diesel(belongs_to(Member))]
+#[diesel(belongs_to(MemberRow, foreign_key = member_id))]
 #[diesel(belongs_to(Server))]
 pub struct ServerMembership {
     #[diesel(sql_type = Int4)]

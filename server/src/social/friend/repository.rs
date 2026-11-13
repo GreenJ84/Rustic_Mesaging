@@ -9,7 +9,9 @@ use super::models::{
     NewFriend,
 };
 use crate::infra::{DbConn, DbError};
-use crate::member::models::{Member, MemberId, MemberProfile, MemberShort};
+use crate::member::models::{
+    MemberDetailed, MemberDetailedRow, MemberId, MemberShort, MemberShortRow,
+};
 use crate::schema::friend::dsl as friend_dsl;
 use crate::schema::member::dsl as member_dsl;
 
@@ -53,10 +55,10 @@ impl FriendRepository {
             .filter(friend_dsl::member_id.eq(member_id))
             .filter(friend_dsl::friend_id.eq(friend_id))
             .inner_join(member_dsl::member.on(member_dsl::id.eq(other_member_id)))
-            .select((Member::as_select(), friend_dsl::created_at))
+            .select((MemberDetailedRow::as_select(), friend_dsl::created_at))
             .first(conn)
             .map(|(member, created_at)| Friend {
-                friend: MemberProfile::from(member),
+                friend: MemberDetailed::from(member),
                 created_at,
             })
             .map_err(DbError::from)
@@ -76,7 +78,7 @@ impl FriendRepository {
                     .or(friend_dsl::friend_id.eq(member_id)), // Find all friend relationships
             )
             .inner_join(member_dsl::member.on(member_dsl::id.eq(other_member_id)))
-            .select((Member::as_select(), friend_dsl::created_at))
+            .select((MemberDetailedRow::as_select(), friend_dsl::created_at))
             .order_by(friend_dsl::created_at.desc())
             .limit(25)
             .load(conn)
@@ -84,7 +86,7 @@ impl FriendRepository {
                 friends: results
                     .into_iter()
                     .map(|(member, created_at)| Friend {
-                        friend: MemberProfile::from(member),
+                        friend: MemberDetailed::from(member),
                         created_at,
                     })
                     .collect::<Vec<Friend>>(),
@@ -106,7 +108,7 @@ impl FriendRepository {
                     .or(friend_dsl::friend_id.eq(member_id)), // Find all friend relationships
             )
             .inner_join(member_dsl::member.on(member_dsl::id.eq(other_member_id)))
-            .select((Member::as_select(), friend_dsl::created_at))
+            .select((MemberShortRow::as_select(), friend_dsl::created_at))
             .order_by(friend_dsl::created_at.desc())
             .limit(25)
             .load(conn)

@@ -3,7 +3,7 @@ use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SelectableHelp
 use crate::chat::models::ChatId;
 use crate::chat::participant::models::ChatParticipantDetails;
 use crate::infra::{DbConn, DbError};
-use crate::member::models::{Member, MemberId, MemberShort};
+use crate::member::models::{MemberId, MemberShort, MemberShortRow};
 use crate::schema::{member::dsl as m_dsl, chat_participant::dsl as cp_dsl};
 
 use super::models::{ChatParticipant, NewChatParticipant, NewChatParticipants};
@@ -56,7 +56,7 @@ impl ChatParticipantRepository {
         cp_dsl::chat_participant
             .find((chat_id, member_id))
             .inner_join(m_dsl::member.on(cp_dsl::member_id.eq(m_dsl::id)))
-            .select((ChatParticipant::as_select(), Member::as_select()))
+            .select((ChatParticipant::as_select(), MemberShortRow::as_select()))
             .first(conn)
             .map(|(chat_member, member)| {
                 let member_profile = MemberShort::from(member);
@@ -72,7 +72,7 @@ impl ChatParticipantRepository {
         cp_dsl::chat_participant
             .filter(cp_dsl::chat_id.eq(chat_id))
             .inner_join(m_dsl::member.on(cp_dsl::member_id.eq(m_dsl::id)))
-            .select((ChatParticipant::as_select(), Member::as_select()))
+            .select((ChatParticipant::as_select(), MemberShortRow::as_select()))
             .load(conn)
             .map(|memberships| {
                 memberships

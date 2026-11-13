@@ -2,7 +2,7 @@ use super::models::{Message, MessageChangeset, MessageDetails, MessageId, NewMes
 use crate::chat::message::models::MultiMessageDetails;
 use crate::chat::models::ChatId;
 use crate::infra::{DbConn, DbError};
-use crate::member::models::{Member, MemberShort};
+use crate::member::models::{MemberShort, MemberShortRow};
 use crate::schema::{member::dsl as m_dsl, message::dsl as ms_dsl};
 use crate::utils::Paginator;
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SelectableHelper};
@@ -30,7 +30,7 @@ impl MessageRepository {
             .filter(ms_dsl::id.eq(id))
             .filter(ms_dsl::chat_id.eq(chat_id))
             .inner_join(m_dsl::member.on(ms_dsl::sender_id.eq(m_dsl::id)))
-            .select((Message::as_select(), Member::as_select()))
+            .select((Message::as_select(), MemberShortRow::as_select()))
             .first(conn)
             .map(|(message, member)| {
                 let member_profile = MemberShort::from(member);
@@ -63,7 +63,7 @@ impl MessageRepository {
             .limit(page_size)
             .offset(page_offset)
             .inner_join(m_dsl::member.on(ms_dsl::sender_id.eq(m_dsl::id)))
-            .select((Message::as_select(), Member::as_select()))
+            .select((Message::as_select(), MemberShortRow::as_select()))
             .load(conn)
             .map(|messages| {
                 messages

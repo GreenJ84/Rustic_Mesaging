@@ -2,7 +2,7 @@ use chrono::NaiveDateTime;
 use diesel::{AsChangeset, Associations, Identifiable, Insertable, Queryable, Selectable};
 use serde::{Deserialize, Serialize};
 
-use crate::member::models::{Member, MemberId, MemberShort};
+use crate::member::models::{MemberId, MemberRow, MemberShort};
 use crate::schema::post;
 use crate::server::channel::models::{Channel, ChannelId};
 use crate::utils::{Page, Validator};
@@ -94,7 +94,7 @@ impl TryFrom<PostChangesetInput> for PostChangeset {
 #[diesel(table_name = post)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 #[diesel(belongs_to(Channel, foreign_key = channel_id))]
-#[diesel(belongs_to(Member, foreign_key = author_id))]
+#[diesel(belongs_to(MemberRow, foreign_key = author_id))]
 pub struct Post {
     id: PostId,
     content: String,

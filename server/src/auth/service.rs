@@ -4,7 +4,7 @@ use crate::auth::system_roles::SystemRoleId;
 use crate::infra::{Database, DbConn, DbError, DieselError, IdGenerator};
 use crate::member::error::MemberError;
 use crate::member::models::{
-    ChangePasswordInput, MemberId, MemberProfile, NewMember, NewMemberInput,
+    ChangePasswordInput, MemberDetailed, MemberId, NewMember, NewMemberInput,
 };
 use crate::member::repository::MemberRepository;
 
@@ -93,7 +93,7 @@ impl AuthService {
         metadata: SessionMetadata,
     ) -> Result<AuthOutcome, AuthError> {
         let mut conn = self.database.get_connection()?;
-        let member = MemberRepository::find_by_username(&mut conn, &input.username)?
+        let member = MemberRepository::read_by_username(&mut conn, &input.username)?
             .ok_or(AuthError::InvalidCredentials)?;
         PasswordManager::verify(&input.password, member.password_hash())?;
         Self::require_role(&mut conn, member.id(), BuiltInSystemRole::User)?;
@@ -118,7 +118,7 @@ impl AuthService {
         metadata: SessionMetadata,
     ) -> Result<AuthOutcome, AuthError> {
         let mut conn = self.database.get_connection()?;
-        let member = MemberRepository::find_by_id(&mut conn, member_id)?
+        let member = MemberRepository::read(&mut conn, member_id)?
             .ok_or(AuthError::InvalidCredentials)?;
         Self::require_role(&mut conn, member.id(), BuiltInSystemRole::User)?;
         let credentials = self.sessions.rotate(
@@ -187,7 +187,7 @@ impl AuthService {
         }
 
         let mut conn = self.database.get_connection()?;
-        let member = MemberRepository::find_by_id(&mut conn, principal.member_id)?
+        let member = MemberRepository::read(&mut conn, principal.member_id)?
             .ok_or(AuthError::AccountNotFound)?;
         PasswordManager::verify(&input.current_password, member.password_hash())?;
         PasswordManager::validate_candidate(
@@ -214,10 +214,10 @@ impl AuthService {
     pub(crate) fn current_member(
         &self,
         principal: &AuthenticatedPrincipal,
-    ) -> Result<MemberProfile, AuthError> {
+    ) -> Result<MemberDetailed, AuthError> {
         let mut conn = self.database.get_connection()?;
         Self::require_role(&mut conn, principal.member_id, BuiltInSystemRole::User)?;
-        MemberRepository::find_by_id(&mut conn, principal.member_id)?
+        MemberRepository::read(&mut conn, principal.member_id)?
             .map(|member| member.into())
             .ok_or(AuthError::AccountNotFound)
     }

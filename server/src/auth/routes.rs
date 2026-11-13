@@ -8,7 +8,7 @@ use crate::api::ApiError;
 use crate::auth::guards::{ClientMetadata, RegistrationRole};
 use crate::auth::models::{AuthOutcome, AuthenticationResponse, LoginInput};
 use crate::auth::session::AuthenticatedPrincipal;
-use crate::member::models::{ChangePasswordInput, MemberId, MemberProfile, NewMemberInput};
+use crate::member::models::{ChangePasswordInput, MemberDetailed, MemberId, NewMemberInput};
 use crate::ApiResponse;
 
 const REFRESH_COOKIE: &str = "refresh_token";
@@ -102,7 +102,7 @@ pub(crate) fn update_password(
 pub(crate) fn current_member(
     service: &State<AuthService>,
     principal: AuthenticatedPrincipal,
-) -> ApiResponse<Json<MemberProfile>> {
+) -> ApiResponse<Json<MemberDetailed>> {
     let response = service.current_member(&principal).map_err(ApiError::from)?;
     Ok(status::Custom(Status::Ok, Json(response)))
 }

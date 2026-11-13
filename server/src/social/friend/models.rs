@@ -5,7 +5,7 @@ use rocket::serde::json::Json;
 use rocket::Response;
 use serde::{Deserialize, Serialize};
 
-use crate::member::models::{MemberId, MemberProfile, MemberShort};
+use crate::member::models::{MemberDetailed, MemberId, MemberShort};
 use crate::schema::friend as friend_schema;
 
 #[derive(Insertable)]
@@ -64,7 +64,7 @@ impl Friendship {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Friend {
-    pub friend: MemberProfile,
+    pub friend: MemberDetailed,
     pub created_at: NaiveDateTime,
 }
 
