@@ -5,13 +5,13 @@ use crate::auth::system_roles::SystemRoleError;
 use crate::infra::{DbError, DieselError};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum DeletionBlock {
+pub(crate) enum DeletionBlock {
     LastAdministrator,
     ServerOwner,
     UnderInvestigation,
 }
 impl DeletionBlock {
-    pub fn message(&self) -> &str {
+    pub(crate) fn message(&self) -> &str {
         match self {
             DeletionBlock::LastAdministrator => "Cannot delete the last administrator",
             DeletionBlock::ServerOwner => "Cannot delete the server owner",
@@ -21,7 +21,7 @@ impl DeletionBlock {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum MemberError {
+pub(crate) enum MemberError {
     NotFound,
 
     UsernameTaken,
@@ -36,7 +36,7 @@ pub enum MemberError {
     PersistenceFailure,
 }
 impl MemberError {
-    pub fn message(&self) -> String {
+    pub(crate) fn message(&self) -> String {
         match self {
             Self::NotFound => "Member not found".to_string(),
             Self::UsernameTaken => "Username is already taken".to_string(),
@@ -50,7 +50,7 @@ impl MemberError {
         }
     }
 
-    pub fn status(&self) -> Status {
+    pub(crate) fn status(&self) -> Status {
         match self {
             MemberError::NotFound => Status::NotFound,
             MemberError::UsernameTaken
