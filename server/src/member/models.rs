@@ -192,7 +192,10 @@ impl TryFrom<MemberUpdateInput> for MemberChangeset {
 
 #[cfg(test)]
 mod tests {
-    use super::{MemberChangeset, MemberDetailedRow, MemberRow, MemberShortRow, NewMember, MemberDetailed, MemberShort, MemberUpdateInput};
+    use super::{
+        MemberChangeset, MemberDetailed, MemberDetailedRow, MemberRow, MemberShort, MemberShortRow,
+        MemberUpdateInput, NewMember,
+    };
     use crate::member::error::MemberError;
 
     #[test]

@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
 use yew::{html, Html};
 
-use super::{ContextDefault, AvatarRendering};
+use super::{AvatarRendering, ContextDefault};
 
 pub(crate) use shared::models::member::{
     ChangePasswordInput, MemberDetailed as Member, MemberShort, MemberUpdateInput,

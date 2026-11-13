@@ -4,7 +4,7 @@ use crate::chat::models::ChatId;
 use crate::chat::participant::models::ChatParticipantDetails;
 use crate::infra::{DbConn, DbError};
 use crate::member::models::{MemberId, MemberShort, MemberShortRow};
-use crate::schema::{member::dsl as m_dsl, chat_participant::dsl as cp_dsl};
+use crate::schema::{chat_participant::dsl as cp_dsl, member::dsl as m_dsl};
 
 use super::models::{ChatParticipant, NewChatParticipant, NewChatParticipants};
 

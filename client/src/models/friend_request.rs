@@ -5,7 +5,6 @@ use super::channel::Channel;
 use super::member::Member;
 use super::{AvatarRendering, ContextDefault};
 
-
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct FriendRequest {
     pub(crate) sender_id: i32,

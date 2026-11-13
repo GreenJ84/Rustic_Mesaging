@@ -118,8 +118,8 @@ impl AuthService {
         metadata: SessionMetadata,
     ) -> Result<AuthOutcome, AuthError> {
         let mut conn = self.database.get_connection()?;
-        let member = MemberRepository::read(&mut conn, member_id)?
-            .ok_or(AuthError::InvalidCredentials)?;
+        let member =
+            MemberRepository::read(&mut conn, member_id)?.ok_or(AuthError::InvalidCredentials)?;
         Self::require_role(&mut conn, member.id(), BuiltInSystemRole::User)?;
         let credentials = self.sessions.rotate(
             &mut conn,

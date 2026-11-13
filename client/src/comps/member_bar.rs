@@ -1,8 +1,8 @@
 use crate::comps::modal::toggle_modal;
 use yew::prelude::*;
 
-use crate::models::AvatarRendering;
 use crate::contexts::member_context::TMemberContext;
+use crate::models::AvatarRendering;
 
 #[function_component(MemberBar)]
 pub fn member_bar() -> Html {

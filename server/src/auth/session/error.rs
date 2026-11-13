@@ -1,5 +1,5 @@
-use rocket::http::Status;
 use jsonwebtoken::errors::{Error as JwtError, ErrorKind};
+use rocket::http::Status;
 
 use crate::api::ApiError;
 use crate::auth::session::AuthCredentials;
@@ -48,9 +48,7 @@ impl SessionError {
             | Self::SessionRevoked
             | Self::RefreshTokenReused => Status::Unauthorized,
 
-            Self::CodecFailure | Self::PersistenceFailure => {
-                Status::InternalServerError
-            }
+            Self::CodecFailure | Self::PersistenceFailure => Status::InternalServerError,
         }
     }
 }

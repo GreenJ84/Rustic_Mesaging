@@ -1,8 +1,8 @@
 use crate::comps::icon::Icon;
 use crate::contexts::member_context::TMemberContext;
 use crate::contexts::server_context::{get_channel_thread, ServerDispatch, TServerContext};
-use crate::models::AvatarRendering;
 use crate::models::post::{Post, PostDetail};
+use crate::models::AvatarRendering;
 use crate::utils::api_requests::api_put;
 use wasm_bindgen::JsCast;
 use web_sys::HtmlTextAreaElement;

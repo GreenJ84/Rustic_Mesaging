@@ -16,10 +16,8 @@ use crate::social::{get_friend_routes, get_request_routes, service::SocialServic
 // use crate::server::routes as server_routes;
 
 pub fn build() -> Rocket<Build> {
-    let AppConfig {
-        env,
-        admin_key,
-    } = AppConfig::load().expect("Failed to read configuration file");
+    let AppConfig { env, admin_key } =
+        AppConfig::load().expect("Failed to read configuration file");
 
     let database = Database::new(&env.database_url())
         .map_err(|e| {

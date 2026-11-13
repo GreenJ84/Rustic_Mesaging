@@ -19,7 +19,10 @@ fn head(_principal: SystemUser) -> ApiResponse<()> {
 
 #[get("/")]
 /// Returns the detailed information of the authenticated member.
-fn get(user: SystemUser, member_service: &State<MemberService>) -> ApiResponse<Json<MemberDetailed>> {
+fn get(
+    user: SystemUser,
+    member_service: &State<MemberService>,
+) -> ApiResponse<Json<MemberDetailed>> {
     member_service
         .get_detailed(user.member_id())
         .map(|member| status::Custom(Status::Ok, Json(member)))

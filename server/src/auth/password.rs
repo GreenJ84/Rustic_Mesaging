@@ -119,11 +119,19 @@ mod tests {
     #[test]
     fn rejects_passwords_containing_username_or_email_case_insensitively() {
         assert!(matches!(
-            PasswordManager::validate_candidate("SecureALICEPassword", "alice", "other@example.com"),
+            PasswordManager::validate_candidate(
+                "SecureALICEPassword",
+                "alice",
+                "other@example.com"
+            ),
             Err(PasswordError::ContainsIdentity)
         ));
         assert!(matches!(
-            PasswordManager::validate_candidate("Secureuser@example.comPassword", "alice", "user@example.com"),
+            PasswordManager::validate_candidate(
+                "Secureuser@example.comPassword",
+                "alice",
+                "user@example.com"
+            ),
             Err(PasswordError::ContainsIdentity)
         ));
     }

@@ -10,11 +10,6 @@ use crate::infra::{DbConn, DbError};
 use crate::schema::member::dsl as m_dsl;
 use crate::utils::SearchValidation;
 
-enum MemberIdentifier<'a> {
-    Id(MemberId),
-    Username(&'a str),
-}
-
 /// Stateless persistence operations for members.
 pub(crate) struct MemberRepository;
 impl MemberRepository {

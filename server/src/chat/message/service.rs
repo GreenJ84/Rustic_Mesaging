@@ -1,8 +1,8 @@
 use crate::infra::{Database, DbConn};
 use crate::member::models::MemberId;
 
-use crate::chat::participant::repository::ChatParticipantRepository;
 use crate::chat::models::ChatId;
+use crate::chat::participant::repository::ChatParticipantRepository;
 use crate::chat::repository::ChatRepository;
 
 use super::error::MessageError;

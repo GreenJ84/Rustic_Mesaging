@@ -93,8 +93,7 @@ impl ApiError {
 
 impl<'r> Responder<'r, 'static> for ApiError {
     fn respond_to(self, request: &'r Request<'_>) -> response::Result<'static> {
-        rocket::response::status::Custom(self.status(), Json(self.message()))
-            .respond_to(request)
+        rocket::response::status::Custom(self.status(), Json(self.message())).respond_to(request)
     }
 }
 

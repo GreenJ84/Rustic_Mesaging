@@ -4,8 +4,8 @@ mod catchers;
 mod cors;
 mod error;
 
-pub(crate) use error::ApiError;
 pub(crate) use cors::create_cors;
+pub(crate) use error::ApiError;
 
 /// Returns all framework-level error catchers used by the application.
 pub(crate) fn get_catchers() -> Vec<rocket::Catcher> {

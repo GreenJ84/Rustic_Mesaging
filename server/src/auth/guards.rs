@@ -9,8 +9,8 @@ use rocket::State;
 use super::service::AuthService;
 use crate::auth::error::AuthError;
 use crate::auth::session::{AuthenticatedPrincipal, SessionId, SessionMetadata};
-use crate::infra::AdminCredential;
 use crate::auth::system_roles::{BuiltInSystemRole, RegistrationRoleKind, SystemRoleError};
+use crate::infra::AdminCredential;
 use crate::member::models::MemberId;
 
 /// Registration capability selected from the rotating platform secret. An
@@ -29,7 +29,9 @@ impl<'r> FromRequest<'r> for RegistrationRole {
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         let admin_credentials = match request.guard::<&State<AdminCredential>>().await {
             Outcome::Success(config) => config,
-            Outcome::Error(error) => return Outcome::Error((error.0, AuthError::PersistenceFailure)),
+            Outcome::Error(error) => {
+                return Outcome::Error((error.0, AuthError::PersistenceFailure))
+            }
             Outcome::Forward(status) => return Outcome::Forward(status),
         };
 

@@ -5,7 +5,9 @@ use rocket::serde::json::Json;
 use rocket::State;
 
 use crate::auth::SystemUser;
-use crate::chat::participant::models::{ChatParticipant, ChatParticipantDetails, MultiChatParticipantDetails};
+use crate::chat::participant::models::{
+    ChatParticipant, ChatParticipantDetails, MultiChatParticipantDetails,
+};
 use crate::member::models::{MemberId, MultiMemberPreview};
 use crate::ApiResponse;
 

@@ -4,13 +4,14 @@ use crate::infra::{Database, DbConn, DbError};
 use crate::member::models::{MemberId, MemberShort};
 
 use super::error::ChatError;
-use super::participant::models::{
-    ChatParticipant, ChatParticipantDetails, MultiChatParticipantDetails, NewChatParticipant, NewChatParticipants,
-};
-use super::participant::repository::ChatParticipantRepository;
 use super::models::{
     ChatChangeset, ChatChangesetInput, ChatDetails, ChatId, MultiChatDetails, NewChat, NewChatInput,
 };
+use super::participant::models::{
+    ChatParticipant, ChatParticipantDetails, MultiChatParticipantDetails, NewChatParticipant,
+    NewChatParticipants,
+};
+use super::participant::repository::ChatParticipantRepository;
 use super::repository::ChatRepository;
 
 pub(crate) struct ChatService {
