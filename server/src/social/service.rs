@@ -1,175 +1,149 @@
 use diesel::Connection;
-use serde::{Deserialize, Serialize};
 
-use crate::infra::{Database, DbError};
+use crate::infra::Database;
 use crate::member::models::MemberId;
 use crate::member::repository::MemberRepository;
 use crate::social::error::SocialError;
-use crate::social::friend::models::{MultiFriend, MultiFriendPreview};
+use crate::social::friend::models::NewFriend;
+use crate::social::friend::repository::FriendRepository;
+use crate::social::request::models::{FriendRequestChangeset, NewFriendRequest};
+use crate::social::request::repository::{FriendRequestDirection, FriendRequestRepository};
+use crate::utils::Validator;
+use shared::models::social::friend::{FriendDetails, MultiFriend, MultiFriendPreview};
+use shared::models::social::request::{
+    FriendRequestChangesetInput, FriendRequestCreation, FriendRequestDetailed, MultiFriendRequest,
+    NewFriendRequestInput,
+};
 
-use super::friend::models::{Friend, FriendList, FriendPreview, NewFriend};
-use super::friend::repository::FriendRepository;
-use super::request::models::{FriendRequest, MultiFriendRequest, NewFriendRequest, RequestDetails};
-use super::request::repository::{RequestRepository, RequestType};
-
-#[derive(Serialize, Deserialize, Debug)]
-pub enum RequestCreation {
-    NewFriend(Friend),
-    NewRequest(RequestDetails),
-}
 pub(crate) struct SocialService {
     database: Database,
 }
+
 impl SocialService {
-    pub fn new(database: Database) -> Self {
-        SocialService { database }
+    pub(crate) fn new(database: Database) -> Self {
+        Self { database }
     }
 
-    // ================================
-    // Request Lifecycle
-    // ================================
-    // Create
     pub(crate) fn send_friend_request(
         &self,
         member_id: MemberId,
-        receiver_id: MemberId,
-        note: String,
-    ) -> Result<RequestCreation, SocialError> {
-        if member_id == receiver_id {
+        input: NewFriendRequestInput,
+    ) -> Result<FriendRequestCreation, SocialError> {
+        if member_id == input.receiver_id {
             return Err(SocialError::SelfFriendship);
         }
+
+        let receiver_id = input.receiver_id;
         let new_request = NewFriendRequest {
             sender_id: member_id,
             receiver_id,
-            note,
+            note: normalize_note(input.note)?,
         };
 
         let mut conn = self.database.get_connection()?;
-        conn.transaction::<RequestCreation, SocialError, _>(|conn| {
+        conn.transaction::<FriendRequestCreation, SocialError, _>(|conn| {
             if !MemberRepository::exists(conn, receiver_id)? {
                 return Err(SocialError::MemberNotFound);
-            } else if FriendRepository::exists(conn, member_id, receiver_id)? {
+            }
+            if FriendRepository::exists(conn, member_id, receiver_id)? {
                 return Err(SocialError::AlreadyFriends);
             }
-            match RequestRepository::is_requested(
-                conn,
-                new_request.sender_id,
-                new_request.receiver_id,
-            ) {
-                Ok(RequestType::Incoming) => {
-                    // If the request is incoming, accept it and create a friendship
-                    let new_friendship =
-                        NewFriend::new(new_request.sender_id, new_request.receiver_id);
-                    FriendRepository::create(conn, new_friendship)?;
-                    RequestRepository::delete_request(
-                        conn,
-                        new_request.receiver_id,
-                        new_request.sender_id,
-                    )?;
-                    let friendship = FriendRepository::find(
-                        conn,
-                        new_request.sender_id,
-                        new_request.receiver_id,
-                    )?;
-                    Ok(RequestCreation::NewFriend(friendship))
+
+            match FriendRequestRepository::read_direction_for_update(conn, member_id, receiver_id)?
+            {
+                Some(FriendRequestDirection::Incoming) => {
+                    FriendRepository::create(conn, NewFriend::new(member_id, receiver_id))?;
+                    if !FriendRequestRepository::delete(conn, receiver_id, member_id)? {
+                        return Err(SocialError::RequestNotFound);
+                    }
+                    let friend = FriendRepository::read_detailed(conn, member_id, receiver_id)?
+                        .ok_or(SocialError::FriendshipNotFound)?;
+                    Ok(FriendRequestCreation::Friend(FriendDetails::from(friend)))
                 }
-                Ok(RequestType::Outgoing) => {
-                    // If the request is outgoing, return an error indicating that the request already exists
-                    Err(SocialError::RequestAlreadyExists)
+                Some(FriendRequestDirection::Outgoing) => Err(SocialError::RequestAlreadyExists),
+                None => {
+                    FriendRequestRepository::create(conn, new_request)?;
+                    let request =
+                        FriendRequestRepository::read_detailed(conn, member_id, receiver_id)?
+                            .ok_or(SocialError::RequestNotFound)?;
+                    Ok(FriendRequestCreation::Request(FriendRequestDetailed::from(
+                        request,
+                    )))
                 }
-                Err(DbError::NotFound) => {
-                    // If no request exists, create a new friend request
-                    let new_request = RequestRepository::create_request(conn, new_request)?;
-                    let new_request = RequestRepository::get_request(
-                        conn,
-                        new_request.sender_id(),
-                        new_request.receiver_id(),
-                    )?;
-                    Ok(RequestCreation::NewRequest(new_request))
-                }
-                Err(e) => Err(SocialError::from(e)),
             }
         })
     }
 
-    // Get
     pub(crate) fn get_friend_request(
         &self,
-        sender_id: MemberId,
-        receiver_id: MemberId,
-    ) -> Result<RequestDetails, SocialError> {
+        member_id: MemberId,
+        other_member_id: MemberId,
+    ) -> Result<FriendRequestDetailed, SocialError> {
         let mut conn = self.database.get_connection()?;
-        RequestRepository::get_request(&mut conn, sender_id, receiver_id).map_err(|err| match err {
-            DbError::NotFound => SocialError::RequestNotFound,
-            _ => SocialError::from(err),
-        })
+        FriendRequestRepository::read_detailed(&mut conn, member_id, other_member_id)?
+            .map(FriendRequestDetailed::from)
+            .ok_or(SocialError::RequestNotFound)
     }
+
     pub(crate) fn get_friend_requests(
         &self,
         member_id: MemberId,
     ) -> Result<MultiFriendRequest, SocialError> {
         let mut conn = self.database.get_connection()?;
-        let incoming =
-            RequestRepository::get_incoming(&mut conn, member_id).map_err(SocialError::from)?;
-        let outgoing =
-            RequestRepository::get_outgoing(&mut conn, member_id).map_err(SocialError::from)?;
+        let incoming = FriendRequestRepository::read_incoming(&mut conn, member_id)?
+            .into_iter()
+            .map(FriendRequestDetailed::from)
+            .collect();
+        let outgoing = FriendRequestRepository::read_outgoing(&mut conn, member_id)?
+            .into_iter()
+            .map(FriendRequestDetailed::from)
+            .collect();
         Ok(MultiFriendRequest { incoming, outgoing })
     }
 
-    // Update
     pub(crate) fn update_request(
         &self,
         member_id: MemberId,
         receiver_id: MemberId,
-        note: String,
+        input: FriendRequestChangesetInput,
     ) -> Result<(), SocialError> {
+        let changeset = FriendRequestChangeset {
+            note: normalize_note(input.note)?,
+        };
         let mut conn = self.database.get_connection()?;
-        let found =
-            RequestRepository::is_requested(&mut conn, member_id, receiver_id).map_err(|err| {
-                match err {
-                    DbError::NotFound => SocialError::RequestNotFound,
-                    _ => SocialError::from(err),
+        conn.transaction::<(), SocialError, _>(|conn| {
+            match FriendRequestRepository::read_direction_for_update(conn, member_id, receiver_id)?
+            {
+                Some(FriendRequestDirection::Incoming) => Err(SocialError::NotRequestSender),
+                Some(FriendRequestDirection::Outgoing) => {
+                    FriendRequestRepository::update(conn, member_id, receiver_id, changeset)?
+                        .ok_or(SocialError::RequestNotFound)?;
+                    Ok(())
                 }
-            })?;
-        match found {
-            RequestType::Incoming => Err(SocialError::NotRequestSender),
-            RequestType::Outgoing => {
-                let updated_request = NewFriendRequest {
-                    sender_id: member_id,
-                    receiver_id,
-                    note,
-                };
-                let updated_request = RequestRepository::update_request(&mut conn, updated_request)
-                    .map_err(|err| match err {
-                        DbError::NotFound => SocialError::RequestNotFound,
-                        _ => SocialError::from(err),
-                    })?;
-                Ok(())
+                None => Err(SocialError::RequestNotFound),
             }
-        }
+        })
     }
+
     pub(crate) fn accept_friend_request(
         &self,
         member_id: MemberId,
         sender_id: MemberId,
-    ) -> Result<Friend, SocialError> {
+    ) -> Result<FriendDetails, SocialError> {
         let mut conn = self.database.get_connection()?;
-        conn.transaction::<Friend, SocialError, _>(|conn| {
-            let found = RequestRepository::is_requested(conn, member_id, sender_id).map_err(
-                |err| match err {
-                    DbError::NotFound => SocialError::RequestNotFound,
-                    _ => SocialError::from(err),
-                },
-            )?;
-            match found {
-                RequestType::Incoming => {
-                    let new_friendship = NewFriend::new(sender_id, member_id);
-                    FriendRepository::create(conn, new_friendship)?;
-                    RequestRepository::delete_request(conn, sender_id, member_id)?;
-                    let friend = FriendRepository::find(conn, sender_id, member_id)?;
-                    Ok(friend)
+        conn.transaction::<FriendDetails, SocialError, _>(|conn| {
+            match FriendRequestRepository::read_direction_for_update(conn, member_id, sender_id)? {
+                Some(FriendRequestDirection::Incoming) => {
+                    FriendRepository::create(conn, NewFriend::new(sender_id, member_id))?;
+                    if !FriendRequestRepository::delete(conn, sender_id, member_id)? {
+                        return Err(SocialError::RequestNotFound);
+                    }
+                    FriendRepository::read_detailed(conn, member_id, sender_id)?
+                        .map(FriendDetails::from)
+                        .ok_or(SocialError::FriendshipNotFound)
                 }
-                RequestType::Outgoing => Err(SocialError::NotRequestRecipient),
+                Some(FriendRequestDirection::Outgoing) => Err(SocialError::NotRequestRecipient),
+                None => Err(SocialError::RequestNotFound),
             }
         })
     }
@@ -181,24 +155,16 @@ impl SocialService {
     ) -> Result<(), SocialError> {
         let mut conn = self.database.get_connection()?;
         conn.transaction::<(), SocialError, _>(|conn| {
-            let found = RequestRepository::is_requested(conn, member_id, sender_id).map_err(
-                |err| match err {
-                    DbError::NotFound => SocialError::RequestNotFound,
-                    _ => SocialError::from(err),
-                },
-            )?;
-            match found {
-                RequestType::Incoming => {
-                    RequestRepository::delete_request(conn, sender_id, member_id).map(|size| {
-                        if size < 1 {
-                            Err(SocialError::RequestNotFound)
-                        } else {
-                            Ok(())
-                        }
-                    })?;
-                    Ok(())
+            match FriendRequestRepository::read_direction_for_update(conn, member_id, sender_id)? {
+                Some(FriendRequestDirection::Incoming) => {
+                    if FriendRequestRepository::delete(conn, sender_id, member_id)? {
+                        Ok(())
+                    } else {
+                        Err(SocialError::RequestNotFound)
+                    }
                 }
-                RequestType::Outgoing => Err(SocialError::NotRequestRecipient),
+                Some(FriendRequestDirection::Outgoing) => Err(SocialError::NotRequestRecipient),
+                None => Err(SocialError::RequestNotFound),
             }
         })
     }
@@ -210,81 +176,113 @@ impl SocialService {
     ) -> Result<(), SocialError> {
         let mut conn = self.database.get_connection()?;
         conn.transaction::<(), SocialError, _>(|conn| {
-            let found =
-                RequestRepository::is_requested(conn, member_id, receiver_id).map_err(|err| {
-                    match err {
-                        DbError::NotFound => SocialError::RequestNotFound,
-                        _ => SocialError::from(err),
+            match FriendRequestRepository::read_direction_for_update(conn, member_id, receiver_id)?
+            {
+                Some(FriendRequestDirection::Incoming) => Err(SocialError::NotRequestSender),
+                Some(FriendRequestDirection::Outgoing) => {
+                    if FriendRequestRepository::delete(conn, member_id, receiver_id)? {
+                        Ok(())
+                    } else {
+                        Err(SocialError::RequestNotFound)
                     }
-                })?;
-            match found {
-                RequestType::Incoming => Err(SocialError::NotRequestSender),
-                RequestType::Outgoing => {
-                    RequestRepository::delete_request(conn, member_id, receiver_id)?;
-                    Ok(())
                 }
+                None => Err(SocialError::RequestNotFound),
             }
         })
     }
-    // ================================
-    // Friend Lifecycle
-    // ================================
-    // Create is internally handled by accepting a friend request, which creates a friendship record.
 
-    // Get
     pub(crate) fn is_friend(
         &self,
         member_id: MemberId,
         friend_id: MemberId,
     ) -> Result<bool, SocialError> {
         let mut conn = self.database.get_connection()?;
-        FriendRepository::exists(&mut conn, member_id, friend_id).map_err(|err| match err {
-            DbError::NotFound => SocialError::FriendshipNotFound,
-            _ => SocialError::from(err),
-        })
+        FriendRepository::exists(&mut conn, member_id, friend_id).map_err(SocialError::from)
     }
+
     pub(crate) fn get_friend(
         &self,
         member_id: MemberId,
         friend_id: MemberId,
-    ) -> Result<Friend, SocialError> {
+    ) -> Result<FriendDetails, SocialError> {
         let mut conn = self.database.get_connection()?;
-        FriendRepository::find(&mut conn, member_id, friend_id).map_err(|err| match err {
-            DbError::NotFound => SocialError::FriendshipNotFound,
-            _ => SocialError::from(err),
-        })
+        FriendRepository::read_detailed(&mut conn, member_id, friend_id)?
+            .map(FriendDetails::from)
+            .ok_or(SocialError::FriendshipNotFound)
     }
+
     pub(crate) fn get_member_friends(
         &self,
         member_id: MemberId,
     ) -> Result<MultiFriend, SocialError> {
         let mut conn = self.database.get_connection()?;
-        FriendRepository::find_multi(&mut conn, member_id).map_err(SocialError::from)
+        let friends = FriendRepository::read_many_detailed(&mut conn, member_id)?
+            .into_iter()
+            .map(FriendDetails::from)
+            .collect();
+        Ok(MultiFriend { friends })
     }
+
     pub(crate) fn get_member_friend_previews(
         &self,
         member_id: MemberId,
     ) -> Result<MultiFriendPreview, SocialError> {
         let mut conn = self.database.get_connection()?;
-        FriendRepository::find_multi_preview(&mut conn, member_id).map_err(SocialError::from)
+        let friends = FriendRepository::read_many_short(&mut conn, member_id)?
+            .into_iter()
+            .map(Into::into)
+            .collect();
+        Ok(MultiFriendPreview { friends })
     }
-    // Delete
+
     pub(crate) fn remove_friend(
         &self,
         member_id: MemberId,
         friend_id: MemberId,
     ) -> Result<(), SocialError> {
         let mut conn = self.database.get_connection()?;
-        match FriendRepository::delete(&mut conn, member_id, friend_id) {
-            Ok(size) => {
-                if size == 0 {
-                    Err(SocialError::FriendshipNotFound)
-                } else {
-                    Ok(())
-                }
-            }
-            Err(DbError::NotFound) => Err(SocialError::FriendshipNotFound),
-            Err(e) => Err(SocialError::Persistence(e)),
+        if FriendRepository::delete(&mut conn, member_id, friend_id)? {
+            Ok(())
+        } else {
+            Err(SocialError::FriendshipNotFound)
         }
+    }
+}
+
+fn normalize_note(note: Option<String>) -> Result<Option<String>, SocialError> {
+    let Some(note) = note else {
+        return Ok(None);
+    };
+    if note.trim().is_empty() {
+        return Ok(None);
+    }
+    Validator::validate_text(&note, Some(1), Some(500))
+        .map(Some)
+        .map_err(|error| {
+            SocialError::InvalidInput(format!("Friend request note {}", error.message()))
+        })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::normalize_note;
+    use crate::social::error::SocialError;
+
+    #[test]
+    fn normalizes_optional_request_notes() {
+        assert_eq!(normalize_note(None).unwrap(), None);
+        assert_eq!(normalize_note(Some("   ".into())).unwrap(), None);
+        assert_eq!(
+            normalize_note(Some("  Let's connect  ".into())).unwrap(),
+            Some("Let's connect".into())
+        );
+    }
+
+    #[test]
+    fn rejects_request_notes_over_the_limit() {
+        assert!(matches!(
+            normalize_note(Some("a".repeat(501))),
+            Err(SocialError::InvalidInput(_))
+        ));
     }
 }
