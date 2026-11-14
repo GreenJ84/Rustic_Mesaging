@@ -1,73 +1,80 @@
-use chrono::NaiveDateTime;
 use diesel::dsl::case_when;
-use diesel::{
-    BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SelectableHelper,
-};
+use diesel::prelude::*;
 
 use super::models::{
-    normalize_friendship, Friend, FriendPreview, Friendship, MultiFriend, MultiFriendPreview,
-    NewFriend,
+    normalize_friendship, FriendDetailedRow, FriendRow, FriendShortRow, NewFriend,
 };
 use crate::infra::{DbConn, DbError};
-use crate::member::models::{
-    MemberDetailed, MemberDetailedRow, MemberId, MemberShort, MemberShortRow,
-};
+use crate::member::models::{MemberDetailedRow, MemberId, MemberShortRow};
 use crate::schema::friend::dsl as friend_dsl;
 use crate::schema::member::dsl as member_dsl;
 
 pub(in crate::social) struct FriendRepository;
+
 impl FriendRepository {
-    // Create
     pub(in crate::social) fn create(
         conn: &mut DbConn,
-        new_friendship: NewFriend,
-    ) -> Result<Friendship, DbError> {
+        new_friend: NewFriend,
+    ) -> Result<FriendRow, DbError> {
         diesel::insert_into(friend_dsl::friend)
-            .values(&new_friendship)
-            .returning(Friendship::as_returning())
+            .values(&new_friend)
+            .returning(FriendRow::as_returning())
             .get_result(conn)
             .map_err(DbError::from)
     }
-    // Get
+
     pub(in crate::social) fn exists(
         conn: &mut DbConn,
         member_id: MemberId,
         friend_id: MemberId,
     ) -> Result<bool, DbError> {
-        let (member_id, friend_id) = normalize_friendship(member_id, friend_id);
-        diesel::select(diesel::dsl::exists(
-            friend_dsl::friend.find((member_id, friend_id)),
-        ))
-        .get_result::<bool>(conn)
-        .map_err(DbError::from)
+        let pair = normalize_friendship(member_id, friend_id);
+        diesel::select(diesel::dsl::exists(friend_dsl::friend.find(pair)))
+            .get_result(conn)
+            .map_err(DbError::from)
     }
 
-    pub(in crate::social) fn find(
+    pub(in crate::social) fn read(
         conn: &mut DbConn,
         member_id: MemberId,
         friend_id: MemberId,
-    ) -> Result<Friend, DbError> {
-        let other_member_id = case_when(friend_dsl::member_id.eq(member_id), friend_dsl::friend_id)
-            .otherwise(friend_dsl::member_id);
-
-        let (member_id, friend_id) = normalize_friendship(member_id, friend_id);
+    ) -> Result<Option<FriendRow>, DbError> {
+        let pair = normalize_friendship(member_id, friend_id);
         friend_dsl::friend
-            .filter(friend_dsl::member_id.eq(member_id))
-            .filter(friend_dsl::friend_id.eq(friend_id))
+            .find(pair)
+            .select(FriendRow::as_select())
+            .first(conn)
+            .optional()
+            .map_err(DbError::from)
+    }
+
+    pub(in crate::social) fn read_detailed(
+        conn: &mut DbConn,
+        member_id: MemberId,
+        friend_id: MemberId,
+    ) -> Result<Option<FriendDetailedRow>, DbError> {
+        let requester_id = member_id;
+        let pair = normalize_friendship(member_id, friend_id);
+        let other_member_id = case_when(
+            friend_dsl::member_id.eq(requester_id),
+            friend_dsl::friend_id,
+        )
+        .otherwise(friend_dsl::member_id);
+
+        friend_dsl::friend
+            .find(pair)
             .inner_join(member_dsl::member.on(member_dsl::id.eq(other_member_id)))
             .select((MemberDetailedRow::as_select(), friend_dsl::created_at))
             .first(conn)
-            .map(|(member, created_at)| Friend {
-                friend: MemberDetailed::from(member),
-                created_at,
-            })
+            .optional()
+            .map(|row| row.map(|(friend, created_at)| FriendDetailedRow { friend, created_at }))
             .map_err(DbError::from)
     }
 
-    pub(in crate::social) fn find_multi(
+    pub(in crate::social) fn read_many_detailed(
         conn: &mut DbConn,
         member_id: MemberId,
-    ) -> Result<MultiFriend, DbError> {
+    ) -> Result<Vec<FriendDetailedRow>, DbError> {
         let other_member_id = case_when(friend_dsl::member_id.eq(member_id), friend_dsl::friend_id)
             .otherwise(friend_dsl::member_id);
 
@@ -75,29 +82,29 @@ impl FriendRepository {
             .filter(
                 friend_dsl::member_id
                     .eq(member_id)
-                    .or(friend_dsl::friend_id.eq(member_id)), // Find all friend relationships
+                    .or(friend_dsl::friend_id.eq(member_id)),
             )
             .inner_join(member_dsl::member.on(member_dsl::id.eq(other_member_id)))
             .select((MemberDetailedRow::as_select(), friend_dsl::created_at))
-            .order_by(friend_dsl::created_at.desc())
+            .order_by((
+                friend_dsl::created_at.desc(),
+                friend_dsl::member_id.asc(),
+                friend_dsl::friend_id.asc(),
+            ))
             .limit(25)
             .load(conn)
-            .map(|results| MultiFriend {
-                friends: results
-                    .into_iter()
-                    .map(|(member, created_at)| Friend {
-                        friend: MemberDetailed::from(member),
-                        created_at,
-                    })
-                    .collect::<Vec<Friend>>(),
+            .map(|rows: Vec<(MemberDetailedRow, _)>| {
+                rows.into_iter()
+                    .map(|(friend, created_at)| FriendDetailedRow { friend, created_at })
+                    .collect()
             })
             .map_err(DbError::from)
     }
 
-    pub(in crate::social) fn find_multi_preview(
+    pub(in crate::social) fn read_many_short(
         conn: &mut DbConn,
         member_id: MemberId,
-    ) -> Result<MultiFriendPreview, DbError> {
+    ) -> Result<Vec<FriendShortRow>, DbError> {
         let other_member_id = case_when(friend_dsl::member_id.eq(member_id), friend_dsl::friend_id)
             .otherwise(friend_dsl::member_id);
 
@@ -105,36 +112,34 @@ impl FriendRepository {
             .filter(
                 friend_dsl::member_id
                     .eq(member_id)
-                    .or(friend_dsl::friend_id.eq(member_id)), // Find all friend relationships
+                    .or(friend_dsl::friend_id.eq(member_id)),
             )
             .inner_join(member_dsl::member.on(member_dsl::id.eq(other_member_id)))
             .select((MemberShortRow::as_select(), friend_dsl::created_at))
-            .order_by(friend_dsl::created_at.desc())
+            .order_by((
+                friend_dsl::created_at.desc(),
+                friend_dsl::member_id.asc(),
+                friend_dsl::friend_id.asc(),
+            ))
             .limit(25)
             .load(conn)
-            .map(|results| MultiFriendPreview {
-                friends: results
-                    .into_iter()
-                    .map(|(member, created_at)| FriendPreview {
-                        friend: MemberShort::from(member),
-                        created_at,
-                    })
-                    .collect::<Vec<FriendPreview>>(),
+            .map(|rows: Vec<(MemberShortRow, _)>| {
+                rows.into_iter()
+                    .map(|(friend, created_at)| FriendShortRow { friend, created_at })
+                    .collect()
             })
             .map_err(DbError::from)
     }
 
-    // Friendship Updates are not supported.
-
-    // Delete
     pub(in crate::social) fn delete(
         conn: &mut DbConn,
         member_id: MemberId,
         friend_id: MemberId,
-    ) -> Result<usize, DbError> {
-        let (member_id, friend_id) = normalize_friendship(member_id, friend_id);
-        diesel::delete(friend_dsl::friend.find((member_id, friend_id)))
+    ) -> Result<bool, DbError> {
+        let pair = normalize_friendship(member_id, friend_id);
+        diesel::delete(friend_dsl::friend.find(pair))
             .execute(conn)
+            .map(|deleted| deleted == 1)
             .map_err(DbError::from)
     }
 }
