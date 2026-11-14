@@ -1,29 +1,20 @@
 use chrono::NaiveDateTime;
 use diesel::{Insertable, Queryable, Selectable};
-use rocket::response::Responder;
-use rocket::serde::json::Json;
-use rocket::Response;
-use serde::{Deserialize, Serialize};
 
-use crate::member::models::{MemberDetailed, MemberId, MemberShort};
+use crate::member::models::{
+    MemberDetailed, MemberDetailedRow, MemberId, MemberShort, MemberShortRow,
+};
 use crate::schema::friend as friend_schema;
+use shared::models::social::friend::{Friend, FriendDetails, FriendShort};
 
 #[derive(Insertable)]
 #[diesel(table_name = friend_schema)]
-pub struct NewFriend {
+pub(in crate::social) struct NewFriend {
     member_id: MemberId,
     friend_id: MemberId,
 }
 impl NewFriend {
-    pub fn member_id(&self) -> MemberId {
-        self.member_id
-    }
-    pub fn friend_id(&self) -> MemberId {
-        self.friend_id
-    }
-
-    // Order id's to avoid duplication
-    pub fn new(member_id: MemberId, friend_id: MemberId) -> Self {
+    pub(in crate::social) fn new(member_id: MemberId, friend_id: MemberId) -> Self {
         let (member_id, friend_id) = normalize_friendship(member_id, friend_id);
         Self {
             member_id,
@@ -45,39 +36,94 @@ pub(super) fn normalize_friendship(
 
 #[derive(Queryable, Selectable)]
 #[diesel(table_name = friend_schema)]
-pub struct Friendship {
+pub(in crate::social) struct FriendRow {
     member_id: MemberId,
     friend_id: MemberId,
     created_at: NaiveDateTime,
 }
-impl Friendship {
-    pub fn member_id(&self) -> MemberId {
+
+impl FriendRow {
+    pub(in crate::social) fn member_id(&self) -> MemberId {
         self.member_id
     }
-    pub fn friend_id(&self) -> MemberId {
+
+    pub(in crate::social) fn friend_id(&self) -> MemberId {
         self.friend_id
     }
-    pub fn created_at(&self) -> NaiveDateTime {
+
+    pub(in crate::social) fn created_at(&self) -> NaiveDateTime {
         self.created_at
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct Friend {
-    pub friend: MemberDetailed,
-    pub created_at: NaiveDateTime,
+impl From<FriendRow> for Friend {
+    fn from(row: FriendRow) -> Self {
+        Self {
+            member_id: row.member_id,
+            friend_id: row.friend_id,
+            created_at: row.created_at,
+        }
+    }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct FriendPreview {
-    pub friend: MemberShort,
-    pub created_at: NaiveDateTime,
+pub(in crate::social) struct FriendDetailedRow {
+    pub(super) friend: MemberDetailedRow,
+    pub(super) created_at: NaiveDateTime,
 }
 
-#[derive(Serialize, Debug)]
-pub struct FriendList<T> {
-    pub friends: Vec<T>,
+impl From<FriendDetailedRow> for FriendDetails {
+    fn from(row: FriendDetailedRow) -> Self {
+        Self {
+            friend: MemberDetailed::from(row.friend),
+            created_at: row.created_at,
+        }
+    }
 }
 
-pub type MultiFriend = FriendList<Friend>;
-pub type MultiFriendPreview = FriendList<FriendPreview>;
+pub(in crate::social) struct FriendShortRow {
+    pub(super) friend: MemberShortRow,
+    pub(super) created_at: NaiveDateTime,
+}
+
+impl From<FriendShortRow> for FriendShort {
+    fn from(row: FriendShortRow) -> Self {
+        Self {
+            friend: MemberShort::from(row.friend),
+            created_at: row.created_at,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{normalize_friendship, FriendRow, NewFriend};
+    use shared::models::social::friend::Friend;
+
+    #[test]
+    fn normalizes_friendship_ids_into_canonical_order() {
+        assert_eq!(normalize_friendship(4, 9), (4, 9));
+        assert_eq!(normalize_friendship(9, 4), (4, 9));
+    }
+
+    #[test]
+    fn new_friend_uses_canonical_id_order() {
+        let friend = NewFriend::new(9, 4);
+
+        assert_eq!(friend.member_id, 4);
+        assert_eq!(friend.friend_id, 9);
+    }
+
+    #[test]
+    fn row_converts_to_shared_friend_contract() {
+        let created_at = chrono::NaiveDateTime::default();
+        let friend = Friend::from(FriendRow {
+            member_id: 4,
+            friend_id: 9,
+            created_at,
+        });
+
+        assert_eq!(friend.member_id, 4);
+        assert_eq!(friend.friend_id, 9);
+        assert_eq!(friend.created_at, created_at);
+    }
+}
