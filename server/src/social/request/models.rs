@@ -1,67 +1,95 @@
 use chrono::NaiveDateTime;
-use diesel::{Insertable, Queryable, Selectable};
-use rocket::response::Responder;
-use rocket::serde::json::Json;
-use rocket::Response;
-use serde::{Deserialize, Serialize};
+use diesel::{AsChangeset, Insertable, Queryable, Selectable};
 
-use crate::member::models::{MemberId, MemberShort};
+use crate::member::models::{MemberId, MemberShort, MemberShortRow};
 use crate::schema::friend_request;
+use shared::models::social::request::{FriendRequest, FriendRequestDetailed};
 
 #[derive(Insertable)]
 #[diesel(table_name = friend_request)]
 pub(in crate::social) struct NewFriendRequest {
     pub(in crate::social) sender_id: MemberId,
     pub(in crate::social) receiver_id: MemberId,
-    pub(in crate::social) note: String,
+    pub(in crate::social) note: Option<String>,
 }
-impl NewFriendRequest {
-    pub(in crate::social) fn sender_id(&self) -> MemberId {
-        self.sender_id
-    }
-    pub(in crate::social) fn receiver_id(&self) -> MemberId {
-        self.receiver_id
-    }
-    pub(in crate::social) fn note(&self) -> &str {
-        &self.note
-    }
+
+#[derive(AsChangeset)]
+#[diesel(table_name = friend_request)]
+#[diesel(treat_none_as_null = true)]
+pub(in crate::social) struct FriendRequestChangeset {
+    pub(in crate::social) note: Option<String>,
 }
 
 #[derive(Queryable, Selectable)]
 #[diesel(table_name = friend_request)]
-pub(in crate::social) struct FriendRequest {
+pub(in crate::social) struct FriendRequestRow {
     sender_id: MemberId,
     receiver_id: MemberId,
     note: Option<String>,
     created_at: NaiveDateTime,
 }
-impl FriendRequest {
+impl FriendRequestRow {
     pub(in crate::social) fn sender_id(&self) -> MemberId {
         self.sender_id
     }
+
     pub(in crate::social) fn receiver_id(&self) -> MemberId {
         self.receiver_id
     }
+
     pub(in crate::social) fn note(&self) -> Option<&str> {
         self.note.as_deref()
     }
+
     pub(in crate::social) fn created_at(&self) -> NaiveDateTime {
         self.created_at
     }
 }
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct RequestDetails {
-    pub member: MemberShort,
-    pub note: Option<String>,
-    pub created_at: NaiveDateTime,
+impl From<FriendRequestRow> for FriendRequest {
+    fn from(row: FriendRequestRow) -> Self {
+        Self {
+            sender_id: row.sender_id,
+            receiver_id: row.receiver_id,
+            note: row.note,
+            created_at: row.created_at,
+        }
+    }
 }
 
-pub type IncomingRequests = Vec<RequestDetails>;
-pub type OutgoingRequests = Vec<RequestDetails>;
+pub(in crate::social) struct FriendRequestDetailedRow {
+    pub(super) member: MemberShortRow,
+    pub(super) note: Option<String>,
+    pub(super) created_at: NaiveDateTime,
+}
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct MultiFriendRequest {
-    pub incoming: IncomingRequests,
-    pub outgoing: OutgoingRequests,
+impl From<FriendRequestDetailedRow> for FriendRequestDetailed {
+    fn from(row: FriendRequestDetailedRow) -> Self {
+        Self {
+            member: MemberShort::from(row.member),
+            note: row.note,
+            created_at: row.created_at,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::FriendRequestRow;
+    use shared::models::social::request::FriendRequest;
+
+    #[test]
+    fn row_converts_to_shared_request_contract() {
+        let created_at = chrono::NaiveDateTime::default();
+        let request = FriendRequest::from(FriendRequestRow {
+            sender_id: 4,
+            receiver_id: 9,
+            note: Some("hello".into()),
+            created_at,
+        });
+
+        assert_eq!(request.sender_id, 4);
+        assert_eq!(request.receiver_id, 9);
+        assert_eq!(request.note.as_deref(), Some("hello"));
+        assert_eq!(request.created_at, created_at);
+    }
 }
