@@ -1,16 +1,15 @@
 use diesel::Connection;
 
 use crate::infra::{Database, DbConn, DbError};
-use crate::member::models::{MemberId, MemberShort};
+use shared::models::chat::chat::{Chat, ChatChangesetInput, ChatId, MultiChat, NewChatInput};
+use shared::models::chat::participant::{
+    ChatParticipant, MultiChatParticipant, MultiChatParticipantDetailed, NewChatParticipantsInput,
+};
+use shared::models::member::MemberId;
 
 use super::error::ChatError;
-use super::models::{
-    ChatChangeset, ChatChangesetInput, ChatDetails, ChatId, MultiChatDetails, NewChat, NewChatInput,
-};
-use super::participant::models::{
-    ChatParticipant, ChatParticipantDetails, MultiChatParticipantDetails, NewChatParticipant,
-    NewChatParticipants,
-};
+use super::models::{ChatChangeset, NewChat};
+use super::participant::models::{NewChatParticipant, NewChatParticipants};
 use super::participant::repository::ChatParticipantRepository;
 use super::repository::ChatRepository;
 
@@ -31,12 +30,12 @@ impl ChatService {
         &self,
         member_id: MemberId,
         input: NewChatInput,
-    ) -> Result<ChatDetails, ChatError> {
+    ) -> Result<Chat, ChatError> {
         let (new_chat, mut added_members) = NewChat::new(input)?;
         added_members.push(member_id);
 
         let mut conn = self.database.get_connection()?;
-        conn.transaction::<ChatDetails, ChatError, _>(|conn| {
+        conn.transaction::<Chat, ChatError, _>(|conn| {
             let chat = ChatRepository::create(conn, new_chat)?;
             let memberships = NewChatParticipants::try_from((chat.id(), added_members))?;
 
@@ -46,16 +45,21 @@ impl ChatService {
     }
 
     // Read
-    pub(crate) fn get_chat(
-        &self,
-        member_id: MemberId,
-        chat_id: ChatId,
-    ) -> Result<ChatDetails, ChatError> {
+    pub(crate) fn get_chat(&self, member_id: MemberId, chat_id: ChatId) -> Result<Chat, ChatError> {
         let mut conn = self.database.get_connection()?;
         self.require_participant(&mut conn, member_id, chat_id)?;
         ChatRepository::read(&mut conn, chat_id)
-            .map(ChatDetails::from)
+            .map(Chat::from)
             .map_err(ChatError::from)
+    }
+
+    pub(crate) fn get_member_chats(&self, member_id: MemberId) -> Result<MultiChat, ChatError> {
+        let mut conn = self.database.get_connection()?;
+        let chats = ChatRepository::read_many_by_member(&mut conn, member_id)?
+            .into_iter()
+            .map(Chat::from)
+            .collect();
+        Ok(MultiChat { chats })
     }
 
     // Update
@@ -64,12 +68,12 @@ impl ChatService {
         member_id: MemberId,
         chat_id: ChatId,
         input: ChatChangesetInput,
-    ) -> Result<ChatDetails, ChatError> {
+    ) -> Result<Chat, ChatError> {
         let changeset = ChatChangeset::try_from(input)?;
         let mut conn = self.database.get_connection()?;
         self.require_participant(&mut conn, member_id, chat_id)?;
         ChatRepository::update(&mut conn, chat_id, changeset)
-            .map(ChatDetails::from)
+            .map(Chat::from)
             .map_err(ChatError::from)
     }
 
@@ -104,21 +108,27 @@ impl ChatService {
             if !ChatRepository::exists(conn, chat_id)? {
                 return Err(ChatError::NotFound);
             }
-            ChatParticipantRepository::create(conn, memberships).map_err(ChatError::from)
+            ChatParticipantRepository::create(conn, memberships)
+                .map(ChatParticipant::from)
+                .map_err(ChatError::from)
         })
     }
 
     pub(crate) fn add_members(
         &self,
         member_id: MemberId,
-        member_ids: Vec<MemberId>,
+        input: NewChatParticipantsInput,
         chat_id: ChatId,
-    ) -> Result<Vec<ChatParticipant>, ChatError> {
-        let memberships = NewChatParticipants::try_from((chat_id, member_ids))?;
+    ) -> Result<MultiChatParticipant, ChatError> {
+        let memberships = NewChatParticipants::try_from((chat_id, input.member_ids))?;
 
         let mut conn = self.database.get_connection()?;
         self.require_participant(&mut conn, member_id, chat_id)?;
-        ChatParticipantRepository::create_many(&mut conn, memberships).map_err(ChatError::from)
+        let participants = ChatParticipantRepository::create_many(&mut conn, memberships)?
+            .into_iter()
+            .map(ChatParticipant::from)
+            .collect();
+        Ok(MultiChatParticipant { participants })
     }
 
     // Read
@@ -126,10 +136,14 @@ impl ChatService {
         &self,
         member_id: MemberId,
         chat_id: ChatId,
-    ) -> Result<MultiChatParticipantDetails, ChatError> {
+    ) -> Result<MultiChatParticipantDetailed, ChatError> {
         let mut conn = self.database.get_connection()?;
         self.require_participant(&mut conn, member_id, chat_id)?;
-        ChatParticipantRepository::read_many(&mut conn, chat_id).map_err(ChatError::from)
+        let participants = ChatParticipantRepository::read_many_detailed(&mut conn, chat_id)?
+            .into_iter()
+            .map(Into::into)
+            .collect();
+        Ok(MultiChatParticipantDetailed { participants })
     }
 
     // Delete
