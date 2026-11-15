@@ -4,8 +4,8 @@ pub(crate) mod repository;
 pub(crate) mod routes;
 pub(crate) mod service;
 
-pub mod channel;
-pub mod membership;
+pub(crate) mod channel;
+pub(crate) mod membership;
 
 pub(crate) fn get_server_routes() -> Vec<rocket::Route> {
     let mut routes = routes::routes();
