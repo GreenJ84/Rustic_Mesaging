@@ -1,31 +1,47 @@
 use chrono::NaiveDateTime;
-use diesel::{Associations, Insertable, Queryable, Selectable};
-use rocket::response::Responder;
-use rocket::serde::json::Json;
-use rocket::serde::{Deserialize, Serialize};
-use rocket::Response;
+use diesel::{Associations, Identifiable, Insertable, Queryable, Selectable};
 
-use crate::member::models::{MemberId, MemberRow};
+use crate::member::models::MemberRow;
 use crate::schema::server_membership;
-use crate::server::models::{Server, ServerId};
+use crate::server::models::ServerRow;
+use shared::models::member::MemberId;
+use shared::models::server::server::ServerId;
 
-#[derive(Insertable, Selectable, Serialize, Deserialize, Debug)]
+#[derive(Insertable)]
 #[diesel(table_name = server_membership)]
-pub struct NewServerMembership {
-    pub member_id: MemberId,
-    pub server_id: ServerId,
+pub(in crate::server) struct NewServerMembership {
+    member_id: MemberId,
+    server_id: ServerId,
+}
+impl NewServerMembership {
+    pub(in crate::server) fn new(member_id: MemberId, server_id: ServerId) -> Self {
+        Self {
+            member_id,
+            server_id,
+        }
+    }
 }
 
-#[derive(Queryable, Associations, Serialize, Deserialize, Debug)]
+#[derive(Associations, Identifiable, Queryable, Selectable)]
 #[diesel(table_name = server_membership)]
+#[diesel(primary_key(member_id, server_id))]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 #[diesel(belongs_to(MemberRow, foreign_key = member_id))]
-#[diesel(belongs_to(Server))]
-pub struct ServerMembership {
-    #[diesel(sql_type = Int4)]
-    pub member_id: MemberId,
-    #[diesel(sql_type = Int4)]
-    pub server_id: ServerId,
-    #[diesel(sql_type = Timestamp)]
+#[diesel(belongs_to(ServerRow, foreign_key = server_id))]
+pub(in crate::server) struct ServerMembershipRow {
+    member_id: MemberId,
+    server_id: ServerId,
     joined_at: NaiveDateTime,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{NewServerMembership, ServerMembershipRow};
+
+    #[test]
+    fn creation_binds_member_and_server() {
+        let membership = NewServerMembership::new(4, 9);
+        assert_eq!(membership.member_id, 4);
+        assert_eq!(membership.server_id, 9);
+    }
 }
