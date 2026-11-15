@@ -8,3 +8,6 @@ description.workspace = true
 [dependencies]
 serde = { workspace = true, features = ["derive"] }
 chrono = { workspace = true, features = ["serde"] }
+
+[dev-dependencies]
+serde_json.workspace = true
