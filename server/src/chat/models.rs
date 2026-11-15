@@ -1,47 +1,36 @@
 use chrono::NaiveDateTime;
 use diesel::{AsChangeset, Identifiable, Insertable, Queryable, Selectable};
-use serde::{Deserialize, Serialize};
 
-use crate::member::models::{MemberId, MemberShort};
 use crate::schema::chat;
-use crate::utils::{Page, Validator};
+use crate::utils::Validator;
+use shared::models::chat::chat::{Chat, ChatChangesetInput, ChatId, NewChatInput};
+use shared::models::member::MemberId;
 
 use super::error::ChatError;
 
-pub(crate) type ChatId = i32;
-
-#[derive(FromForm, Debug)]
-pub(crate) struct NewChatInput {
-    pub(crate) name: String,
-    pub(crate) member_ids: Vec<MemberId>,
-}
-
-#[derive(Insertable, Debug)]
+#[derive(Insertable)]
 #[diesel(table_name = chat)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-pub(crate) struct NewChat {
+pub(in crate::chat) struct NewChat {
     name: String,
 }
+
 impl NewChat {
-    pub fn new(input: NewChatInput) -> Result<(Self, Vec<MemberId>), ChatError> {
+    pub(in crate::chat) fn new(input: NewChatInput) -> Result<(Self, Vec<MemberId>), ChatError> {
         let name = Validator::validate_text(&input.name, Some(3), Some(80))
-            .map_err(|e| ChatError::InvalidInput(format!("Chat name {}", e.message())))?;
+            .map_err(|error| ChatError::InvalidInput(format!("Chat name {}", error.message())))?;
 
         Ok((Self { name }, input.member_ids))
     }
 }
 
-#[derive(Debug, FromForm)]
-pub(crate) struct ChatChangesetInput {
-    pub(crate) name: Option<String>,
-}
-
 #[derive(AsChangeset)]
 #[diesel(table_name = chat)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-pub(crate) struct ChatChangeset {
+pub(in crate::chat) struct ChatChangeset {
     name: Option<String>,
 }
+
 impl TryFrom<ChatChangesetInput> for ChatChangeset {
     type Error = ChatError;
 
@@ -49,38 +38,34 @@ impl TryFrom<ChatChangesetInput> for ChatChangeset {
         let Some(name) = input.name else {
             return Err(ChatError::InvalidChangeset("No changes provided".into()));
         };
-        let name = Validator::validate_text(&name, Some(3), Some(80))
-            .map_err(|e| ChatError::InvalidChangeset(format!("Chat name {}", e.message())))?;
+        let name = Validator::validate_text(&name, Some(3), Some(80)).map_err(|error| {
+            ChatError::InvalidChangeset(format!("Chat name {}", error.message()))
+        })?;
         Ok(Self { name: Some(name) })
     }
 }
 
-#[derive(Identifiable, Queryable, Selectable, Debug)]
+#[derive(Identifiable, Queryable, Selectable)]
 #[diesel(table_name = chat)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-pub(crate) struct Chat {
+pub(in crate::chat) struct ChatRow {
     id: ChatId,
     name: String,
     created_at: NaiveDateTime,
 }
-impl Chat {
-    pub(crate) fn id(&self) -> ChatId {
+
+impl ChatRow {
+    pub(in crate::chat) fn id(&self) -> ChatId {
         self.id
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub(crate) struct ChatDetails {
-    pub id: ChatId,
-    pub name: String,
-    pub created_at: NaiveDateTime,
-}
-impl From<Chat> for ChatDetails {
-    fn from(chat: Chat) -> Self {
+impl From<ChatRow> for Chat {
+    fn from(row: ChatRow) -> Self {
         Self {
-            id: chat.id,
-            name: chat.name,
-            created_at: chat.created_at,
+            id: row.id,
+            name: row.name,
+            created_at: row.created_at,
         }
     }
 }
