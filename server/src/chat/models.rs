@@ -70,5 +70,49 @@ impl From<ChatRow> for Chat {
     }
 }
 
-pub(crate) type MultiChatDetails = Vec<ChatDetails>;
-pub(crate) type MultiChatPage = Page<MultiChatDetails>;
+#[cfg(test)]
+mod tests {
+    use super::{ChatChangeset, ChatRow, NewChat};
+    use crate::chat::error::ChatError;
+    use shared::models::chat::chat::{Chat, ChatChangesetInput, NewChatInput};
+
+    #[test]
+    fn new_chat_normalizes_name_and_preserves_participants() {
+        let (chat, member_ids) = NewChat::new(NewChatInput {
+            name: "  Project room  ".into(),
+            member_ids: vec![3, 7],
+        })
+        .unwrap();
+
+        assert_eq!(chat.name, "Project room");
+        assert_eq!(member_ids, vec![3, 7]);
+    }
+
+    #[test]
+    fn changeset_requires_a_valid_name() {
+        assert!(matches!(
+            ChatChangeset::try_from(ChatChangesetInput { name: None }),
+            Err(ChatError::InvalidChangeset(_))
+        ));
+        assert!(matches!(
+            ChatChangeset::try_from(ChatChangesetInput {
+                name: Some("  ".into())
+            }),
+            Err(ChatError::InvalidChangeset(_))
+        ));
+    }
+
+    #[test]
+    fn row_converts_to_shared_chat_contract() {
+        let created_at = chrono::NaiveDateTime::default();
+        let chat = Chat::from(ChatRow {
+            id: 12,
+            name: "Project room".into(),
+            created_at,
+        });
+
+        assert_eq!(chat.id, 12);
+        assert_eq!(chat.name, "Project room");
+        assert_eq!(chat.created_at, created_at);
+    }
+}
