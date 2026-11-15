@@ -89,6 +89,31 @@ mod tests {
     }
 
     #[test]
+    fn new_chat_accepts_name_length_boundaries() {
+        for name in ["a".repeat(3), "é".repeat(80)] {
+            let (chat, _) = NewChat::new(NewChatInput {
+                name: format!("  {name}  "),
+                member_ids: Vec::new(),
+            })
+            .unwrap();
+            assert_eq!(chat.name, name);
+        }
+    }
+
+    #[test]
+    fn new_chat_rejects_blank_short_and_oversized_names() {
+        for name in ["   ".to_string(), "ab".into(), "a".repeat(81)] {
+            assert!(matches!(
+                NewChat::new(NewChatInput {
+                    name,
+                    member_ids: Vec::new(),
+                }),
+                Err(ChatError::InvalidInput(_))
+            ));
+        }
+    }
+
+    #[test]
     fn changeset_requires_a_valid_name() {
         assert!(matches!(
             ChatChangeset::try_from(ChatChangesetInput { name: None }),
@@ -103,6 +128,22 @@ mod tests {
     }
 
     #[test]
+    fn changeset_normalizes_valid_names_and_enforces_boundaries() {
+        let changeset = ChatChangeset::try_from(ChatChangesetInput {
+            name: Some("  Renamed room  ".into()),
+        })
+        .unwrap();
+        assert_eq!(changeset.name.as_deref(), Some("Renamed room"));
+
+        for name in ["ab".to_string(), "a".repeat(81)] {
+            assert!(matches!(
+                ChatChangeset::try_from(ChatChangesetInput { name: Some(name) }),
+                Err(ChatError::InvalidChangeset(_))
+            ));
+        }
+    }
+
+    #[test]
     fn row_converts_to_shared_chat_contract() {
         let created_at = chrono::NaiveDateTime::default();
         let chat = Chat::from(ChatRow {
@@ -114,5 +155,16 @@ mod tests {
         assert_eq!(chat.id, 12);
         assert_eq!(chat.name, "Project room");
         assert_eq!(chat.created_at, created_at);
+    }
+
+    #[test]
+    fn row_exposes_its_identifier() {
+        let row = ChatRow {
+            id: 12,
+            name: "Project room".into(),
+            created_at: chrono::NaiveDateTime::default(),
+        };
+
+        assert_eq!(row.id(), 12);
     }
 }

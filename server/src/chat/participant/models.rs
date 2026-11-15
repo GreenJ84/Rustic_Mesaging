@@ -89,7 +89,7 @@ impl From<ChatParticipantDetailedRow> for ChatParticipantDetailed {
 
 #[cfg(test)]
 mod tests {
-    use super::{ChatParticipantRow, NewChatParticipants};
+    use super::{ChatParticipantRow, NewChatParticipant, NewChatParticipants};
     use shared::models::chat::participant::ChatParticipant;
 
     #[test]
@@ -102,6 +102,18 @@ mod tests {
             .collect::<Vec<_>>();
 
         assert_eq!(member_ids, vec![4, 8]);
+        assert!(participants
+            .rows()
+            .iter()
+            .all(|participant| participant.chat_id == 3));
+    }
+
+    #[test]
+    fn individual_participant_uses_tuple_ownership() {
+        let participant = NewChatParticipant::from((3, 8));
+
+        assert_eq!(participant.chat_id, 3);
+        assert_eq!(participant.member_id, 8);
     }
 
     #[test]

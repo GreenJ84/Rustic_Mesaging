@@ -37,7 +37,7 @@ pub type MultiChatParticipantDetailed = ChatParticipantList<ChatParticipantDetai
 
 #[cfg(test)]
 mod tests {
-    use super::NewChatParticipantsInput;
+    use super::{ChatParticipantList, NewChatParticipantsInput};
 
     #[test]
     fn batch_creation_input_uses_member_ids() {
@@ -47,5 +47,23 @@ mod tests {
         .unwrap();
 
         assert_eq!(value, serde_json::json!({ "member_ids": [4, 9] }));
+    }
+
+    #[test]
+    fn participant_collections_use_the_participants_field() {
+        let value = serde_json::to_value(ChatParticipantList::<serde_json::Value> {
+            participants: Vec::new(),
+        })
+        .unwrap();
+
+        assert_eq!(value, serde_json::json!({ "participants": [] }));
+    }
+
+    #[test]
+    fn batch_creation_input_deserializes_from_the_wire_shape() {
+        let input: NewChatParticipantsInput =
+            serde_json::from_value(serde_json::json!({ "member_ids": [4, 9] })).unwrap();
+
+        assert_eq!(input.member_ids, vec![4, 9]);
     }
 }

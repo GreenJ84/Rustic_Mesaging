@@ -36,7 +36,7 @@ pub type MultiChat = ChatList<Chat>;
 
 #[cfg(test)]
 mod tests {
-    use super::{ChatChangesetInput, NewChatInput};
+    use super::{ChatChangesetInput, ChatList, NewChatInput};
 
     #[test]
     fn creation_input_uses_the_stable_json_shape() {
@@ -55,5 +55,25 @@ mod tests {
         let value = serde_json::to_value(ChatChangesetInput { name: None }).unwrap();
 
         assert!(value["name"].is_null());
+    }
+
+    #[test]
+    fn chat_collections_use_the_chats_field() {
+        let value =
+            serde_json::to_value(ChatList::<serde_json::Value> { chats: Vec::new() }).unwrap();
+
+        assert_eq!(value, serde_json::json!({ "chats": [] }));
+    }
+
+    #[test]
+    fn creation_input_deserializes_from_the_wire_shape() {
+        let input: NewChatInput = serde_json::from_value(serde_json::json!({
+            "name": "Project room",
+            "member_ids": [4, 9]
+        }))
+        .unwrap();
+
+        assert_eq!(input.name, "Project room");
+        assert_eq!(input.member_ids, vec![4, 9]);
     }
 }

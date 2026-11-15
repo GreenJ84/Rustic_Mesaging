@@ -49,7 +49,7 @@ pub type MultiMessageDetailed = MessageList<MessageDetailed>;
 
 #[cfg(test)]
 mod tests {
-    use super::{MessageList, NewMessageInput};
+    use super::{MessageChangesetInput, MessageList, NewMessageInput};
 
     #[test]
     fn creation_input_contains_only_client_owned_content() {
@@ -69,5 +69,20 @@ mod tests {
         .unwrap();
 
         assert_eq!(value, serde_json::json!({ "messages": [] }));
+    }
+
+    #[test]
+    fn changeset_preserves_an_explicit_missing_content() {
+        let value = serde_json::to_value(MessageChangesetInput { content: None }).unwrap();
+
+        assert!(value["content"].is_null());
+    }
+
+    #[test]
+    fn creation_input_deserializes_from_the_wire_shape() {
+        let input: NewMessageInput =
+            serde_json::from_value(serde_json::json!({ "content": "hello" })).unwrap();
+
+        assert_eq!(input.content, "hello");
     }
 }
