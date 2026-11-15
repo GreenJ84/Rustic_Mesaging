@@ -1,37 +1,36 @@
 use chrono::NaiveDateTime;
 use diesel::{AsChangeset, Identifiable, Insertable, Queryable, Selectable};
-use serde::{Deserialize, Serialize};
 
-use crate::chat::models::{Chat, ChatId};
-use crate::member::models::{MemberId, MemberRow, MemberShort};
+use crate::member::models::MemberShortRow;
 use crate::schema::message;
-use crate::utils::{Page, Validator};
+use crate::utils::Validator;
+use shared::models::chat::chat::ChatId;
+use shared::models::chat::message::{
+    Message, MessageChangesetInput, MessageDetailed, MessageId, NewMessageInput,
+};
+use shared::models::member::{MemberId, MemberShort};
 
 use super::error::MessageError;
 
-pub(crate) type MessageId = i32;
-
-#[derive(Debug, FromForm)]
-pub(crate) struct MessageInput {
-    pub(crate) content: String,
-}
-
-#[derive(Insertable, Debug)]
+#[derive(Insertable)]
 #[diesel(table_name = message)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-pub(crate) struct NewMessage {
+pub(in crate::chat) struct NewMessage {
     content: String,
     sender_id: MemberId,
     chat_id: ChatId,
 }
-impl TryFrom<(ChatId, MemberId, MessageInput)> for NewMessage {
+
+impl TryFrom<(ChatId, MemberId, NewMessageInput)> for NewMessage {
     type Error = MessageError;
 
     fn try_from(
-        (chat_id, sender_id, input): (ChatId, MemberId, MessageInput),
+        (chat_id, sender_id, input): (ChatId, MemberId, NewMessageInput),
     ) -> Result<Self, Self::Error> {
-        let content = Validator::validate_text(&input.content, None, Some(2000))
-            .map_err(|e| MessageError::InvalidInput(format!("Message content {}", e.message())))?;
+        let content =
+            Validator::validate_text(&input.content, None, Some(2000)).map_err(|error| {
+                MessageError::InvalidInput(format!("Message content {}", error.message()))
+            })?;
         Ok(Self {
             content,
             sender_id,
@@ -40,17 +39,13 @@ impl TryFrom<(ChatId, MemberId, MessageInput)> for NewMessage {
     }
 }
 
-#[derive(Debug, FromForm)]
-pub(crate) struct MessageChangesetInput {
-    pub(crate) content: Option<String>,
-}
-
-#[derive(AsChangeset, Debug)]
+#[derive(AsChangeset)]
 #[diesel(table_name = message)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-pub(crate) struct MessageChangeset {
+pub(in crate::chat) struct MessageChangeset {
     content: Option<String>,
 }
+
 impl TryFrom<MessageChangesetInput> for MessageChangeset {
     type Error = MessageError;
 
@@ -58,8 +53,8 @@ impl TryFrom<MessageChangesetInput> for MessageChangeset {
         let Some(content) = input.content else {
             return Err(MessageError::InvalidChangeset("No changes provided".into()));
         };
-        let content = Validator::validate_text(&content, None, Some(2000)).map_err(|e| {
-            MessageError::InvalidChangeset(format!("Message content {}", e.message()))
+        let content = Validator::validate_text(&content, None, Some(2000)).map_err(|error| {
+            MessageError::InvalidChangeset(format!("Message content {}", error.message()))
         })?;
         Ok(Self {
             content: Some(content),
@@ -67,43 +62,96 @@ impl TryFrom<MessageChangesetInput> for MessageChangeset {
     }
 }
 
-#[derive(Identifiable, Queryable, Selectable, Debug)]
+#[derive(Identifiable, Queryable, Selectable)]
 #[diesel(table_name = message)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-#[diesel(belongs_to(MemberRow, foreign_key = sender_id))]
-pub(crate) struct Message {
+pub(in crate::chat) struct MessageRow {
     id: MessageId,
     content: String,
     sender_id: MemberId,
     chat_id: ChatId,
     created_at: NaiveDateTime,
 }
-impl Message {
-    pub(crate) fn id(&self) -> MessageId {
+
+impl MessageRow {
+    pub(in crate::chat) fn id(&self) -> MessageId {
         self.id
     }
 }
 
-#[derive(Serialize, Debug)]
-pub(crate) struct MessageDetails {
-    pub(crate) id: MessageId,
-    pub(crate) content: String,
-    pub(crate) sender: MemberShort,
-    pub(crate) chat_id: ChatId,
-    pub(crate) created_at: NaiveDateTime,
-}
-
-impl From<(Message, MemberShort)> for MessageDetails {
-    fn from((message, sender): (Message, MemberShort)) -> Self {
+impl From<MessageRow> for Message {
+    fn from(row: MessageRow) -> Self {
         Self {
-            id: message.id,
-            content: message.content,
-            sender,
-            chat_id: message.chat_id,
-            created_at: message.created_at,
+            id: row.id,
+            content: row.content,
+            sender_id: row.sender_id,
+            chat_id: row.chat_id,
+            created_at: row.created_at,
         }
     }
 }
 
-pub type MultiMessageDetails = Vec<MessageDetails>;
-pub type MessagePage = Page<MultiMessageDetails>;
+pub(in crate::chat) struct MessageDetailedRow {
+    pub(super) message: MessageRow,
+    pub(super) sender: MemberShortRow,
+}
+
+impl From<MessageDetailedRow> for MessageDetailed {
+    fn from(row: MessageDetailedRow) -> Self {
+        Self {
+            id: row.message.id,
+            content: row.message.content,
+            sender: MemberShort::from(row.sender),
+            chat_id: row.message.chat_id,
+            created_at: row.message.created_at,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{MessageChangeset, MessageRow, NewMessage};
+    use crate::chat::message::error::MessageError;
+    use shared::models::chat::message::{Message, MessageChangesetInput, NewMessageInput};
+
+    #[test]
+    fn new_message_normalizes_content_and_sets_ownership() {
+        let message = NewMessage::try_from((
+            4,
+            9,
+            NewMessageInput {
+                content: "  hello  ".into(),
+            },
+        ))
+        .unwrap();
+
+        assert_eq!(message.content, "hello");
+        assert_eq!(message.chat_id, 4);
+        assert_eq!(message.sender_id, 9);
+    }
+
+    #[test]
+    fn changeset_requires_content() {
+        assert!(matches!(
+            MessageChangeset::try_from(MessageChangesetInput { content: None }),
+            Err(MessageError::InvalidChangeset(_))
+        ));
+    }
+
+    #[test]
+    fn row_converts_to_shared_message_contract() {
+        let created_at = chrono::NaiveDateTime::default();
+        let message = Message::from(MessageRow {
+            id: 2,
+            content: "hello".into(),
+            sender_id: 9,
+            chat_id: 4,
+            created_at,
+        });
+
+        assert_eq!(message.id, 2);
+        assert_eq!(message.sender_id, 9);
+        assert_eq!(message.chat_id, 4);
+        assert_eq!(message.created_at, created_at);
+    }
+}
