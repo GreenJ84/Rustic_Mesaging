@@ -227,10 +227,11 @@ impl From<ServerShortRow> for ServerShort {
 
 #[cfg(test)]
 mod tests {
-    use super::{NewServer, ServerChangeset, ServerRow, ServerShortRow};
+    use super::{NewServer, ServerChangeset, ServerDetailedRow, ServerRow, ServerShortRow};
     use crate::server::errors::ServerError;
     use shared::models::server::server::{
-        NewServerInput, ServerChangesetInput, ServerDetailed, ServerShort,
+        NewServerInput, Server, ServerChangesetInput, ServerDetailed, ServerShort,
+        SERVER_ICON_COLORS, SERVER_ICON_SHAPES,
     };
 
     fn create_input(name: &str, description: &str, icon: Option<&str>) -> NewServerInput {
@@ -272,6 +273,77 @@ mod tests {
             )),
             Err(ServerError::InvalidInput(_))
         ));
+        assert!(matches!(
+            NewServer::try_from((11, create_input("Example", "short", Some("badge:red")))),
+            Err(ServerError::InvalidInput(_))
+        ));
+        assert!(matches!(
+            NewServer::try_from((
+                11,
+                create_input("Example", "A valid description", Some("badge:unknown"))
+            )),
+            Err(ServerError::InvalidInput(_))
+        ));
+        assert!(matches!(
+            NewServer::try_from((
+                11,
+                create_input("Example", "A valid description", Some("badge"))
+            )),
+            Err(ServerError::InvalidInput(_))
+        ));
+    }
+
+    #[test]
+    fn creation_accepts_text_length_boundaries() {
+        for (name, description) in [
+            ("a".repeat(5), "b".repeat(10)),
+            ("é".repeat(80), "界".repeat(300)),
+        ] {
+            let server =
+                NewServer::try_from((11, create_input(&name, &description, None))).unwrap();
+            assert_eq!(server.name, name);
+            assert_eq!(server.description, description);
+        }
+    }
+
+    #[test]
+    fn creation_rejects_text_outside_length_boundaries() {
+        for (name, description) in [
+            ("a".repeat(4), "b".repeat(10)),
+            ("a".repeat(81), "b".repeat(10)),
+            ("a".repeat(5), "b".repeat(9)),
+            ("a".repeat(5), "b".repeat(301)),
+        ] {
+            assert!(matches!(
+                NewServer::try_from((11, create_input(&name, &description, None))),
+                Err(ServerError::InvalidInput(_))
+            ));
+        }
+    }
+
+    #[test]
+    fn creation_accepts_every_supported_icon_component() {
+        for shape in SERVER_ICON_SHAPES {
+            let icon = format!("{shape}:red");
+            assert_eq!(
+                NewServer::try_from((
+                    11,
+                    create_input("Example", "A valid description", Some(&icon))
+                ))
+                .unwrap()
+                .icon
+                .as_deref(),
+                Some(icon.as_str())
+            );
+        }
+        for color in SERVER_ICON_COLORS {
+            let icon = format!("badge:{color}");
+            assert!(NewServer::try_from((
+                11,
+                create_input("Example", "A valid description", Some(&icon))
+            ))
+            .is_ok());
+        }
     }
 
     #[test]
@@ -294,6 +366,38 @@ mod tests {
     }
 
     #[test]
+    fn changeset_validates_each_mutable_field() {
+        let changeset = ServerChangeset::try_from(ServerChangesetInput {
+            name: None,
+            description: Some("  Updated description  ".into()),
+            icon: Some("  building:blue  ".into()),
+        })
+        .unwrap();
+        assert_eq!(
+            changeset.description.as_deref(),
+            Some("Updated description")
+        );
+        assert_eq!(changeset.icon.as_deref(), Some("building:blue"));
+
+        assert!(matches!(
+            ServerChangeset::try_from(ServerChangesetInput {
+                name: None,
+                description: Some("short".into()),
+                icon: None,
+            }),
+            Err(ServerError::InvalidChangeset(_))
+        ));
+        assert!(matches!(
+            ServerChangeset::try_from(ServerChangesetInput {
+                name: None,
+                description: None,
+                icon: Some("invalid".into()),
+            }),
+            Err(ServerError::InvalidChangeset(_))
+        ));
+    }
+
+    #[test]
     fn rows_convert_to_shared_contracts() {
         let created_at = chrono::NaiveDateTime::default();
         let detailed = ServerDetailed::from(ServerRow {
@@ -312,5 +416,53 @@ mod tests {
 
         assert_eq!(detailed.owner_id, 11);
         assert_eq!(short.icon, "badge:green");
+    }
+
+    #[test]
+    fn full_rows_convert_to_each_supported_contract_and_expose_accessors() {
+        let created_at = chrono::NaiveDateTime::default();
+        let row = ServerRow {
+            id: 7,
+            name: "Example Server".into(),
+            description: "An example server".into(),
+            icon: "badge:green".into(),
+            owner_id: 11,
+            created_at,
+        };
+        assert_eq!(row.id(), 7);
+        assert_eq!(row.name(), "Example Server");
+        assert_eq!(row.owner_id(), 11);
+        assert_eq!(row.created_at(), created_at);
+        let server = Server::from(row);
+        assert_eq!(server.description, "An example server");
+
+        let short = ServerShort::from(ServerRow {
+            id: 7,
+            name: "Example Server".into(),
+            description: "An example server".into(),
+            icon: "badge:green".into(),
+            owner_id: 11,
+            created_at,
+        });
+        assert_eq!(short.id, 7);
+        assert_eq!(short.name, "Example Server");
+    }
+
+    #[test]
+    fn detailed_rows_convert_and_expose_accessors() {
+        let created_at = chrono::NaiveDateTime::default();
+        let row = ServerDetailedRow {
+            id: 7,
+            name: "Example Server".into(),
+            description: "An example server".into(),
+            icon: "badge:green".into(),
+            owner_id: 11,
+            created_at,
+        };
+        assert_eq!(row.id(), 7);
+        assert_eq!(row.name(), "Example Server");
+        assert_eq!(row.owner_id(), 11);
+        assert_eq!(row.created_at(), created_at);
+        assert_eq!(ServerDetailed::from(row).description, "An example server");
     }
 }

@@ -136,6 +136,7 @@ impl ServerService {
             }
             ServerMembershipRepository::create(conn, NewServerMembership::new(member_id, server_id))
                 .map(|_| ())
+                .map_err(MembershipError::from)
                 .map_err(ServerError::from)
         })
     }

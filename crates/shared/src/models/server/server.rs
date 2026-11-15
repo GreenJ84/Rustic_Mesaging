@@ -70,7 +70,7 @@ pub type MultiServerPreview = ServerList<ServerShort>;
 
 #[cfg(test)]
 mod tests {
-    use super::{NewServerInput, ServerChangesetInput};
+    use super::{NewServerInput, ServerChangesetInput, ServerList};
 
     #[test]
     fn creation_input_omits_server_owned_fields() {
@@ -97,5 +97,29 @@ mod tests {
 
         assert_eq!(value["name"], "Updated");
         assert!(value["description"].is_null());
+    }
+
+    #[test]
+    fn server_collections_use_the_servers_field() {
+        let value = serde_json::to_value(ServerList::<serde_json::Value> {
+            servers: Vec::new(),
+        })
+        .unwrap();
+
+        assert_eq!(value, serde_json::json!({ "servers": [] }));
+    }
+
+    #[test]
+    fn creation_input_deserializes_from_the_wire_shape() {
+        let input: NewServerInput = serde_json::from_value(serde_json::json!({
+            "name": "Rust server",
+            "description": "A Rust community",
+            "icon": null
+        }))
+        .unwrap();
+
+        assert_eq!(input.name, "Rust server");
+        assert_eq!(input.description, "A Rust community");
+        assert_eq!(input.icon, None);
     }
 }

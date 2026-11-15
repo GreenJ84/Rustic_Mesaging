@@ -39,6 +39,7 @@ impl From<DbError> for ServerError {
 
             DbError::ConstraintViolation(DieselError::DatabaseError(_, information)) => {
                 match information.constraint_name() {
+                    Some("server_owner_id_fkey") => Self::Member(MemberError::NotFound),
                     Some("server_membership_server_id_fkey") => Self::NotFound,
                     Some("server_membership_member_id_fkey") => Self::Member(MemberError::NotFound),
                     _ => Self::Persistence(error),
@@ -104,18 +105,57 @@ mod tests {
     use super::ServerError;
     use crate::api::ApiError;
     use crate::infra::{DbError, DieselError};
+    use crate::member::error::MemberError;
+    use crate::server::membership::error::MembershipError;
+    use diesel::result::{DatabaseErrorInformation, DatabaseErrorKind};
     use rocket::http::Status;
 
+    struct ConstraintInformation(&'static str);
+
+    impl DatabaseErrorInformation for ConstraintInformation {
+        fn message(&self) -> &str {
+            "test database error"
+        }
+        fn details(&self) -> Option<&str> {
+            None
+        }
+        fn hint(&self) -> Option<&str> {
+            None
+        }
+        fn table_name(&self) -> Option<&str> {
+            None
+        }
+        fn column_name(&self) -> Option<&str> {
+            None
+        }
+        fn constraint_name(&self) -> Option<&str> {
+            Some(self.0)
+        }
+        fn statement_position(&self) -> Option<i32> {
+            None
+        }
+    }
+
+    fn conflict(name: &'static str) -> DbError {
+        DbError::Conflict(DieselError::DatabaseError(
+            DatabaseErrorKind::UniqueViolation,
+            Box::new(ConstraintInformation(name)),
+        ))
+    }
+
+    fn constraint(name: &'static str) -> DbError {
+        DbError::ConstraintViolation(DieselError::DatabaseError(
+            DatabaseErrorKind::ForeignKeyViolation,
+            Box::new(ConstraintInformation(name)),
+        ))
+    }
+
     #[test]
-    fn diesel_not_found_maps_to_not_found() {
+    fn missing_rows_map_to_server_not_found() {
         assert!(matches!(
             ServerError::from(DieselError::NotFound),
             ServerError::NotFound
         ));
-    }
-
-    #[test]
-    fn database_not_found_maps_to_not_found() {
         assert!(matches!(
             ServerError::from(DbError::NotFound),
             ServerError::NotFound
@@ -123,10 +163,72 @@ mod tests {
     }
 
     #[test]
-    fn authorization_failures_map_to_forbidden() {
-        assert_eq!(
-            ApiError::from(ServerError::NotOwner).status(),
-            Status::Forbidden
-        );
+    fn unique_constraints_map_to_domain_conflicts() {
+        assert!(matches!(
+            ServerError::from(conflict("server_name_key")),
+            ServerError::NameTaken
+        ));
+        assert!(matches!(
+            ServerError::from(conflict("server_membership_pkey")),
+            ServerError::Membership(MembershipError::AlreadyMember)
+        ));
+    }
+
+    #[test]
+    fn foreign_keys_map_to_missing_domain_resources() {
+        assert!(matches!(
+            ServerError::from(constraint("server_owner_id_fkey")),
+            ServerError::Member(MemberError::NotFound)
+        ));
+        assert!(matches!(
+            ServerError::from(constraint("server_membership_member_id_fkey")),
+            ServerError::Member(MemberError::NotFound)
+        ));
+        assert!(matches!(
+            ServerError::from(constraint("server_membership_server_id_fkey")),
+            ServerError::NotFound
+        ));
+    }
+
+    #[test]
+    fn unknown_database_errors_remain_internal() {
+        assert!(matches!(
+            ServerError::from(conflict("unknown_constraint")),
+            ServerError::Persistence(_)
+        ));
+        assert!(matches!(
+            ServerError::from(DbError::ConnectionError("offline".into())),
+            ServerError::Persistence(_)
+        ));
+    }
+
+    #[test]
+    fn server_errors_map_to_expected_http_status_classes() {
+        let cases = [
+            (
+                ServerError::InvalidInput("invalid".into()),
+                Status::BadRequest,
+            ),
+            (
+                ServerError::InvalidChangeset("invalid".into()),
+                Status::BadRequest,
+            ),
+            (
+                ServerError::InvalidSearchTerm("invalid".into()),
+                Status::BadRequest,
+            ),
+            (ServerError::NotFound, Status::NotFound),
+            (ServerError::NameTaken, Status::Conflict),
+            (ServerError::NotOwner, Status::Forbidden),
+            (ServerError::MissingAuthority, Status::Forbidden),
+            (
+                ServerError::Persistence(DbError::ConnectionError("offline".into())),
+                Status::InternalServerError,
+            ),
+        ];
+
+        for (error, status) in cases {
+            assert_eq!(ApiError::from(error).status(), status);
+        }
     }
 }
