@@ -44,4 +44,18 @@ mod tests {
         assert_eq!(membership.member_id, 4);
         assert_eq!(membership.server_id, 9);
     }
+
+    #[test]
+    fn membership_rows_preserve_composite_identity_and_join_time() {
+        let joined_at = chrono::NaiveDateTime::default();
+        let membership = ServerMembershipRow {
+            member_id: 4,
+            server_id: 9,
+            joined_at,
+        };
+
+        assert_eq!(membership.member_id, 4);
+        assert_eq!(membership.server_id, 9);
+        assert_eq!(membership.joined_at, joined_at);
+    }
 }

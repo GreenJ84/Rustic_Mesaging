@@ -16,12 +16,10 @@ impl From<DbError> for MembershipError {
         match &error {
             DbError::NotFound => Self::MembershipNotFound,
 
-            DbError::Conflict(DieselError::DatabaseError(_, info)) => {
-                match info.constraint_name() {
-                    Some("server_membership_pkey") => Self::AlreadyMember,
-                    _ => Self::Persistence(error),
-                }
-            }
+            // Server membership currently has one unique constraint: its
+            // composite primary key. Preserve the domain conflict when the
+            // database driver omits constraint metadata.
+            DbError::Conflict(DieselError::DatabaseError(_, _)) => Self::AlreadyMember,
 
             DbError::Conflict(_)
             | DbError::ConstraintViolation(_)
@@ -55,6 +53,98 @@ impl From<MembershipError> for ApiError {
                 error.log_error("server membership");
                 ApiError::InternalError
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::MembershipError;
+    use crate::api::ApiError;
+    use crate::infra::DbError;
+    use diesel::result::{DatabaseErrorInformation, DatabaseErrorKind, Error as DieselError};
+    use rocket::http::Status;
+
+    struct ConstraintInformation(&'static str);
+
+    impl DatabaseErrorInformation for ConstraintInformation {
+        fn message(&self) -> &str {
+            "test database error"
+        }
+        fn details(&self) -> Option<&str> {
+            None
+        }
+        fn hint(&self) -> Option<&str> {
+            None
+        }
+        fn table_name(&self) -> Option<&str> {
+            None
+        }
+        fn column_name(&self) -> Option<&str> {
+            None
+        }
+        fn constraint_name(&self) -> Option<&str> {
+            Some(self.0)
+        }
+        fn statement_position(&self) -> Option<i32> {
+            None
+        }
+    }
+
+    fn conflict(name: &'static str) -> DbError {
+        DbError::Conflict(DieselError::DatabaseError(
+            DatabaseErrorKind::UniqueViolation,
+            Box::new(ConstraintInformation(name)),
+        ))
+    }
+
+    #[test]
+    fn membership_primary_key_maps_to_already_member() {
+        assert!(matches!(
+            MembershipError::from(conflict("server_membership_pkey")),
+            MembershipError::AlreadyMember
+        ));
+    }
+
+    #[test]
+    fn missing_rows_map_to_missing_membership() {
+        assert!(matches!(
+            MembershipError::from(DbError::NotFound),
+            MembershipError::MembershipNotFound
+        ));
+    }
+
+    #[test]
+    fn unrecognized_unique_conflicts_remain_membership_conflicts() {
+        assert!(matches!(
+            MembershipError::from(conflict("unknown_constraint")),
+            MembershipError::AlreadyMember
+        ));
+    }
+
+    #[test]
+    fn non_constraint_database_errors_remain_internal() {
+        assert!(matches!(
+            MembershipError::from(DbError::ConnectionError("offline".into())),
+            MembershipError::Persistence(_)
+        ));
+    }
+
+    #[test]
+    fn membership_errors_map_to_expected_http_status_classes() {
+        let cases = [
+            (MembershipError::MembershipNotFound, Status::NotFound),
+            (MembershipError::MembershipRequired, Status::Forbidden),
+            (MembershipError::AlreadyMember, Status::Conflict),
+            (MembershipError::OwnerCannotLeave, Status::Forbidden),
+            (
+                MembershipError::Persistence(DbError::ConnectionError("offline".into())),
+                Status::InternalServerError,
+            ),
+        ];
+
+        for (error, status) in cases {
+            assert_eq!(ApiError::from(error).status(), status);
         }
     }
 }
