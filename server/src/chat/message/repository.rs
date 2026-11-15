@@ -1,48 +1,49 @@
-use super::models::{Message, MessageChangeset, MessageDetails, MessageId, NewMessage};
-use crate::chat::message::models::MultiMessageDetails;
-use crate::chat::models::ChatId;
+use super::models::{MessageChangeset, MessageDetailedRow, MessageRow, NewMessage};
 use crate::infra::{DbConn, DbError};
-use crate::member::models::{MemberShort, MemberShortRow};
+use crate::member::models::MemberShortRow;
 use crate::schema::{member::dsl as m_dsl, message::dsl as ms_dsl};
 use crate::utils::Paginator;
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SelectableHelper};
+use shared::models::chat::chat::ChatId;
+use shared::models::chat::message::MessageId;
+use shared::models::member::MemberId;
 
 const MESSAGE_PAGINATOR: Paginator = Paginator::new(None);
 
-pub(crate) struct MessageRepository;
+pub(in crate::chat) struct MessageRepository;
 impl MessageRepository {
     // Create
-    pub(crate) fn create(conn: &mut DbConn, value: NewMessage) -> Result<Message, DbError> {
+    pub(in crate::chat) fn create(
+        conn: &mut DbConn,
+        value: NewMessage,
+    ) -> Result<MessageRow, DbError> {
         diesel::insert_into(ms_dsl::message)
             .values(value)
-            .returning(Message::as_returning())
+            .returning(MessageRow::as_returning())
             .get_result(conn)
             .map_err(DbError::from)
     }
 
     // Read
-    pub(crate) fn read(
+    pub(in crate::chat) fn read_detailed(
         conn: &mut DbConn,
         chat_id: ChatId,
         id: MessageId,
-    ) -> Result<MessageDetails, DbError> {
+    ) -> Result<MessageDetailedRow, DbError> {
         ms_dsl::message
             .filter(ms_dsl::id.eq(id))
             .filter(ms_dsl::chat_id.eq(chat_id))
             .inner_join(m_dsl::member.on(ms_dsl::sender_id.eq(m_dsl::id)))
-            .select((Message::as_select(), MemberShortRow::as_select()))
+            .select((MessageRow::as_select(), MemberShortRow::as_select()))
             .first(conn)
-            .map(|(message, member)| {
-                let member_profile = MemberShort::from(member);
-                MessageDetails::from((message, member_profile))
-            })
+            .map(|(message, sender)| MessageDetailedRow { message, sender })
             .map_err(DbError::from)
     }
-    pub(crate) fn read_author_id(
+    pub(in crate::chat) fn read_author_id(
         conn: &mut DbConn,
         chat_id: ChatId,
         id: MessageId,
-    ) -> Result<i32, DbError> {
+    ) -> Result<MemberId, DbError> {
         ms_dsl::message
             .filter(ms_dsl::id.eq(id))
             .filter(ms_dsl::chat_id.eq(chat_id))
@@ -50,11 +51,11 @@ impl MessageRepository {
             .first(conn)
             .map_err(DbError::from)
     }
-    pub(crate) fn read_many(
+    pub(in crate::chat) fn read_many_detailed(
         conn: &mut DbConn,
         chat_id: ChatId,
         page: u32,
-    ) -> Result<MultiMessageDetails, DbError> {
+    ) -> Result<Vec<MessageDetailedRow>, DbError> {
         let page_size = MESSAGE_PAGINATOR.page_size();
         let page_offset = MESSAGE_PAGINATOR.offset(page);
         ms_dsl::message
@@ -63,41 +64,41 @@ impl MessageRepository {
             .limit(page_size)
             .offset(page_offset)
             .inner_join(m_dsl::member.on(ms_dsl::sender_id.eq(m_dsl::id)))
-            .select((Message::as_select(), MemberShortRow::as_select()))
+            .select((MessageRow::as_select(), MemberShortRow::as_select()))
             .load(conn)
             .map(|messages| {
                 messages
                     .into_iter()
-                    .map(|(message, member)| {
-                        let member_profile = MemberShort::from(member);
-                        MessageDetails::from((message, member_profile))
-                    })
+                    .map(|(message, sender)| MessageDetailedRow { message, sender })
                     .collect()
             })
             .map_err(DbError::from)
     }
 
     // Update
-    pub(crate) fn update(
+    pub(in crate::chat) fn update(
         conn: &mut DbConn,
         chat_id: ChatId,
         id: MessageId,
         changeset: MessageChangeset,
-    ) -> Result<MessageDetails, DbError> {
+    ) -> Result<MessageRow, DbError> {
         diesel::update(
             ms_dsl::message
                 .filter(ms_dsl::id.eq(id))
                 .filter(ms_dsl::chat_id.eq(chat_id)),
         )
         .set(changeset)
-        .returning(Message::as_returning())
-        .get_result::<Message>(conn)
+        .returning(MessageRow::as_returning())
+        .get_result::<MessageRow>(conn)
         .map_err(DbError::from)
-        .and_then(|message| Self::read(conn, chat_id, message.id()))
     }
 
     // Delete
-    pub(crate) fn delete(conn: &mut DbConn, chat_id: ChatId, id: MessageId) -> Result<(), DbError> {
+    pub(in crate::chat) fn delete(
+        conn: &mut DbConn,
+        chat_id: ChatId,
+        id: MessageId,
+    ) -> Result<(), DbError> {
         let count = diesel::delete(
             ms_dsl::message
                 .filter(ms_dsl::id.eq(id))
