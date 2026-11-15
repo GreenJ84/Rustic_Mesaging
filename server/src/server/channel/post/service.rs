@@ -1,22 +1,28 @@
 use crate::infra::{Database, DbConn};
-use crate::member::{models::MemberId, repository::MemberRepository};
-use crate::server::channel::{models::ChannelId, repository::ChannelRepository};
+use crate::server::channel::repository::ChannelRepository;
 use crate::server::membership::repository::ServerMembershipRepository;
-use crate::server::{models::ServerId, repository::ServerRepository};
+use crate::server::repository::ServerRepository;
+use shared::models::member::MemberId;
+use shared::models::server::channel::channel::ChannelId;
+use shared::models::server::channel::post::{
+    MultiPostDetailed, NewPostInput, PostChangesetInput, PostDetailed, PostId,
+};
+use shared::models::server::server::ServerId;
 
 use super::error::PostError;
-use super::models::*;
+use super::models::{NewPost, PostChangeset};
 use super::repository::PostRepository;
 
-pub struct PostService {
+pub(crate) struct PostService {
     database: Database,
 }
+
 impl PostService {
-    pub fn new(database: Database) -> Self {
+    pub(crate) fn new(database: Database) -> Self {
         Self { database }
     }
 
-    fn validated_and_authorized(
+    fn validate_authorization(
         &self,
         conn: &mut DbConn,
         member_id: MemberId,
@@ -25,96 +31,91 @@ impl PostService {
     ) -> Result<(), PostError> {
         if !ServerRepository::exists(conn, server_id)? {
             return Err(PostError::ServerNotFound);
-        } else if !ServerMembershipRepository::exists(conn, server_id, member_id)? {
+        }
+        if !ServerMembershipRepository::exists(conn, server_id, member_id)? {
             return Err(PostError::MembershipRequired);
-        } else if !ChannelRepository::exists(conn, server_id, channel_id)? {
+        }
+        if !ChannelRepository::exists(conn, server_id, channel_id)? {
             return Err(PostError::ChannelNotFound);
         }
         Ok(())
     }
 
-    // Create
-    pub fn create_post(
+    pub(crate) fn create_post(
         &self,
         member_id: MemberId,
         server_id: ServerId,
         channel_id: ChannelId,
-        content: NewPostInput,
-    ) -> Result<Post, PostError> {
-        let new_post = NewPost::try_from((member_id, channel_id, content))?;
-
+        input: NewPostInput,
+    ) -> Result<PostDetailed, PostError> {
+        let new_post = NewPost::try_from((member_id, channel_id, input))?;
         let mut conn = self.database.get_connection()?;
-
-        self.validated_and_authorized(&mut conn, member_id, server_id, channel_id)?;
-
-        PostRepository::create(&mut conn, new_post).map_err(PostError::from)
+        conn.transaction::<PostDetailed, PostError, _>(|conn| {
+            self.validate_authorization(conn, member_id, server_id, channel_id)?;
+            let post = PostRepository::create(conn, new_post)?;
+            PostRepository::read_detailed(conn, channel_id, post.id())
+                .map(PostDetailed::from)
+                .map_err(PostError::from)
+        })
     }
 
-    // Read
-    pub fn get_post(
-        &self,
-        member_id: MemberId,
-        server_id: ServerId,
-        channel_id: ChannelId,
-        post_id: PostId,
-    ) -> Result<Post, PostError> {
-        let mut conn = self.database.get_connection()?;
-
-        self.validated_and_authorized(&mut conn, member_id, server_id, channel_id)?;
-
-        PostRepository::read(&mut conn, channel_id, post_id).map_err(PostError::from)
-    }
-
-    pub fn get_post_detail(
+    pub(crate) fn get_post_detailed(
         &self,
         member_id: MemberId,
         server_id: ServerId,
         channel_id: ChannelId,
         post_id: PostId,
-    ) -> Result<PostDetail, PostError> {
+    ) -> Result<PostDetailed, PostError> {
         let mut conn = self.database.get_connection()?;
-
-        self.validated_and_authorized(&mut conn, member_id, server_id, channel_id)?;
-
-        PostRepository::read_detail(&mut conn, channel_id, post_id).map_err(PostError::from)
+        conn.transaction::<PostDetailed, PostError, _>(|conn| {
+            self.validate_authorization(conn, member_id, server_id, channel_id)?;
+            PostRepository::read_detailed(conn, channel_id, post_id)
+                .map(PostDetailed::from)
+                .map_err(PostError::from)
+        })
     }
 
-    pub fn get_post_page(
+    pub(crate) fn get_post_page(
         &self,
         member_id: MemberId,
         server_id: ServerId,
         channel_id: ChannelId,
         page: u32,
-    ) -> Result<MultiPost, PostError> {
+    ) -> Result<MultiPostDetailed, PostError> {
         let mut conn = self.database.get_connection()?;
-
-        self.validated_and_authorized(&mut conn, member_id, server_id, channel_id)?;
-
-        PostRepository::read_page(&mut conn, channel_id, page).map_err(PostError::from)
+        conn.transaction::<MultiPostDetailed, PostError, _>(|conn| {
+            self.validate_authorization(conn, member_id, server_id, channel_id)?;
+            let posts = PostRepository::read_page_detailed(conn, channel_id, page)?
+                .into_iter()
+                .map(PostDetailed::from)
+                .collect();
+            Ok(MultiPostDetailed { posts })
+        })
     }
 
-    // Update
-    pub fn update_post(
+    pub(crate) fn update_post(
         &self,
         member_id: MemberId,
         server_id: ServerId,
         channel_id: ChannelId,
         post_id: PostId,
-        changeset: PostChangesetInput,
-    ) -> Result<Post, PostError> {
-        let changeset = PostChangeset::try_from(changeset)?;
+        input: PostChangesetInput,
+    ) -> Result<PostDetailed, PostError> {
+        let changeset = PostChangeset::try_from(input)?;
         let mut conn = self.database.get_connection()?;
-
-        self.validated_and_authorized(&mut conn, member_id, server_id, channel_id)?;
-        if member_id != PostRepository::read_author_id(&mut conn, channel_id, post_id)? {
-            return Err(PostError::PermissionDenied);
-        }
-
-        PostRepository::update(&mut conn, channel_id, post_id, changeset).map_err(PostError::from)
+        conn.transaction::<PostDetailed, PostError, _>(|conn| {
+            self.validate_authorization(conn, member_id, server_id, channel_id)?;
+            if member_id != PostRepository::read_author_id(conn, channel_id, post_id)? {
+                return Err(PostError::PermissionDenied);
+            }
+            PostRepository::update(conn, channel_id, post_id, changeset)?;
+            PostRepository::read_detailed(conn, channel_id, post_id)
+                .map(PostDetailed::from)
+                .map_err(PostError::from)
+        })
     }
 
-    // Delete
-    pub fn delete_post(
+    pub(crate) fn delete_post(
         &self,
         member_id: MemberId,
         server_id: ServerId,
@@ -122,12 +123,13 @@ impl PostService {
         post_id: PostId,
     ) -> Result<(), PostError> {
         let mut conn = self.database.get_connection()?;
-
-        self.validated_and_authorized(&mut conn, member_id, server_id, channel_id)?;
-        if member_id != PostRepository::read_author_id(&mut conn, channel_id, post_id)? {
-            return Err(PostError::PermissionDenied);
-        }
-
-        PostRepository::delete(&mut conn, channel_id, post_id).map_err(PostError::from)
+        conn.transaction::<(), PostError, _>(|conn| {
+            self.validate_authorization(conn, member_id, server_id, channel_id)?;
+            if member_id != PostRepository::read_author_id(conn, channel_id, post_id)? {
+                return Err(PostError::PermissionDenied);
+            }
+            PostRepository::delete(conn, channel_id, post_id).map_err(PostError::from)
+        })
     }
 }
+use diesel::Connection;
