@@ -65,7 +65,10 @@ impl From<PostError> for ApiError {
                 ApiError::Forbidden("You do not have permission to perform this action".into())
             }
 
-            PostError::PersistenceError(_) => ApiError::InternalError,
+            PostError::PersistenceError(error) => {
+                error.log_error("server channel post");
+                ApiError::InternalError
+            }
         }
     }
 }

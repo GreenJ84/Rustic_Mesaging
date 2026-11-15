@@ -91,7 +91,10 @@ impl From<ServerError> for ApiError {
 
             ServerError::Membership(error) => ApiError::from(error),
             ServerError::Member(error) => ApiError::from(error),
-            ServerError::Persistence(_) => ApiError::InternalError,
+            ServerError::Persistence(error) => {
+                error.log_error("server domain");
+                ApiError::InternalError
+            }
         }
     }
 }

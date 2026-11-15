@@ -2,7 +2,7 @@ use crate::api::ApiError;
 use crate::infra::{DbError, DieselError};
 
 #[derive(Debug)]
-pub enum ChannelError {
+pub(crate) enum ChannelError {
     InvalidInput(String),
     InvalidChangeset(String),
 
@@ -68,7 +68,7 @@ impl From<ChannelError> for ApiError {
             ),
 
             ChannelError::PersistenceError(error) => {
-                log::error!("Channel persistence error: {error:?}");
+                error.log_error("server channel");
                 ApiError::InternalError
             }
         }
