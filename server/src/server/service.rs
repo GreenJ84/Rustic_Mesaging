@@ -1,24 +1,25 @@
 use diesel::Connection;
 
 use crate::infra::Database;
-use crate::member::models::{MemberId, MultiMemberPreview};
 use crate::server::membership::error::MembershipError;
 use crate::server::membership::repository::ServerMembershipRepository;
 use crate::utils::Validator;
+use shared::models::member::{MemberId, MemberShort, MultiMemberPreview};
+use shared::models::server::server::{
+    MultiServer, MultiServerPreview, NewServerInput, ServerChangesetInput, ServerDetailed,
+    ServerId, ServerShort,
+};
 
 use super::errors::ServerError;
 use super::membership::models::NewServerMembership;
-use super::models::{
-    MultiServerPreview, NewServer, ServerChangeset, ServerChangesetInput, ServerCreateInput,
-    ServerDetails, ServerId, ServerPreview,
-};
+use super::models::{NewServer, ServerChangeset};
 use super::repository::ServerRepository;
 
-pub struct ServerService {
+pub(crate) struct ServerService {
     database: Database,
 }
 impl ServerService {
-    pub fn new(database: Database) -> Self {
+    pub(crate) fn new(database: Database) -> Self {
         Self { database }
     }
 
@@ -26,50 +27,48 @@ impl ServerService {
     // Server Services
     // ===============================
     // Create
-    pub fn create_server(
+    pub(crate) fn create_server(
         &self,
         member_id: MemberId,
-        input: ServerCreateInput,
-    ) -> Result<ServerDetails, ServerError> {
+        input: NewServerInput,
+    ) -> Result<ServerDetailed, ServerError> {
         let new_server = NewServer::try_from((member_id, input))?;
 
         let mut conn = self.database.get_connection()?;
-        conn.transaction::<ServerDetails, ServerError, _>(|conn| {
+        conn.transaction::<ServerDetailed, ServerError, _>(|conn| {
             if ServerRepository::name_taken(conn, new_server.name())? {
                 return Err(ServerError::NameTaken);
             }
-            let new_server = ServerRepository::create(conn, new_server)
-                .map(ServerDetails::from)
-                .map_err(ServerError::from)?;
+            let server = ServerRepository::create(conn, new_server)?;
             ServerMembershipRepository::create(
                 conn,
-                NewServerMembership {
-                    member_id,
-                    server_id: new_server.id,
-                },
+                NewServerMembership::new(member_id, server.id()),
             )?;
-            Ok(new_server.into())
+            Ok(ServerDetailed::from(server))
         })
     }
 
     // Read
-    pub fn get_server(&self, server_id: ServerId) -> Result<ServerDetails, ServerError> {
+    pub(crate) fn get_server(&self, server_id: ServerId) -> Result<ServerDetailed, ServerError> {
         let mut conn = self.database.get_connection()?;
         ServerRepository::read(&mut conn, server_id)
-            .map(ServerDetails::from)
+            .map(ServerDetailed::from)
             .map_err(ServerError::from)
     }
 
-    pub fn get_servers_list(&self, page: u32) -> Result<MultiServerPreview, ServerError> {
+    pub(crate) fn get_servers_list(&self, page: u32) -> Result<MultiServer, ServerError> {
         let mut conn = self.database.get_connection()?;
         ServerRepository::read_page(&mut conn, page)
-            .map(|servers| MultiServerPreview {
-                servers: servers.into_iter().map(ServerPreview::from).collect(),
+            .map(|servers| MultiServer {
+                servers: servers.into_iter().map(ServerDetailed::from).collect(),
             })
             .map_err(ServerError::from)
     }
 
-    pub fn search_servers(&self, search_term: String) -> Result<MultiServerPreview, ServerError> {
+    pub(crate) fn search_servers(
+        &self,
+        search_term: String,
+    ) -> Result<MultiServerPreview, ServerError> {
         let search = Validator::validate_search_term(search_term).map_err(|e| {
             ServerError::InvalidSearchTerm(format!("Servers search term {}", e.message()))
         })?;
@@ -77,35 +76,35 @@ impl ServerService {
         let mut conn = self.database.get_connection()?;
         ServerRepository::search(&mut conn, search)
             .map(|servers| MultiServerPreview {
-                servers: servers.into_iter().map(ServerPreview::from).collect(),
+                servers: servers.into_iter().map(ServerShort::from).collect(),
             })
             .map_err(ServerError::from)
     }
 
     // Update
-    pub fn update_server(
+    pub(crate) fn update_server(
         &self,
         server_id: ServerId,
         member_id: MemberId,
         input: ServerChangesetInput,
-    ) -> Result<ServerDetails, ServerError> {
+    ) -> Result<ServerDetailed, ServerError> {
         let changeset = ServerChangeset::try_from(input)?;
 
         let mut conn = self.database.get_connection()?;
-        conn.transaction::<ServerDetails, ServerError, _>(|conn| {
+        conn.transaction::<ServerDetailed, ServerError, _>(|conn| {
             if !ServerRepository::exists(conn, server_id)? {
                 return Err(ServerError::NotFound);
             } else if !ServerRepository::is_owner(conn, server_id, member_id)? {
                 return Err(ServerError::NotOwner);
             }
             ServerRepository::update(conn, server_id, changeset)
-                .map(ServerDetails::from)
+                .map(ServerDetailed::from)
                 .map_err(ServerError::from)
         })
     }
 
     // Delete
-    pub fn delete_server(
+    pub(crate) fn delete_server(
         &self,
         server_id: ServerId,
         member_id: MemberId,
@@ -125,35 +124,36 @@ impl ServerService {
     // Server Membership Services
     // ===============================
     // Create
-    pub fn join_server(&self, server_id: ServerId, member_id: MemberId) -> Result<(), ServerError> {
+    pub(crate) fn join_server(
+        &self,
+        server_id: ServerId,
+        member_id: MemberId,
+    ) -> Result<(), ServerError> {
         let mut conn = self.database.get_connection()?;
         conn.transaction::<(), ServerError, _>(|conn| {
             if !ServerRepository::exists(conn, server_id)? {
                 return Err(ServerError::NotFound);
             }
-            ServerMembershipRepository::create(
-                conn,
-                NewServerMembership {
-                    member_id,
-                    server_id,
-                },
-            )
-            .map_err(ServerError::from)
+            ServerMembershipRepository::create(conn, NewServerMembership::new(member_id, server_id))
+                .map(|_| ())
+                .map_err(ServerError::from)
         })
     }
 
     // Read
-    pub fn get_member_servers(
+    pub(crate) fn get_member_servers(
         &self,
         member_id: MemberId,
         page: u32,
     ) -> Result<MultiServerPreview, ServerError> {
         let mut conn = self.database.get_connection()?;
         ServerMembershipRepository::get_member_servers(&mut conn, member_id, page)
-            .map(|servers| MultiServerPreview { servers })
+            .map(|servers| MultiServerPreview {
+                servers: servers.into_iter().map(ServerShort::from).collect(),
+            })
             .map_err(ServerError::from)
     }
-    pub fn get_server_members(
+    pub(crate) fn get_server_members(
         &self,
         server_id: ServerId,
         member_id: MemberId,
@@ -167,13 +167,15 @@ impl ServerService {
                 return Err(ServerError::Membership(MembershipError::MembershipRequired));
             }
             ServerMembershipRepository::get_server_members(conn, server_id, page)
-                .map(|members| MultiMemberPreview { members })
+                .map(|members| MultiMemberPreview {
+                    members: members.into_iter().map(MemberShort::from).collect(),
+                })
                 .map_err(ServerError::from)
         })
     }
 
     // Delete
-    pub fn leave_server(
+    pub(crate) fn leave_server(
         &self,
         server_id: ServerId,
         member_id: MemberId,
