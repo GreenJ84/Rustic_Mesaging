@@ -55,3 +55,58 @@ pub enum FriendRequestCreation {
     Friend(FriendDetails),
     Request(FriendRequestDetailed),
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        FriendRequestChangesetInput, FriendRequestCreation, FriendRequestDetailed,
+        FriendRequestList, NewFriendRequestInput,
+    };
+    use crate::models::member::MemberShort;
+
+    #[test]
+    fn creation_input_contains_only_receiver_and_optional_note() {
+        let value = serde_json::to_value(NewFriendRequestInput {
+            receiver_id: 9,
+            note: Some("hello".into()),
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({ "receiver_id": 9, "note": "hello" })
+        );
+    }
+
+    #[test]
+    fn changeset_preserves_null_as_the_note_clear_operation() {
+        let value = serde_json::to_value(FriendRequestChangesetInput { note: None }).unwrap();
+        assert_eq!(value, serde_json::json!({ "note": null }));
+    }
+
+    #[test]
+    fn request_list_uses_a_stable_requests_envelope() {
+        let value = serde_json::to_value(FriendRequestList::<serde_json::Value> {
+            requests: Vec::new(),
+        })
+        .unwrap();
+        assert_eq!(value, serde_json::json!({ "requests": [] }));
+    }
+
+    #[test]
+    fn creation_result_uses_stable_externally_tagged_variants() {
+        let value = serde_json::to_value(FriendRequestCreation::Request(FriendRequestDetailed {
+            member: MemberShort {
+                id: 9,
+                username: "bob".into(),
+                avatar: "default".into(),
+            },
+            note: None,
+            created_at: chrono::NaiveDateTime::default(),
+        }))
+        .unwrap();
+
+        assert!(value.get("Request").is_some());
+        assert!(value.get("Friend").is_none());
+    }
+}

@@ -74,7 +74,7 @@ impl From<FriendRequestDetailedRow> for FriendRequestDetailed {
 
 #[cfg(test)]
 mod tests {
-    use super::FriendRequestRow;
+    use super::{FriendRequestChangeset, FriendRequestRow, NewFriendRequest};
     use shared::models::social::request::FriendRequest;
 
     #[test]
@@ -91,5 +91,40 @@ mod tests {
         assert_eq!(request.receiver_id, 9);
         assert_eq!(request.note.as_deref(), Some("hello"));
         assert_eq!(request.created_at, created_at);
+    }
+
+    #[test]
+    fn new_request_preserves_direction_and_optional_note() {
+        let request = NewFriendRequest {
+            sender_id: 4,
+            receiver_id: 9,
+            note: Some("hello".into()),
+        };
+
+        assert_eq!(request.sender_id, 4);
+        assert_eq!(request.receiver_id, 9);
+        assert_eq!(request.note.as_deref(), Some("hello"));
+    }
+
+    #[test]
+    fn changeset_none_represents_clearing_the_note() {
+        let changeset = FriendRequestChangeset { note: None };
+        assert!(changeset.note.is_none());
+    }
+
+    #[test]
+    fn row_accessors_expose_each_persistence_field() {
+        let created_at = chrono::NaiveDateTime::default();
+        let row = FriendRequestRow {
+            sender_id: 4,
+            receiver_id: 9,
+            note: Some("hello".into()),
+            created_at,
+        };
+
+        assert_eq!(row.sender_id(), 4);
+        assert_eq!(row.receiver_id(), 9);
+        assert_eq!(row.note(), Some("hello"));
+        assert_eq!(row.created_at(), created_at);
     }
 }

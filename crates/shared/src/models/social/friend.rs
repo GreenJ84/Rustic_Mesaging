@@ -33,3 +33,32 @@ pub struct FriendList<T> {
 
 pub type MultiFriend = FriendList<FriendDetails>;
 pub type MultiFriendPreview = FriendList<FriendShort>;
+
+#[cfg(test)]
+mod tests {
+    use super::{Friend, FriendList};
+
+    #[test]
+    fn friendship_contract_preserves_canonical_member_ids() {
+        let created_at = chrono::NaiveDateTime::default();
+        let value = serde_json::to_value(Friend {
+            member_id: 4,
+            friend_id: 9,
+            created_at,
+        })
+        .unwrap();
+
+        assert_eq!(value["member_id"], 4);
+        assert_eq!(value["friend_id"], 9);
+        assert_eq!(value["created_at"], serde_json::json!(created_at));
+    }
+
+    #[test]
+    fn friend_list_uses_a_stable_friends_envelope() {
+        let value = serde_json::to_value(FriendList::<serde_json::Value> {
+            friends: Vec::new(),
+        })
+        .unwrap();
+        assert_eq!(value, serde_json::json!({ "friends": [] }));
+    }
+}

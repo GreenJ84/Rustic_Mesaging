@@ -269,12 +269,25 @@ mod tests {
     use crate::social::error::SocialError;
 
     #[test]
-    fn normalizes_optional_request_notes() {
+    fn absent_and_blank_request_notes_normalize_to_none() {
         assert_eq!(normalize_note(None).unwrap(), None);
         assert_eq!(normalize_note(Some("   ".into())).unwrap(), None);
+    }
+
+    #[test]
+    fn request_notes_are_trimmed() {
         assert_eq!(
             normalize_note(Some("  Let's connect  ".into())).unwrap(),
             Some("Let's connect".into())
+        );
+    }
+
+    #[test]
+    fn accepts_request_notes_at_length_boundaries() {
+        assert_eq!(normalize_note(Some("a".into())).unwrap(), Some("a".into()));
+        assert_eq!(
+            normalize_note(Some("a".repeat(500))).unwrap(),
+            Some("a".repeat(500))
         );
     }
 

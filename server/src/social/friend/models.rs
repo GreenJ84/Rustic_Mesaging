@@ -103,6 +103,7 @@ mod tests {
     fn normalizes_friendship_ids_into_canonical_order() {
         assert_eq!(normalize_friendship(4, 9), (4, 9));
         assert_eq!(normalize_friendship(9, 4), (4, 9));
+        assert_eq!(normalize_friendship(4, 4), (4, 4));
     }
 
     #[test]
@@ -125,5 +126,19 @@ mod tests {
         assert_eq!(friend.member_id, 4);
         assert_eq!(friend.friend_id, 9);
         assert_eq!(friend.created_at, created_at);
+    }
+
+    #[test]
+    fn row_accessors_expose_each_persistence_field() {
+        let created_at = chrono::NaiveDateTime::default();
+        let row = FriendRow {
+            member_id: 4,
+            friend_id: 9,
+            created_at,
+        };
+
+        assert_eq!(row.member_id(), 4);
+        assert_eq!(row.friend_id(), 9);
+        assert_eq!(row.created_at(), created_at);
     }
 }
