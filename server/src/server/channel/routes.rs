@@ -1,54 +1,53 @@
-use rocket::form::{Form, Strict};
 use rocket::http::Status;
 use rocket::response::status;
 use rocket::serde::json::Json;
 use rocket::State;
 
 use crate::auth::SystemUser;
-use crate::server::models::ServerId;
 use crate::ApiResponse;
-
-use super::models::{
-    ChannelChangesetInput, ChannelDetails, ChannelId, MultiChannelDetails, MultiChannelPreview,
+use shared::models::server::channel::channel::{
+    ChannelChangesetInput, ChannelDetailed, ChannelId, MultiChannel, MultiChannelPreview,
     NewChannelInput,
 };
+use shared::models::server::server::ServerId;
+
 use super::service::ChannelService;
 
-#[post("/<server_id>/channel", data = "<form>")]
-pub fn create(
+#[post("/<server_id>/channels", data = "<input>")]
+fn create(
     user: SystemUser,
     channel_service: &State<ChannelService>,
     server_id: ServerId,
-    form: Form<Strict<NewChannelInput>>,
-) -> ApiResponse<Json<ChannelDetails>> {
-    let input = form.into_inner().into_inner();
-    let new_channel = channel_service.create_channel(user.member_id(), server_id, input)?;
-    Ok(status::Custom(Status::Created, Json(new_channel)))
+    input: Json<NewChannelInput>,
+) -> ApiResponse<Json<ChannelDetailed>> {
+    let channel =
+        channel_service.create_channel(user.member_id(), server_id, input.into_inner())?;
+    Ok(status::Custom(Status::Created, Json(channel)))
 }
 
-#[get("/<server_id>/channel/<channel_id>")]
-pub fn get(
+#[get("/<server_id>/channels/<channel_id>", rank = 2)]
+fn get(
     user: SystemUser,
     channel_service: &State<ChannelService>,
     server_id: ServerId,
     channel_id: ChannelId,
-) -> ApiResponse<Json<ChannelDetails>> {
+) -> ApiResponse<Json<ChannelDetailed>> {
     let channel = channel_service.get_channel(user.member_id(), server_id, channel_id)?;
     Ok(status::Custom(Status::Ok, Json(channel)))
 }
 
 #[get("/<server_id>/channels")]
-pub fn get_server_channels(
+fn get_server_channels(
     user: SystemUser,
     channel_service: &State<ChannelService>,
     server_id: ServerId,
-) -> ApiResponse<Json<MultiChannelDetails>> {
+) -> ApiResponse<Json<MultiChannel>> {
     let channels = channel_service.get_server_channels(user.member_id(), server_id)?;
     Ok(status::Custom(Status::Ok, Json(channels)))
 }
 
 #[get("/<server_id>/channels/preview")]
-pub fn get_server_channel_previews(
+fn get_server_channel_previews(
     user: SystemUser,
     channel_service: &State<ChannelService>,
     server_id: ServerId,
@@ -57,22 +56,25 @@ pub fn get_server_channel_previews(
     Ok(status::Custom(Status::Ok, Json(channels)))
 }
 
-#[patch("/<server_id>/channel/<channel_id>", data = "<form>")]
-pub fn update(
+#[patch("/<server_id>/channels/<channel_id>", data = "<input>")]
+fn update(
     user: SystemUser,
     channel_service: &State<ChannelService>,
     server_id: ServerId,
     channel_id: ChannelId,
-    form: Form<Strict<ChannelChangesetInput>>,
-) -> ApiResponse<Json<ChannelDetails>> {
-    let input = form.into_inner().into_inner();
-
-    let channel = channel_service.update_channel(user.member_id(), server_id, channel_id, input)?;
+    input: Json<ChannelChangesetInput>,
+) -> ApiResponse<Json<ChannelDetailed>> {
+    let channel = channel_service.update_channel(
+        user.member_id(),
+        server_id,
+        channel_id,
+        input.into_inner(),
+    )?;
     Ok(status::Custom(Status::Ok, Json(channel)))
 }
 
-#[delete("/<server_id>/channel/<channel_id>")]
-pub fn delete(
+#[delete("/<server_id>/channels/<channel_id>")]
+fn delete(
     user: SystemUser,
     channel_service: &State<ChannelService>,
     server_id: ServerId,
@@ -82,21 +84,38 @@ pub fn delete(
     Ok(status::Custom(Status::NoContent, ()))
 }
 
-// #[get("/<channel_id>/posts")]
-// pub fn get_channel_posts(
-//     user: SystemUser,
-//     channel_service: &State<ChannelService>,
-//     channel_id: ChannelId,
-// ) -> ApiResponse<MultiPost> {
-//     channel_authorized(&mut conn, channel_id, token)?;
+pub(in crate::server) fn routes() -> Vec<rocket::Route> {
+    routes![
+        create,
+        get,
+        get_server_channels,
+        get_server_channel_previews,
+        update,
+        delete,
+    ]
+}
 
-//     match channel_service.get_channel_posts(&mut conn, channel_id) {
-//         Ok(posts) => Ok(status::Custom(Status::Ok, posts)),
-//         Err(e) => {
-//             return Err::<status::Custom<MultiPost>, status::Custom<String>>(status::Custom(
-//                 Status::NotFound,
-//                 format!("Channel post lookup error: {}", e),
-//             ))
-//         }
-//     }
-// }
+#[cfg(test)]
+mod tests {
+    use rocket::http::Method;
+
+    use super::routes;
+
+    #[test]
+    fn channel_routes_use_plural_resource_paths() {
+        let routes = routes();
+        let signatures = routes
+            .iter()
+            .map(|route| (route.method, route.uri.to_string()))
+            .collect::<Vec<_>>();
+
+        assert!(routes.iter().any(|route| {
+            route.uri.to_string() == "/<server_id>/channels/<channel_id>" && route.rank == 2
+        }));
+
+        assert!(signatures.contains(&(Method::Post, "/<server_id>/channels".into())));
+        assert!(signatures.contains(&(Method::Patch, "/<server_id>/channels/<channel_id>".into())));
+        assert!(signatures.contains(&(Method::Delete, "/<server_id>/channels/<channel_id>".into())));
+        assert_eq!(signatures.len(), 6);
+    }
+}
