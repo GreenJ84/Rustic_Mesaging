@@ -9,11 +9,6 @@ pub(crate) mod participant;
 
 pub fn get_chat_routes() -> Vec<rocket::Route> {
     let mut routes = routes::routes();
-    routes.extend(routes![
-        message::routes::create,
-        message::routes::get,
-        message::routes::update,
-        message::routes::delete,
-    ]);
+    routes.extend(message::routes::routes());
     routes
 }

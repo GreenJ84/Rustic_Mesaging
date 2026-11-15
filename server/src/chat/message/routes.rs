@@ -1,48 +1,47 @@
-use rocket::form::{Form, Strict};
 use rocket::http::Status;
 use rocket::response::status;
 use rocket::serde::json::Json;
 use rocket::State;
 
 use crate::auth::SystemUser;
-use crate::chat::models::ChatId;
 use crate::ApiResponse;
-
-use super::models::{
-    MessageChangesetInput, MessageDetails, MessageId, MessageInput, MultiMessageDetails,
+use shared::models::chat::chat::ChatId;
+use shared::models::chat::message::{
+    MessageChangesetInput, MessageDetailed, MessageId, MultiMessageDetailed, NewMessageInput,
 };
+
 use super::service::MessageService;
 
-#[post("/<chat_id>/messages", data = "<form>")]
-pub(crate) fn create(
+#[post("/<chat_id>/messages", data = "<input>")]
+fn create(
     user: SystemUser,
     service: &State<MessageService>,
     chat_id: ChatId,
-    form: Form<Strict<MessageInput>>,
-) -> ApiResponse<Json<MessageDetails>> {
-    let message = service.create(user.member_id(), chat_id, form.into_inner().into_inner())?;
+    input: Json<NewMessageInput>,
+) -> ApiResponse<Json<MessageDetailed>> {
+    let message = service.create(user.member_id(), chat_id, input.into_inner())?;
     Ok(status::Custom(Status::Created, Json(message)))
 }
 
 #[get("/<chat_id>/messages/<message_id>")]
-pub(crate) fn get(
+fn get(
     user: SystemUser,
     service: &State<MessageService>,
     chat_id: ChatId,
     message_id: MessageId,
-) -> ApiResponse<Json<MessageDetails>> {
+) -> ApiResponse<Json<MessageDetailed>> {
     Ok(status::Custom(
         Status::Ok,
         Json(service.get(user.member_id(), chat_id, message_id)?),
     ))
 }
 #[get("/<chat_id>/messages?<page>")]
-pub(crate) fn get_thread(
+fn get_thread(
     user: SystemUser,
     service: &State<MessageService>,
     chat_id: ChatId,
     page: Option<u32>,
-) -> ApiResponse<Json<MultiMessageDetails>> {
+) -> ApiResponse<Json<MultiMessageDetailed>> {
     let page = page.unwrap_or(0);
     Ok(status::Custom(
         Status::Ok,
@@ -50,27 +49,22 @@ pub(crate) fn get_thread(
     ))
 }
 
-#[patch("/<chat_id>/messages/<message_id>", data = "<form>")]
-pub(crate) fn update(
+#[patch("/<chat_id>/messages/<message_id>", data = "<input>")]
+fn update(
     user: SystemUser,
     service: &State<MessageService>,
     chat_id: ChatId,
     message_id: MessageId,
-    form: Form<Strict<MessageChangesetInput>>,
-) -> ApiResponse<Json<MessageDetails>> {
+    input: Json<MessageChangesetInput>,
+) -> ApiResponse<Json<MessageDetailed>> {
     Ok(status::Custom(
         Status::Ok,
-        Json(service.update(
-            user.member_id(),
-            chat_id,
-            message_id,
-            form.into_inner().into_inner(),
-        )?),
+        Json(service.update(user.member_id(), chat_id, message_id, input.into_inner())?),
     ))
 }
 
 #[delete("/<chat_id>/messages/<message_id>")]
-pub(crate) fn delete(
+fn delete(
     user: SystemUser,
     service: &State<MessageService>,
     chat_id: ChatId,
@@ -78,4 +72,30 @@ pub(crate) fn delete(
 ) -> ApiResponse<()> {
     service.delete(user.member_id(), chat_id, message_id)?;
     Ok(status::Custom(Status::NoContent, ()))
+}
+
+pub(in crate::chat) fn routes() -> Vec<rocket::Route> {
+    routes![create, get, get_thread, update, delete]
+}
+
+#[cfg(test)]
+mod tests {
+    use rocket::http::Method;
+
+    use super::routes;
+
+    #[test]
+    fn message_routes_include_thread_and_resource_operations() {
+        let signatures = routes()
+            .into_iter()
+            .map(|route| (route.method, route.uri.to_string()))
+            .collect::<Vec<_>>();
+
+        assert!(signatures.contains(&(Method::Post, "/<chat_id>/messages".into())));
+        assert!(signatures.contains(&(Method::Get, "/<chat_id>/messages/<message_id>".into())));
+        assert!(signatures.contains(&(Method::Get, "/<chat_id>/messages?<page>".into())));
+        assert!(signatures.contains(&(Method::Patch, "/<chat_id>/messages/<message_id>".into())));
+        assert!(signatures.contains(&(Method::Delete, "/<chat_id>/messages/<message_id>".into())));
+        assert_eq!(signatures.len(), 5);
+    }
 }
