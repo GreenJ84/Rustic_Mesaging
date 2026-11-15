@@ -1,38 +1,39 @@
 use diesel::Connection;
 
 use crate::infra::Database;
-use crate::member::models::MemberId;
-use crate::server::channel::models::{ChannelChangeset, MultiChannelDetails};
+use crate::server::channel::models::ChannelChangeset;
 use crate::server::membership::repository::ServerMembershipRepository;
-use crate::server::models::ServerId;
 use crate::server::repository::ServerRepository;
+use shared::models::member::MemberId;
+use shared::models::server::channel::channel::{
+    ChannelChangesetInput, ChannelDetailed, ChannelId, ChannelShort, MultiChannel,
+    MultiChannelPreview, NewChannelInput,
+};
+use shared::models::server::server::ServerId;
 
 use super::error::ChannelError;
-use super::models::{
-    ChannelChangesetInput, ChannelDetails, ChannelId, ChannelPreview, MultiChannelPreview,
-    NewChannel, NewChannelInput,
-};
+use super::models::NewChannel;
 use super::repository::ChannelRepository;
 
-pub struct ChannelService {
+pub(crate) struct ChannelService {
     database: Database,
 }
 impl ChannelService {
-    pub fn new(database: Database) -> Self {
+    pub(crate) fn new(database: Database) -> Self {
         Self { database }
     }
 
     // Create
-    pub fn create_channel(
+    pub(crate) fn create_channel(
         &self,
         member_id: MemberId,
         server_id: ServerId,
         input: NewChannelInput,
-    ) -> Result<ChannelDetails, ChannelError> {
+    ) -> Result<ChannelDetailed, ChannelError> {
         let new_channel = NewChannel::try_from((server_id, input))?;
 
         let mut conn = self.database.get_connection()?;
-        conn.transaction::<ChannelDetails, ChannelError, _>(|conn| {
+        conn.transaction::<ChannelDetailed, ChannelError, _>(|conn| {
             if !ServerRepository::exists(conn, server_id)? {
                 return Err(ChannelError::ServerNotFound);
             } else if !ServerRepository::is_owner(conn, server_id, member_id)? {
@@ -42,20 +43,20 @@ impl ChannelService {
             }
 
             ChannelRepository::create(conn, new_channel)
-                .map(ChannelDetails::from)
+                .map(ChannelDetailed::from)
                 .map_err(ChannelError::from)
         })
     }
 
     // Read
-    pub fn get_channel(
+    pub(crate) fn get_channel(
         &self,
         member_id: MemberId,
         server_id: ServerId,
         channel_id: ChannelId,
-    ) -> Result<ChannelDetails, ChannelError> {
+    ) -> Result<ChannelDetailed, ChannelError> {
         let mut conn = self.database.get_connection()?;
-        conn.transaction::<ChannelDetails, ChannelError, _>(|conn| {
+        conn.transaction::<ChannelDetailed, ChannelError, _>(|conn| {
             if !ServerRepository::exists(conn, server_id)? {
                 return Err(ChannelError::ServerNotFound);
             } else if !ServerMembershipRepository::exists(conn, server_id, member_id)? {
@@ -65,30 +66,32 @@ impl ChannelService {
             }
 
             ChannelRepository::read(conn, channel_id)
-                .map(ChannelDetails::from)
+                .map(ChannelDetailed::from)
                 .map_err(ChannelError::from)
         })
     }
-    pub fn get_server_channels(
+    pub(crate) fn get_server_channels(
         &self,
         member_id: MemberId,
         server_id: ServerId,
-    ) -> Result<Vec<ChannelDetails>, ChannelError> {
+    ) -> Result<MultiChannel, ChannelError> {
         let mut conn = self.database.get_connection()?;
 
-        conn.transaction::<MultiChannelDetails, ChannelError, _>(|conn| {
+        conn.transaction::<MultiChannel, ChannelError, _>(|conn| {
             if !ServerRepository::exists(conn, server_id)? {
                 return Err(ChannelError::ServerNotFound);
             } else if !ServerMembershipRepository::exists(conn, server_id, member_id)? {
                 return Err(ChannelError::MembershipRequired);
             }
 
-            ChannelRepository::get_multi(conn, server_id)
-                .map(|channels| channels.into_iter().map(ChannelDetails::from).collect())
+            ChannelRepository::read_many(conn, server_id)
+                .map(|channels| MultiChannel {
+                    channels: channels.into_iter().map(ChannelDetailed::from).collect(),
+                })
                 .map_err(ChannelError::from)
         })
     }
-    pub fn get_server_channel_previews(
+    pub(crate) fn get_server_channel_previews(
         &self,
         member_id: MemberId,
         server_id: ServerId,
@@ -102,24 +105,26 @@ impl ChannelService {
                 return Err(ChannelError::MembershipRequired);
             }
 
-            ChannelRepository::get_multi(conn, server_id)
-                .map(|channels| channels.into_iter().map(ChannelPreview::from).collect())
+            ChannelRepository::read_many_short(conn, server_id)
+                .map(|channels| MultiChannelPreview {
+                    channels: channels.into_iter().map(ChannelShort::from).collect(),
+                })
                 .map_err(ChannelError::from)
         })
     }
 
     // Update
-    pub fn update_channel(
+    pub(crate) fn update_channel(
         &self,
         member_id: MemberId,
         server_id: ServerId,
         channel_id: ChannelId,
         input: ChannelChangesetInput,
-    ) -> Result<ChannelDetails, ChannelError> {
+    ) -> Result<ChannelDetailed, ChannelError> {
         let changeset = ChannelChangeset::try_from(input)?;
 
         let mut conn = self.database.get_connection()?;
-        conn.transaction::<ChannelDetails, ChannelError, _>(|conn| {
+        conn.transaction::<ChannelDetailed, ChannelError, _>(|conn| {
             if !ServerRepository::exists(conn, server_id)? {
                 return Err(ChannelError::ServerNotFound);
             } else if !ServerRepository::is_owner(conn, server_id, member_id)? {
@@ -134,13 +139,13 @@ impl ChannelService {
             }
 
             ChannelRepository::update(conn, channel_id, changeset)
-                .map(ChannelDetails::from)
+                .map(ChannelDetailed::from)
                 .map_err(ChannelError::from)
         })
     }
 
     // Delete
-    pub fn delete_channel(
+    pub(crate) fn delete_channel(
         &self,
         member_id: MemberId,
         server_id: ServerId,
