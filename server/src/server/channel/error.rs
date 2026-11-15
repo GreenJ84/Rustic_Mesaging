@@ -23,6 +23,12 @@ impl From<DbError> for ChannelError {
             DbError::Conflict(DieselError::DatabaseError(_, info)) => {
                 match info.constraint_name() {
                     Some("channel_server_name_unique") => Self::NameTaken,
+                    _ => Self::PersistenceError(error),
+                }
+            }
+
+            DbError::ConstraintViolation(DieselError::DatabaseError(_, info)) => {
+                match info.constraint_name() {
                     Some("channel_server_id_fkey") => Self::ServerNotFound,
                     _ => Self::PersistenceError(error),
                 }
@@ -37,6 +43,106 @@ impl From<DbError> for ChannelError {
             | DbError::Database(_)
             | DbError::ConnectionError(_)
             | DbError::PoolError(_) => Self::PersistenceError(error),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ChannelError;
+    use crate::api::ApiError;
+    use crate::infra::DbError;
+    use diesel::result::{DatabaseErrorInformation, DatabaseErrorKind, Error as DieselError};
+    use rocket::http::Status;
+
+    struct ConstraintInformation(&'static str);
+
+    impl DatabaseErrorInformation for ConstraintInformation {
+        fn message(&self) -> &str {
+            "test database error"
+        }
+        fn details(&self) -> Option<&str> {
+            None
+        }
+        fn hint(&self) -> Option<&str> {
+            None
+        }
+        fn table_name(&self) -> Option<&str> {
+            None
+        }
+        fn column_name(&self) -> Option<&str> {
+            None
+        }
+        fn constraint_name(&self) -> Option<&str> {
+            Some(self.0)
+        }
+        fn statement_position(&self) -> Option<i32> {
+            None
+        }
+    }
+
+    fn database_error(kind: DatabaseErrorKind, name: &'static str) -> DbError {
+        let error = DieselError::DatabaseError(kind, Box::new(ConstraintInformation(name)));
+        DbError::from(error)
+    }
+
+    #[test]
+    fn channel_constraints_map_to_domain_errors() {
+        assert!(matches!(
+            ChannelError::from(database_error(
+                DatabaseErrorKind::UniqueViolation,
+                "channel_server_name_unique"
+            )),
+            ChannelError::NameTaken
+        ));
+        assert!(matches!(
+            ChannelError::from(database_error(
+                DatabaseErrorKind::ForeignKeyViolation,
+                "channel_server_id_fkey"
+            )),
+            ChannelError::ServerNotFound
+        ));
+    }
+
+    #[test]
+    fn unknown_database_errors_remain_internal() {
+        assert!(matches!(
+            ChannelError::from(database_error(
+                DatabaseErrorKind::UniqueViolation,
+                "unknown_constraint"
+            )),
+            ChannelError::PersistenceError(_)
+        ));
+        assert!(matches!(
+            ChannelError::from(DbError::ConnectionError("offline".into())),
+            ChannelError::PersistenceError(_)
+        ));
+    }
+
+    #[test]
+    fn channel_errors_map_to_expected_http_status_classes() {
+        let cases = [
+            (
+                ChannelError::InvalidInput("invalid".into()),
+                Status::BadRequest,
+            ),
+            (
+                ChannelError::InvalidChangeset("invalid".into()),
+                Status::BadRequest,
+            ),
+            (ChannelError::NotFound, Status::NotFound),
+            (ChannelError::NameTaken, Status::Conflict),
+            (ChannelError::ServerNotFound, Status::NotFound),
+            (ChannelError::MembershipRequired, Status::Forbidden),
+            (ChannelError::PermissionDenied, Status::Forbidden),
+            (
+                ChannelError::PersistenceError(DbError::ConnectionError("offline".into())),
+                Status::InternalServerError,
+            ),
+        ];
+
+        for (error, status) in cases {
+            assert_eq!(ApiError::from(error).status(), status);
         }
     }
 }

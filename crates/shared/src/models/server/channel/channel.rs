@@ -48,7 +48,7 @@ pub type MultiChannelPreview = ChannelList<ChannelShort>;
 
 #[cfg(test)]
 mod tests {
-    use super::NewChannelInput;
+    use super::{ChannelChangesetInput, ChannelList, NewChannelInput};
 
     #[test]
     fn creation_input_contains_only_the_channel_name() {
@@ -58,5 +58,22 @@ mod tests {
         .unwrap();
 
         assert_eq!(value, serde_json::json!({ "name": "general" }));
+    }
+
+    #[test]
+    fn channel_collections_use_the_channels_field() {
+        let value = serde_json::to_value(ChannelList::<serde_json::Value> {
+            channels: Vec::new(),
+        })
+        .unwrap();
+
+        assert_eq!(value, serde_json::json!({ "channels": [] }));
+    }
+
+    #[test]
+    fn changeset_preserves_an_explicit_missing_name() {
+        let value = serde_json::to_value(ChannelChangesetInput { name: None }).unwrap();
+
+        assert!(value["name"].is_null());
     }
 }

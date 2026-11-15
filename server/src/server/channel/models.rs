@@ -144,10 +144,10 @@ impl From<ChannelShortRow> for ChannelShort {
 
 #[cfg(test)]
 mod tests {
-    use super::{ChannelChangeset, ChannelRow, NewChannel};
+    use super::{ChannelChangeset, ChannelDetailedRow, ChannelRow, ChannelShortRow, NewChannel};
     use crate::server::channel::error::ChannelError;
     use shared::models::server::channel::channel::{
-        ChannelChangesetInput, ChannelDetailed, NewChannelInput,
+        Channel, ChannelChangesetInput, ChannelDetailed, ChannelShort, NewChannelInput,
     };
 
     #[test]
@@ -177,6 +177,42 @@ mod tests {
     }
 
     #[test]
+    fn creation_and_changeset_enforce_name_boundaries() {
+        for name in ["a".repeat(5), "é".repeat(10)] {
+            assert!(NewChannel::try_from((3, NewChannelInput { name: name.clone() })).is_ok());
+            assert!(ChannelChangeset::try_from(ChannelChangesetInput { name: Some(name) }).is_ok());
+        }
+        for name in ["a".repeat(4), "a".repeat(11)] {
+            assert!(matches!(
+                NewChannel::try_from((3, NewChannelInput { name: name.clone() })),
+                Err(ChannelError::InvalidInput(_))
+            ));
+            assert!(matches!(
+                ChannelChangeset::try_from(ChannelChangesetInput { name: Some(name) }),
+                Err(ChannelError::InvalidChangeset(_))
+            ));
+        }
+    }
+
+    #[test]
+    fn model_accessors_expose_normalized_values() {
+        let channel = NewChannel::try_from((
+            3,
+            NewChannelInput {
+                name: "  general  ".into(),
+            },
+        ))
+        .unwrap();
+        assert_eq!(channel.name(), "general");
+
+        let changeset = ChannelChangeset::try_from(ChannelChangesetInput {
+            name: Some("  updates  ".into()),
+        })
+        .unwrap();
+        assert_eq!(changeset.name(), Some("updates"));
+    }
+
+    #[test]
     fn row_converts_to_shared_channel_contract() {
         let created_at = chrono::NaiveDateTime::default();
         let channel = ChannelDetailed::from(ChannelRow {
@@ -187,5 +223,38 @@ mod tests {
         });
         assert_eq!(channel.id, 5);
         assert_eq!(channel.server_id, 3);
+    }
+
+    #[test]
+    fn rows_convert_to_each_shared_projection() {
+        let created_at = chrono::NaiveDateTime::default();
+        let channel = Channel::from(ChannelRow {
+            id: 5,
+            server_id: 3,
+            name: "general".into(),
+            created_at,
+        });
+        let short = ChannelShort::from(ChannelRow {
+            id: 5,
+            server_id: 3,
+            name: "general".into(),
+            created_at,
+        });
+        let detailed = ChannelDetailed::from(ChannelDetailedRow {
+            id: 5,
+            server_id: 3,
+            name: "general".into(),
+            created_at,
+        });
+        let short_row = ChannelShort::from(ChannelShortRow {
+            id: 5,
+            server_id: 3,
+            name: "general".into(),
+        });
+
+        assert_eq!(channel.created_at, created_at);
+        assert_eq!(short.name, "general");
+        assert_eq!(detailed.server_id, 3);
+        assert_eq!(short_row.id, 5);
     }
 }
