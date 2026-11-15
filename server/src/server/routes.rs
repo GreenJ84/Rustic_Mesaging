@@ -1,52 +1,49 @@
-use rocket::form::{Form, Strict};
 use rocket::http::Status;
 use rocket::response::status;
 use rocket::serde::json::Json;
 use rocket::State;
 
 use crate::auth::SystemUser;
-use crate::member::models::MultiMemberPreview;
+use crate::ApiResponse;
+use shared::models::member::MultiMemberPreview;
+use shared::models::server::server::{
+    MultiServer, MultiServerPreview, NewServerInput, ServerChangesetInput, ServerDetailed, ServerId,
+};
 
 use super::service::ServerService;
-use crate::server::models::{
-    MultiServerPreview, ServerChangesetInput, ServerCreateInput, ServerDetails, ServerId,
-};
-use crate::ApiResponse;
 
-#[post("/", data = "<form>")]
-pub fn create(
+#[post("/", data = "<input>")]
+fn create(
     user: SystemUser,
     server_service: &State<ServerService>,
-    form: Form<Strict<ServerCreateInput>>,
-) -> ApiResponse<Json<ServerDetails>> {
-    let input = form.into_inner().into_inner();
-    let server = server_service.create_server(user.member_id(), input)?;
+    input: Json<NewServerInput>,
+) -> ApiResponse<Json<ServerDetailed>> {
+    let server = server_service.create_server(user.member_id(), input.into_inner())?;
     Ok(status::Custom(Status::Created, Json(server)))
 }
 
 #[get("/<server_id>")]
-pub fn get(
+fn get(
     _user: SystemUser,
     server_service: &State<ServerService>,
     server_id: ServerId,
-) -> ApiResponse<Json<ServerDetails>> {
+) -> ApiResponse<Json<ServerDetailed>> {
     let server = server_service.get_server(server_id)?;
     Ok(status::Custom(Status::Ok, Json(server)))
 }
 
 #[get("/all?<page>")]
-pub fn get_servers_list(
+fn get_servers_list(
     _user: SystemUser,
     server_service: &State<ServerService>,
     page: Option<u32>,
-) -> ApiResponse<Json<MultiServerPreview>> {
-    let page = page.unwrap_or(0);
-    let servers = server_service.get_servers_list(page)?;
+) -> ApiResponse<Json<MultiServer>> {
+    let servers = server_service.get_servers_list(page.unwrap_or(0))?;
     Ok(status::Custom(Status::Ok, Json(servers)))
 }
 
 #[get("/search?<search_term>")]
-pub fn search_servers(
+fn search_servers(
     _user: SystemUser,
     server_service: &State<ServerService>,
     search_term: &str,
@@ -55,20 +52,19 @@ pub fn search_servers(
     Ok(status::Custom(Status::Ok, Json(servers)))
 }
 
-#[patch("/<server_id>", data = "<form>")]
-pub fn update(
+#[patch("/<server_id>", data = "<input>")]
+fn update(
     user: SystemUser,
     server_service: &State<ServerService>,
-    form: Form<Strict<ServerChangesetInput>>,
     server_id: ServerId,
-) -> ApiResponse<Json<ServerDetails>> {
-    let input = form.into_inner().into_inner();
-    let server = server_service.update_server(server_id, user.member_id(), input)?;
+    input: Json<ServerChangesetInput>,
+) -> ApiResponse<Json<ServerDetailed>> {
+    let server = server_service.update_server(server_id, user.member_id(), input.into_inner())?;
     Ok(status::Custom(Status::Ok, Json(server)))
 }
 
 #[delete("/<server_id>")]
-pub fn delete(
+fn delete(
     user: SystemUser,
     server_service: &State<ServerService>,
     server_id: ServerId,
@@ -77,8 +73,8 @@ pub fn delete(
     Ok(status::Custom(Status::NoContent, ()))
 }
 
-#[post("/<server_id>/join")]
-pub fn join_server(
+#[post("/<server_id>/members")]
+fn join_server(
     user: SystemUser,
     server_service: &State<ServerService>,
     server_id: ServerId,
@@ -88,30 +84,29 @@ pub fn join_server(
 }
 
 #[get("/<server_id>/members?<page>")]
-pub fn get_server_members(
+fn get_server_members(
     user: SystemUser,
     server_service: &State<ServerService>,
     server_id: ServerId,
     page: Option<u32>,
 ) -> ApiResponse<Json<MultiMemberPreview>> {
-    let page = page.unwrap_or(0);
-    let members = server_service.get_server_members(server_id, user.member_id(), page)?;
+    let members =
+        server_service.get_server_members(server_id, user.member_id(), page.unwrap_or(0))?;
     Ok(status::Custom(Status::Ok, Json(members)))
 }
 
 #[get("/servers?<page>")]
-pub fn get_member_servers(
+fn get_member_servers(
     user: SystemUser,
     server_service: &State<ServerService>,
     page: Option<u32>,
 ) -> ApiResponse<Json<MultiServerPreview>> {
-    let page = page.unwrap_or(0);
-    let servers = server_service.get_member_servers(user.member_id(), page)?;
+    let servers = server_service.get_member_servers(user.member_id(), page.unwrap_or(0))?;
     Ok(status::Custom(Status::Ok, Json(servers)))
 }
 
-#[delete("/<server_id>/leave")]
-pub fn leave_server(
+#[delete("/<server_id>/members/me")]
+fn leave_server(
     user: SystemUser,
     server_service: &State<ServerService>,
     server_id: ServerId,
@@ -120,27 +115,49 @@ pub fn leave_server(
     Ok(status::Custom(Status::NoContent, ()))
 }
 
-// #[get("/<server_id>/channels")]
-// pub fn get_server_channels(
-//     user: SystemUser,
-//     server_service: &State<ServerService>,
-//     server_id: ServerId,
-// ) -> ApiResponse<MultiChannel> {
-//     let mut conn = get_db_connection(pool)?;
-//     if !MembershipService::has_membership(&mut conn, server_id, token.claims.member_id) {
-//         return Err::<status::Custom<MultiChannel>, status::Custom<String>>(status::Custom(
-//             Status::Unauthorized,
-//             String::from("Only server members can view channels within"),
-//         ));
-//     }
+pub(super) fn routes() -> Vec<rocket::Route> {
+    routes![
+        create,
+        get,
+        get_servers_list,
+        search_servers,
+        update,
+        delete,
+        join_server,
+        get_server_members,
+        leave_server,
+    ]
+}
 
-//     match ServerService::get_server_channels(&mut conn, server_id) {
-//         Ok(channels) => Ok(status::Custom(Status::Ok, MultiChannel { channels })),
-//         Err(e) => {
-//             return Err::<status::Custom<MultiChannel>, status::Custom<String>>(status::Custom(
-//                 Status::NotFound,
-//                 format!("Server channels lookup error: {}", e),
-//             ))
-//         }
-//     }
-// }
+pub(crate) fn member_routes() -> Vec<rocket::Route> {
+    routes![get_member_servers]
+}
+
+#[cfg(test)]
+mod tests {
+    use rocket::http::Method;
+
+    use super::{member_routes, routes};
+
+    #[test]
+    fn server_routes_use_resource_oriented_methods_and_paths() {
+        let signatures = routes()
+            .into_iter()
+            .map(|route| (route.method, route.uri.to_string()))
+            .collect::<Vec<_>>();
+
+        assert!(signatures.contains(&(Method::Post, "/".into())));
+        assert!(signatures.contains(&(Method::Patch, "/<server_id>".into())));
+        assert!(signatures.contains(&(Method::Post, "/<server_id>/members".into())));
+        assert!(signatures.contains(&(Method::Delete, "/<server_id>/members/me".into())));
+        assert_eq!(signatures.len(), 9);
+    }
+
+    #[test]
+    fn member_route_owns_the_member_server_collection() {
+        let routes = member_routes();
+        assert_eq!(routes.len(), 1);
+        assert_eq!(routes[0].method, Method::Get);
+        assert_eq!(routes[0].uri.to_string(), "/servers?<page>");
+    }
+}
