@@ -8,15 +8,7 @@ pub(crate) mod message;
 pub(crate) mod participant;
 
 pub fn get_chat_routes() -> Vec<rocket::Route> {
-    let mut routes = routes![
-        routes::create,
-        routes::get,
-        routes::update,
-        routes::join,
-        routes::add_members,
-        routes::get_chat_members,
-        routes::leave,
-    ];
+    let mut routes = routes::routes();
     routes.extend(routes![
         message::routes::create,
         message::routes::get,
