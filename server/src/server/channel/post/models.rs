@@ -27,7 +27,7 @@ impl TryFrom<(MemberId, ChannelId, NewPostInput)> for NewPost {
         (member_id, channel_id, input): (MemberId, ChannelId, NewPostInput),
     ) -> Result<Self, Self::Error> {
         let content =
-            Validator::validate_text(&input.content, None, Some(500)).map_err(|error| {
+            Validator::validate_text(&input.content, Some(1), Some(500)).map_err(|error| {
                 PostError::InvalidInput(format!("Post content {}", error.message()))
             })?;
         Ok(Self {
@@ -52,7 +52,7 @@ impl TryFrom<PostChangesetInput> for PostChangeset {
                 "No fields provided for update".into(),
             ));
         };
-        let content = Validator::validate_text(&content, None, Some(500)).map_err(|error| {
+        let content = Validator::validate_text(&content, Some(1), Some(500)).map_err(|error| {
             PostError::InvalidChangeset(format!("Post content {}", error.message()))
         })?;
         Ok(Self {
@@ -136,6 +136,49 @@ mod tests {
     }
 
     #[test]
+    fn creation_accepts_content_length_boundaries() {
+        for content in ["a".to_string(), "é".repeat(500)] {
+            let post = NewPost::try_from((
+                4,
+                7,
+                NewPostInput {
+                    content: format!("  {content}  "),
+                },
+            ))
+            .unwrap();
+            assert_eq!(post.content, content);
+        }
+    }
+
+    #[test]
+    fn creation_rejects_blank_and_oversized_content() {
+        for content in ["   ".to_string(), "a".repeat(501)] {
+            assert!(matches!(
+                NewPost::try_from((4, 7, NewPostInput { content })),
+                Err(PostError::InvalidInput(_))
+            ));
+        }
+    }
+
+    #[test]
+    fn changeset_normalizes_content_and_enforces_boundaries() {
+        let changeset = PostChangeset::try_from(PostChangesetInput {
+            content: Some("  x  ".into()),
+        })
+        .unwrap();
+        assert_eq!(changeset.content.as_deref(), Some("x"));
+
+        for content in ["   ".to_string(), "a".repeat(501)] {
+            assert!(matches!(
+                PostChangeset::try_from(PostChangesetInput {
+                    content: Some(content),
+                }),
+                Err(PostError::InvalidChangeset(_))
+            ));
+        }
+    }
+
+    #[test]
     fn row_converts_to_shared_post_contract() {
         let created_at = chrono::NaiveDateTime::default();
         let post = Post::from(PostRow {
@@ -148,5 +191,18 @@ mod tests {
         assert_eq!(post.id, 2);
         assert_eq!(post.author_id, 4);
         assert_eq!(post.channel_id, 7);
+    }
+
+    #[test]
+    fn row_exposes_its_identifier() {
+        let row = PostRow {
+            id: 2,
+            content: "hello".into(),
+            author_id: 4,
+            channel_id: 7,
+            created_at: chrono::NaiveDateTime::default(),
+        };
+
+        assert_eq!(row.id(), 2);
     }
 }

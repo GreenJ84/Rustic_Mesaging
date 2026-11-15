@@ -65,4 +65,12 @@ mod tests {
         assert!(changeset["content"].is_null());
         assert_eq!(list, serde_json::json!({ "posts": [] }));
     }
+
+    #[test]
+    fn creation_input_deserializes_from_the_wire_shape() {
+        let input: NewPostInput =
+            serde_json::from_value(serde_json::json!({ "content": "hello" })).unwrap();
+
+        assert_eq!(input.content, "hello");
+    }
 }

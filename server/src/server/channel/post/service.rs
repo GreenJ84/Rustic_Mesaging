@@ -1,3 +1,5 @@
+use diesel::Connection;
+
 use crate::infra::{Database, DbConn};
 use crate::server::channel::repository::ChannelRepository;
 use crate::server::membership::repository::ServerMembershipRepository;
@@ -132,4 +134,3 @@ impl PostService {
         })
     }
 }
-use diesel::Connection;
