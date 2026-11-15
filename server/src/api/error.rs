@@ -5,7 +5,7 @@ use rocket::serde::json::Json;
 use serde::Serialize;
 use std::{error::Error, fmt::Display};
 
-/// API boundary error represented as an HTTP status and JSON error envelope.
+/// API boundary error represented as an HTTP status and JSON string message.
 #[derive(Debug)]
 pub enum ApiError {
     /// The request was malformed or failed basic validation.
@@ -101,6 +101,17 @@ impl<'r> Responder<'r, 'static> for ApiError {
 mod tests {
     use super::ApiError;
     use rocket::http::Status;
+    use rocket::local::blocking::Client;
+
+    #[get("/conflict")]
+    fn conflict_response() -> Result<(), ApiError> {
+        Err(ApiError::Conflict("Email is already taken".into()))
+    }
+
+    #[get("/internal")]
+    fn internal_response() -> Result<(), ApiError> {
+        Err(ApiError::InternalError)
+    }
 
     #[test]
     fn maps_error_variants_to_expected_statuses() {
@@ -143,5 +154,27 @@ mod tests {
         assert_eq!(ApiError::NotAllowed.status().code, 405);
         assert_eq!(ApiError::FailedDependency.status().code, 424);
         assert_eq!(ApiError::NotImplemented.status().code, 501);
+    }
+
+    #[test]
+    fn responder_serializes_public_and_internal_errors_as_json_strings() {
+        let client = Client::tracked(
+            rocket::build().mount("/", routes![conflict_response, internal_response]),
+        )
+        .expect("valid Rocket instance");
+
+        let conflict = client.get("/conflict").dispatch();
+        assert_eq!(conflict.status(), Status::Conflict);
+        assert_eq!(
+            conflict.into_json::<String>().as_deref(),
+            Some("Conflict: Email is already taken")
+        );
+
+        let internal = client.get("/internal").dispatch();
+        assert_eq!(internal.status(), Status::InternalServerError);
+        assert_eq!(
+            internal.into_json::<String>().as_deref(),
+            Some("Internal server error")
+        );
     }
 }
