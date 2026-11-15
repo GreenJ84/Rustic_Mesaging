@@ -1,33 +1,35 @@
 use chrono::NaiveDateTime;
 use diesel::{Identifiable, Insertable, Queryable, Selectable};
-use serde::{Deserialize, Serialize};
-
-use crate::chat::models::ChatId;
-use crate::member::models::{MemberId, MemberShort};
-use crate::schema::chat_participant;
 
 use crate::chat::error::ChatError;
+use crate::member::models::MemberShortRow;
+use crate::schema::chat_participant;
+use shared::models::chat::chat::ChatId;
+use shared::models::chat::participant::{ChatParticipant, ChatParticipantDetailed};
+use shared::models::member::{MemberId, MemberShort};
 
-#[derive(Insertable, Debug)]
+#[derive(Insertable)]
 #[diesel(table_name = chat_participant)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-pub(crate) struct NewChatParticipant {
+pub(in crate::chat) struct NewChatParticipant {
     chat_id: ChatId,
     member_id: MemberId,
 }
+
 impl From<(ChatId, MemberId)> for NewChatParticipant {
     fn from((chat_id, member_id): (ChatId, MemberId)) -> Self {
         Self { chat_id, member_id }
     }
 }
 
-#[derive(Debug)]
-pub(crate) struct NewChatParticipants(Vec<NewChatParticipant>);
+pub(in crate::chat) struct NewChatParticipants(Vec<NewChatParticipant>);
+
 impl NewChatParticipants {
-    pub(crate) fn rows(&self) -> &[NewChatParticipant] {
+    pub(in crate::chat) fn rows(&self) -> &[NewChatParticipant] {
         &self.0
     }
 }
+
 impl TryFrom<(ChatId, Vec<MemberId>)> for NewChatParticipants {
     type Error = ChatError;
 
@@ -50,30 +52,74 @@ impl TryFrom<(ChatId, Vec<MemberId>)> for NewChatParticipants {
     }
 }
 
-#[derive(Queryable, Selectable, Identifiable, Serialize, Deserialize, Debug, Clone)]
+#[derive(Queryable, Selectable, Identifiable)]
 #[diesel(table_name = chat_participant)]
 #[diesel(primary_key(chat_id, member_id))]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-pub(crate) struct ChatParticipant {
-    pub(crate) chat_id: ChatId,
-    pub(crate) member_id: MemberId,
-    pub(crate) joined_at: NaiveDateTime,
+pub(in crate::chat) struct ChatParticipantRow {
+    chat_id: ChatId,
+    member_id: MemberId,
+    joined_at: NaiveDateTime,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub(crate) struct ChatParticipantDetails {
-    pub(crate) chat_id: ChatId,
-    pub(crate) member: MemberShort,
-    pub(crate) joined_at: NaiveDateTime,
-}
-impl From<(ChatParticipant, MemberShort)> for ChatParticipantDetails {
-    fn from((chat, member): (ChatParticipant, MemberShort)) -> Self {
+impl From<ChatParticipantRow> for ChatParticipant {
+    fn from(row: ChatParticipantRow) -> Self {
         Self {
-            chat_id: chat.chat_id,
-            member,
-            joined_at: chat.joined_at,
+            chat_id: row.chat_id,
+            member_id: row.member_id,
+            joined_at: row.joined_at,
         }
     }
 }
 
-pub type MultiChatParticipantDetails = Vec<ChatParticipantDetails>;
+pub(in crate::chat) struct ChatParticipantDetailedRow {
+    pub(super) participant: ChatParticipantRow,
+    pub(super) member: MemberShortRow,
+}
+
+impl From<ChatParticipantDetailedRow> for ChatParticipantDetailed {
+    fn from(row: ChatParticipantDetailedRow) -> Self {
+        Self {
+            chat_id: row.participant.chat_id,
+            member: MemberShort::from(row.member),
+            joined_at: row.participant.joined_at,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ChatParticipantRow, NewChatParticipants};
+    use shared::models::chat::participant::ChatParticipant;
+
+    #[test]
+    fn participant_batch_sorts_and_deduplicates_member_ids() {
+        let participants = NewChatParticipants::try_from((3, vec![8, 4, 8])).unwrap();
+        let member_ids = participants
+            .rows()
+            .iter()
+            .map(|participant| participant.member_id)
+            .collect::<Vec<_>>();
+
+        assert_eq!(member_ids, vec![4, 8]);
+    }
+
+    #[test]
+    fn participant_batch_rejects_an_empty_member_set() {
+        assert!(NewChatParticipants::try_from((3, Vec::new())).is_err());
+    }
+
+    #[test]
+    fn row_converts_to_shared_participant_contract() {
+        let joined_at = chrono::NaiveDateTime::default();
+        let participant = ChatParticipant::from(ChatParticipantRow {
+            chat_id: 3,
+            member_id: 8,
+            joined_at,
+        });
+
+        assert_eq!(participant.chat_id, 3);
+        assert_eq!(participant.member_id, 8);
+        assert_eq!(participant.joined_at, joined_at);
+    }
+}
