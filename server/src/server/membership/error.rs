@@ -51,7 +51,10 @@ impl From<MembershipError> for ApiError {
             MembershipError::OwnerCannotLeave => {
                 ApiError::Forbidden("Server owner cannot leave the server".to_string())
             }
-            MembershipError::Persistence(_) => ApiError::InternalError,
+            MembershipError::Persistence(error) => {
+                error.log_error("server membership");
+                ApiError::InternalError
+            }
         }
     }
 }
