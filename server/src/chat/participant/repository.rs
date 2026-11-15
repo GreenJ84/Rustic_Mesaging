@@ -74,6 +74,7 @@ impl ChatParticipantRepository {
         cp_dsl::chat_participant
             .filter(cp_dsl::chat_id.eq(chat_id))
             .inner_join(m_dsl::member.on(cp_dsl::member_id.eq(m_dsl::id)))
+            .order((cp_dsl::joined_at.asc(), cp_dsl::member_id.asc()))
             .select((ChatParticipantRow::as_select(), MemberShortRow::as_select()))
             .load(conn)
             .map(|memberships| {
