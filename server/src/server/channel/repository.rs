@@ -2,11 +2,12 @@ use diesel::{dsl, ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper};
 
 use crate::infra::{sql::lower, DbConn, DbError};
 use crate::schema::channel::dsl as c_dsl;
-use crate::server::models::ServerId;
+use shared::models::server::channel::channel::ChannelId;
+use shared::models::server::server::ServerId;
 
-use super::models::{Channel, ChannelChangeset, ChannelId, NewChannel};
+use super::models::{ChannelChangeset, ChannelRow, ChannelShortRow, NewChannel};
 
-pub struct ChannelRepository;
+pub(in crate::server) struct ChannelRepository;
 
 impl ChannelRepository {
     // Existence
@@ -57,39 +58,57 @@ impl ChannelRepository {
     }
 
     // Create
-    pub(super) fn create(conn: &mut DbConn, new_channel: NewChannel) -> Result<Channel, DbError> {
+    pub(in crate::server) fn create(
+        conn: &mut DbConn,
+        new_channel: NewChannel,
+    ) -> Result<ChannelRow, DbError> {
         diesel::insert_into(c_dsl::channel)
             .values(&new_channel)
-            .get_result::<Channel>(conn)
+            .returning(ChannelRow::as_returning())
+            .get_result(conn)
             .map_err(DbError::from)
     }
-    pub(super) fn read(conn: &mut DbConn, id: ChannelId) -> Result<Channel, DbError> {
+    pub(in crate::server) fn read(conn: &mut DbConn, id: ChannelId) -> Result<ChannelRow, DbError> {
         c_dsl::channel
             .find(id)
-            .first::<Channel>(conn)
+            .select(ChannelRow::as_select())
+            .first(conn)
             .map_err(DbError::from)
     }
-    pub(super) fn get_multi(
+    pub(in crate::server) fn read_many(
         conn: &mut DbConn,
         server_id: ServerId,
-    ) -> Result<Vec<Channel>, DbError> {
+    ) -> Result<Vec<ChannelRow>, DbError> {
         c_dsl::channel
             .filter(c_dsl::server_id.eq(server_id))
             .order_by(c_dsl::name.asc())
-            .select(Channel::as_select())
-            .load::<Channel>(conn)
+            .select(ChannelRow::as_select())
+            .load(conn)
+            .map_err(DbError::from)
+    }
+
+    pub(in crate::server) fn read_many_short(
+        conn: &mut DbConn,
+        server_id: ServerId,
+    ) -> Result<Vec<ChannelShortRow>, DbError> {
+        c_dsl::channel
+            .filter(c_dsl::server_id.eq(server_id))
+            .order_by(c_dsl::name.asc())
+            .select(ChannelShortRow::as_select())
+            .load(conn)
             .map_err(DbError::from)
     }
 
     // Update
-    pub(super) fn update(
+    pub(in crate::server) fn update(
         conn: &mut DbConn,
         id: ChannelId,
         changeset: ChannelChangeset,
-    ) -> Result<Channel, DbError> {
+    ) -> Result<ChannelRow, DbError> {
         diesel::update(c_dsl::channel.find(id))
             .set(changeset)
-            .get_result::<Channel>(conn)
+            .returning(ChannelRow::as_returning())
+            .get_result(conn)
             .map_err(DbError::from)
     }
 

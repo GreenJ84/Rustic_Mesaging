@@ -3,12 +3,15 @@ use diesel::{
 };
 
 use crate::infra::{DbConn, DbError};
-use crate::member::models::{MemberId, MemberShort, MemberShortRow};
+use crate::member::models::MemberShortRow;
 use crate::schema::{member::dsl as m_dsl, server::dsl as s_dsl, server_membership::dsl as sm_dsl};
-use crate::server::models::{ServerId, ServerPreview};
 use crate::utils::Paginator;
+use shared::models::member::MemberId;
+use shared::models::server::server::ServerId;
 
-use super::models::{NewServerMembership, ServerMembership};
+use crate::server::models::ServerShortRow;
+
+use super::models::{NewServerMembership, ServerMembershipRow};
 
 const MEMBERSHIP_PAGINATOR: Paginator = Paginator::new(None);
 pub(in crate::server) struct ServerMembershipRepository;
@@ -17,13 +20,12 @@ impl ServerMembershipRepository {
     pub(in crate::server) fn create(
         conn: &mut DbConn,
         new_membership: NewServerMembership,
-    ) -> Result<(), DbError> {
-        let size = diesel::insert_into(sm_dsl::server_membership)
+    ) -> Result<ServerMembershipRow, DbError> {
+        diesel::insert_into(sm_dsl::server_membership)
             .values(&new_membership)
-            .execute(conn)
-            .map_err(DbError::from)?;
-
-        Ok(())
+            .returning(ServerMembershipRow::as_returning())
+            .get_result(conn)
+            .map_err(DbError::from)
     }
 
     // Read
@@ -42,7 +44,7 @@ impl ServerMembershipRepository {
         conn: &mut DbConn,
         member_id: MemberId,
         page: u32,
-    ) -> Result<Vec<ServerPreview>, DbError> {
+    ) -> Result<Vec<ServerShortRow>, DbError> {
         let page_offset = MEMBERSHIP_PAGINATOR.offset(page);
         let page_size = MEMBERSHIP_PAGINATOR.page_size();
         sm_dsl::server_membership
@@ -51,7 +53,7 @@ impl ServerMembershipRepository {
             .order_by((sm_dsl::joined_at.desc(), s_dsl::id.desc()))
             .limit(page_size)
             .offset(page_offset)
-            .select(ServerPreview::as_select())
+            .select(ServerShortRow::as_select())
             .load(conn)
             .map_err(DbError::from)
     }
@@ -59,7 +61,7 @@ impl ServerMembershipRepository {
         conn: &mut DbConn,
         server_id: ServerId,
         page: u32,
-    ) -> Result<Vec<MemberShort>, DbError> {
+    ) -> Result<Vec<MemberShortRow>, DbError> {
         let page_offset = MEMBERSHIP_PAGINATOR.offset(page);
         let page_size = MEMBERSHIP_PAGINATOR.page_size();
         sm_dsl::server_membership
@@ -70,7 +72,6 @@ impl ServerMembershipRepository {
             .offset(page_offset)
             .select(MemberShortRow::as_select())
             .load(conn)
-            .map(|results| results.into_iter().map(MemberShort::from).collect())
             .map_err(DbError::from)
     }
 

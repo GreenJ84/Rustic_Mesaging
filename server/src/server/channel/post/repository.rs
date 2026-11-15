@@ -1,41 +1,46 @@
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, SelectableHelper};
 
 use crate::infra::{DbConn, DbError};
-use crate::member::models::{MemberId, MemberShort, MemberShortRow};
+use crate::member::models::MemberShortRow;
 use crate::schema::{channel::dsl as c_dsl, member::dsl as m_dsl, post::dsl as p_dsl};
-use crate::server::channel::models::ChannelId;
 use crate::server::channel::post::models::PostChangeset;
 use crate::utils::Paginator;
+use shared::models::member::MemberId;
+use shared::models::server::channel::channel::ChannelId;
+use shared::models::server::channel::post::PostId;
 
-use super::models::{NewPost, Post, PostDetail, PostId};
+use super::models::{NewPost, PostDetailedRow, PostRow};
 
 const POST_PAGINATOR: Paginator = Paginator::new(None);
 
-pub(super) struct PostRepository;
+pub(in crate::server) struct PostRepository;
 impl PostRepository {
     // Create
-    pub(super) fn create(conn: &mut DbConn, new_post: NewPost) -> Result<Post, DbError> {
+    pub(in crate::server) fn create(
+        conn: &mut DbConn,
+        new_post: NewPost,
+    ) -> Result<PostRow, DbError> {
         diesel::insert_into(p_dsl::post)
             .values(&new_post)
-            .returning(Post::as_returning())
+            .returning(PostRow::as_returning())
             .get_result(conn)
             .map_err(DbError::from)
     }
 
     // Read
-    pub(super) fn read(
+    pub(in crate::server) fn read(
         conn: &mut DbConn,
         channel_id: ChannelId,
         post_id: PostId,
-    ) -> Result<Post, DbError> {
+    ) -> Result<PostRow, DbError> {
         p_dsl::post
             .find(post_id)
             .filter(p_dsl::channel_id.eq(channel_id))
-            .select(Post::as_select())
+            .select(PostRow::as_select())
             .first(conn)
             .map_err(DbError::from)
     }
-    pub(super) fn read_author_id(
+    pub(in crate::server) fn read_author_id(
         conn: &mut DbConn,
         channel_id: ChannelId,
         post_id: PostId,
@@ -47,28 +52,25 @@ impl PostRepository {
             .first(conn)
             .map_err(DbError::from)
     }
-    pub(super) fn read_detail(
+    pub(in crate::server) fn read_detailed(
         conn: &mut DbConn,
         channel_id: ChannelId,
         post_id: PostId,
-    ) -> Result<PostDetail, DbError> {
+    ) -> Result<PostDetailedRow, DbError> {
         p_dsl::post
             .find(post_id)
             .filter(p_dsl::channel_id.eq(channel_id))
             .inner_join(m_dsl::member.on(p_dsl::author_id.eq(m_dsl::id)))
-            .select((Post::as_select(), MemberShortRow::as_select()))
+            .select((PostRow::as_select(), MemberShortRow::as_select()))
             .first(conn)
-            .map(|(post, member)| {
-                let member_short = MemberShort::from(member);
-                PostDetail::from((post, member_short))
-            })
+            .map(|(post, author)| PostDetailedRow { post, author })
             .map_err(DbError::from)
     }
-    pub(super) fn read_page(
+    pub(in crate::server) fn read_page_detailed(
         conn: &mut DbConn,
         channel_id: ChannelId,
         page: u32,
-    ) -> Result<Vec<PostDetail>, DbError> {
+    ) -> Result<Vec<PostDetailedRow>, DbError> {
         let page_size = POST_PAGINATOR.page_size();
         let page_offset = POST_PAGINATOR.offset(page);
 
@@ -78,34 +80,31 @@ impl PostRepository {
             .order_by((p_dsl::created_at.desc(), p_dsl::id.desc()))
             .limit(page_size)
             .offset(page_offset)
-            .select((Post::as_select(), MemberShortRow::as_select()))
+            .select((PostRow::as_select(), MemberShortRow::as_select()))
             .load(conn)
             .map(|results| {
                 results
                     .into_iter()
-                    .map(|(post, member)| {
-                        let member_short = MemberShort::from(member);
-                        PostDetail::from((post, member_short))
-                    })
+                    .map(|(post, author)| PostDetailedRow { post, author })
                     .collect()
             })
             .map_err(DbError::from)
     }
 
     // Update
-    pub(super) fn update(
+    pub(in crate::server) fn update(
         conn: &mut DbConn,
         channel_id: ChannelId,
         post_id: PostId,
         changeset: PostChangeset,
-    ) -> Result<Post, DbError> {
+    ) -> Result<PostRow, DbError> {
         diesel::update(
             p_dsl::post
                 .find(post_id)
                 .filter(p_dsl::channel_id.eq(channel_id)),
         )
         .set(changeset)
-        .returning(Post::as_returning())
+        .returning(PostRow::as_returning())
         .get_result(conn)
         .map_err(DbError::from)
     }

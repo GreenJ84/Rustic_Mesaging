@@ -6,15 +6,16 @@ use diesel::{
 };
 
 use crate::infra::{DbConn, DbError};
-use crate::member::models::MemberId;
 use crate::schema::server::dsl as s_dsl;
 use crate::utils::{Paginator, SearchValidation};
+use shared::models::member::MemberId;
+use shared::models::server::server::ServerId;
 
-use super::models::{NewServer, Server, ServerChangeset, ServerId};
+use super::models::{NewServer, ServerChangeset, ServerRow, ServerShortRow};
 
 const SERVER_PAGINATOR: Paginator = Paginator::new(None);
 
-pub(crate) struct ServerRepository;
+pub(in crate::server) struct ServerRepository;
 impl ServerRepository {
     // Existence
     pub(super) fn exists(conn: &mut DbConn, id: ServerId) -> Result<bool, DbError> {
@@ -24,18 +25,23 @@ impl ServerRepository {
     }
 
     // Create
-    pub(super) fn create(conn: &mut DbConn, new_server: NewServer) -> Result<Server, DbError> {
+    pub(in crate::server) fn create(
+        conn: &mut DbConn,
+        new_server: NewServer,
+    ) -> Result<ServerRow, DbError> {
         diesel::insert_into(s_dsl::server)
             .values(new_server)
-            .get_result::<Server>(conn)
+            .returning(ServerRow::as_returning())
+            .get_result(conn)
             .map_err(DbError::from)
     }
 
     // Read
-    pub(super) fn read(conn: &mut DbConn, id: ServerId) -> Result<Server, DbError> {
+    pub(in crate::server) fn read(conn: &mut DbConn, id: ServerId) -> Result<ServerRow, DbError> {
         s_dsl::server
             .find(id)
-            .first::<Server>(conn)
+            .select(ServerRow::as_select())
+            .first(conn)
             .map_err(DbError::from)
     }
     pub(super) fn name_taken(conn: &mut DbConn, name: &str) -> Result<bool, DbError> {
@@ -58,11 +64,14 @@ impl ServerRepository {
         .get_result::<bool>(conn)
         .map_err(DbError::from)
     }
-    pub(super) fn read_page(conn: &mut DbConn, page: u32) -> Result<Vec<Server>, DbError> {
+    pub(in crate::server) fn read_page(
+        conn: &mut DbConn,
+        page: u32,
+    ) -> Result<Vec<ServerRow>, DbError> {
         let page_offset = SERVER_PAGINATOR.offset(page);
         let page_size = SERVER_PAGINATOR.page_size();
         s_dsl::server
-            .select(Server::as_select())
+            .select(ServerRow::as_select())
             .order_by((s_dsl::created_at.desc(), s_dsl::id.desc()))
             .limit(page_size)
             .offset(page_offset)
@@ -72,7 +81,7 @@ impl ServerRepository {
     pub(super) fn search(
         conn: &mut DbConn,
         search: SearchValidation,
-    ) -> Result<Vec<Server>, DbError> {
+    ) -> Result<Vec<ServerShortRow>, DbError> {
         let prefix = format!("{}%", search.escaped);
         let contains = format!("%{}%", search.escaped);
 
@@ -85,20 +94,21 @@ impl ServerRepository {
             .filter(s_dsl::name.ilike(contains).escape('\\'))
             .order_by((relevance.asc(), s_dsl::name.asc(), s_dsl::id.asc()))
             .limit(25)
-            .select(Server::as_select())
+            .select(ServerShortRow::as_select())
             .load(conn)
             .map_err(DbError::from)
     }
 
     // Update
-    pub(super) fn update(
+    pub(in crate::server) fn update(
         conn: &mut DbConn,
         id: ServerId,
         changeset: ServerChangeset,
-    ) -> Result<Server, DbError> {
+    ) -> Result<ServerRow, DbError> {
         diesel::update(s_dsl::server.find(id))
             .set(changeset)
-            .get_result::<Server>(conn)
+            .returning(ServerRow::as_returning())
+            .get_result(conn)
             .map_err(DbError::from)
     }
 
