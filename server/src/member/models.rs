@@ -194,7 +194,7 @@ impl TryFrom<MemberUpdateInput> for MemberChangeset {
 mod tests {
     use super::{
         MemberChangeset, MemberDetailed, MemberDetailedRow, MemberRow, MemberShort, MemberShortRow,
-        MemberUpdateInput, NewMember,
+        MemberUpdateInput, NewMember, ALLOWED_AVATARS,
     };
     use crate::member::error::MemberError;
 
@@ -227,6 +227,46 @@ mod tests {
         assert_eq!(detailed.email, "alice@example.com");
         assert_eq!(detailed.avatar, "robot");
         assert_eq!(detailed.created_at, created_at);
+    }
+
+    #[test]
+    fn full_rows_expose_persistence_values_and_convert_to_detailed_contracts() {
+        let created_at = chrono::NaiveDateTime::default();
+        let row = MemberRow {
+            id: 7,
+            username: "alice".into(),
+            password_hash: "password-hash".into(),
+            email: "alice@example.com".into(),
+            avatar: "robot".into(),
+            created_at,
+        };
+
+        assert_eq!(row.id(), 7);
+        assert_eq!(row.username(), "alice");
+        assert_eq!(row.password_hash(), "password-hash");
+        assert_eq!(row.email(), "alice@example.com");
+        assert_eq!(row.avatar(), "robot");
+        assert_eq!(*row.created_at(), created_at);
+
+        let detailed = MemberDetailed::from(row);
+        assert_eq!(detailed.id, 7);
+        assert_eq!(detailed.email, "alice@example.com");
+    }
+
+    #[test]
+    fn full_rows_convert_to_short_contracts_without_private_fields() {
+        let short = MemberShort::from(MemberRow {
+            id: 7,
+            username: "alice".into(),
+            password_hash: "password-hash".into(),
+            email: "alice@example.com".into(),
+            avatar: "robot".into(),
+            created_at: chrono::NaiveDateTime::default(),
+        });
+
+        assert_eq!(short.id, 7);
+        assert_eq!(short.username, "alice");
+        assert_eq!(short.avatar, "robot");
     }
 
     #[test]
@@ -270,29 +310,81 @@ mod tests {
     }
 
     #[test]
-    fn rejects_invalid_member_values() {
-        for changeset in [
-            MemberUpdateInput {
-                username: Some("ab".to_string()),
+    fn accepts_username_length_boundaries() {
+        for username in ["a".repeat(3), "a".repeat(125)] {
+            let changeset = MemberChangeset::try_from(MemberUpdateInput {
+                username: Some(username.clone()),
                 email: None,
                 avatar: None,
-            },
-            MemberUpdateInput {
-                username: None,
-                email: Some("invalid".to_string()),
-                avatar: None,
-            },
-            MemberUpdateInput {
-                username: None,
+            })
+            .unwrap();
+            assert_eq!(changeset.username.as_deref(), Some(username.as_str()));
+        }
+    }
+
+    #[test]
+    fn rejects_invalid_username_lengths() {
+        for username in ["  ".to_string(), "ab".to_string(), "a".repeat(126)] {
+            let result = MemberChangeset::try_from(MemberUpdateInput {
+                username: Some(username),
                 email: None,
-                avatar: Some("unknown".to_string()),
-            },
+                avatar: None,
+            });
+            assert!(matches!(result, Err(MemberError::InvalidChangeset(_))));
+        }
+    }
+
+    #[test]
+    fn accepts_email_length_boundaries() {
+        for email in ["a@b.co".to_string(), format!("{}@x", "a".repeat(252))] {
+            let changeset = MemberChangeset::try_from(MemberUpdateInput {
+                username: None,
+                email: Some(email.clone()),
+                avatar: None,
+            })
+            .unwrap();
+            assert_eq!(changeset.email.as_deref(), Some(email.as_str()));
+        }
+    }
+
+    #[test]
+    fn rejects_invalid_email_values() {
+        for email in [
+            "a@b".to_string(),
+            "invalid-email".to_string(),
+            format!("{}@x", "a".repeat(253)),
         ] {
-            let change_set_result: Result<MemberChangeset, MemberError> = changeset.try_into();
-            assert!(matches!(
-                change_set_result,
-                Err(MemberError::InvalidChangeset(_))
-            ));
+            let result = MemberChangeset::try_from(MemberUpdateInput {
+                username: None,
+                email: Some(email),
+                avatar: None,
+            });
+            assert!(matches!(result, Err(MemberError::InvalidChangeset(_))));
+        }
+    }
+
+    #[test]
+    fn accepts_every_supported_avatar() {
+        for avatar in ALLOWED_AVATARS {
+            let changeset = MemberChangeset::try_from(MemberUpdateInput {
+                username: None,
+                email: None,
+                avatar: Some((*avatar).to_string()),
+            })
+            .unwrap();
+            assert_eq!(changeset.avatar.as_deref(), Some(*avatar));
+        }
+    }
+
+    #[test]
+    fn rejects_unknown_or_empty_avatars() {
+        for avatar in ["unknown", "   "] {
+            let result = MemberChangeset::try_from(MemberUpdateInput {
+                username: None,
+                email: None,
+                avatar: Some(avatar.to_string()),
+            });
+            assert!(matches!(result, Err(MemberError::InvalidChangeset(_))));
         }
     }
 }

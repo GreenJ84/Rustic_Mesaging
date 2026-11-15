@@ -117,15 +117,61 @@ impl From<MemberError> for ApiError {
 mod tests {
     use super::{DeletionBlock, MemberError};
     use crate::api::ApiError;
-    use crate::infra::DbError;
+    use crate::auth::system_roles::SystemRoleError;
+    use crate::infra::{DbError, DieselError};
+    use diesel::result::{DatabaseErrorInformation, DatabaseErrorKind};
     use rocket::http::Status;
+
+    struct ConstraintInformation(&'static str);
+
+    impl DatabaseErrorInformation for ConstraintInformation {
+        fn message(&self) -> &str {
+            "test constraint violation"
+        }
+        fn details(&self) -> Option<&str> {
+            None
+        }
+        fn hint(&self) -> Option<&str> {
+            None
+        }
+        fn table_name(&self) -> Option<&str> {
+            Some("member")
+        }
+        fn column_name(&self) -> Option<&str> {
+            None
+        }
+        fn constraint_name(&self) -> Option<&str> {
+            Some(self.0)
+        }
+        fn statement_position(&self) -> Option<i32> {
+            None
+        }
+    }
+
+    fn unique_constraint(name: &'static str) -> DbError {
+        DbError::Conflict(DieselError::DatabaseError(
+            DatabaseErrorKind::UniqueViolation,
+            Box::new(ConstraintInformation(name)),
+        ))
+    }
 
     #[test]
     fn deletion_blocks_have_stable_messages() {
-        assert_eq!(
-            DeletionBlock::LastAdministrator.message(),
-            "Cannot delete the last administrator"
-        );
+        let cases = [
+            (
+                DeletionBlock::LastAdministrator,
+                "Cannot delete the last administrator",
+            ),
+            (DeletionBlock::ServerOwner, "Cannot delete the server owner"),
+            (
+                DeletionBlock::UnderInvestigation,
+                "Cannot delete a member under investigation",
+            ),
+        ];
+
+        for (block, expected) in cases {
+            assert_eq!(block.message(), expected);
+        }
     }
 
     #[test]
@@ -139,5 +185,76 @@ mod tests {
     #[test]
     fn missing_database_rows_map_to_member_not_found() {
         assert_eq!(MemberError::from(DbError::NotFound), MemberError::NotFound);
+    }
+
+    #[test]
+    fn member_identity_constraints_map_to_specific_conflicts() {
+        assert_eq!(
+            MemberError::from(unique_constraint("member_username_key")),
+            MemberError::UsernameTaken
+        );
+        assert_eq!(
+            MemberError::from(unique_constraint("member_email_key")),
+            MemberError::EmailTaken
+        );
+    }
+
+    #[test]
+    fn unknown_constraints_and_database_failures_are_internal() {
+        assert_eq!(
+            MemberError::from(unique_constraint("unexpected_constraint")),
+            MemberError::PersistenceFailure
+        );
+        assert_eq!(
+            MemberError::from(DbError::ConnectionError("offline".into())),
+            MemberError::PersistenceFailure
+        );
+    }
+
+    #[test]
+    fn system_role_member_not_found_is_normalized_to_member_not_found() {
+        assert_eq!(
+            MemberError::from(SystemRoleError::MemberNotFound),
+            MemberError::NotFound
+        );
+        assert!(matches!(
+            MemberError::from(SystemRoleError::ConfigurationFailure),
+            MemberError::SystemRoleError(SystemRoleError::ConfigurationFailure)
+        ));
+    }
+
+    #[test]
+    fn member_error_statuses_cover_each_public_error_class() {
+        let cases = [
+            (MemberError::NotFound, Status::NotFound),
+            (MemberError::UsernameTaken, Status::Conflict),
+            (MemberError::EmailTaken, Status::Conflict),
+            (
+                MemberError::DeletionBlocked(DeletionBlock::ServerOwner),
+                Status::Conflict,
+            ),
+            (
+                MemberError::InvalidInput("invalid".into()),
+                Status::BadRequest,
+            ),
+            (
+                MemberError::InvalidChangeset("invalid".into()),
+                Status::BadRequest,
+            ),
+            (
+                MemberError::InvalidSearchTerm("invalid".into()),
+                Status::BadRequest,
+            ),
+            (
+                MemberError::SystemRoleError(SystemRoleError::ConfigurationFailure),
+                Status::InternalServerError,
+            ),
+            (MemberError::PersistenceFailure, Status::InternalServerError),
+        ];
+
+        for (error, expected) in cases {
+            assert_eq!(error.status(), expected);
+            assert_eq!(ApiError::from(error).status(), expected);
+        }
     }
 }

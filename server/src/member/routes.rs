@@ -5,11 +5,13 @@ use rocket::State;
 
 use crate::api::ApiError;
 use crate::auth::SystemUser;
+use crate::chat::service::ChatService;
 
 use super::models::{MemberDetailed, MemberShort, MemberUpdateInput, MultiMemberPreview};
 use super::service::MemberService;
 
 use crate::ApiResponse;
+use shared::models::chat::chat::MultiChat;
 
 #[head("/")]
 /// Health check endpoint to verify the service is running.
@@ -70,5 +72,33 @@ fn delete(user: SystemUser, member_service: &State<MemberService>) -> ApiRespons
 
 /// Registers the private member HTTP handlers.
 pub(super) fn routes() -> Vec<rocket::Route> {
-    routes![head, get, search_members, update, delete]
+    routes![
+        head,
+        get,
+        search_members,
+        update,
+        delete
+    ]
+}
+
+#[cfg(test)]
+mod tests {
+    use rocket::http::Method;
+
+    use super::routes;
+
+    #[test]
+    fn member_routes_register_expected_methods_and_resource_paths() {
+        let signatures = routes()
+            .into_iter()
+            .map(|route| (route.method, route.uri.to_string()))
+            .collect::<Vec<_>>();
+
+        assert!(signatures.contains(&(Method::Head, "/".into())));
+        assert!(signatures.contains(&(Method::Get, "/".into())));
+        assert!(signatures.contains(&(Method::Get, "/search?<search_term>".into())));
+        assert!(signatures.contains(&(Method::Patch, "/".into())));
+        assert!(signatures.contains(&(Method::Delete, "/".into())));
+        assert_eq!(signatures.len(), 7);
+    }
 }
