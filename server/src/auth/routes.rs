@@ -98,13 +98,25 @@ pub(crate) fn update_password(
     Ok(status::NoContent)
 }
 
-#[get("/member")]
+#[get("/me")]
 pub(crate) fn current_member(
     service: &State<AuthService>,
     principal: AuthenticatedPrincipal,
 ) -> ApiResponse<Json<MemberDetailed>> {
     let response = service.current_member(&principal).map_err(ApiError::from)?;
     Ok(status::Custom(Status::Ok, Json(response)))
+}
+
+#[delete("/me", data = "<input>")]
+pub(crate) fn delete_current_member(
+    service: &State<AuthService>,
+    principal: AuthenticatedPrincipal,
+    cookies: &CookieJar<'_>,
+    input: Json<NewMemberInput>,
+) -> ApiResponse<()> {
+    service.delete_account(&principal, input.into_inner())?;
+    clear_refresh_cookie(cookies);
+    Ok(status::Custom(Status::NoContent, ()))
 }
 
 fn into_response(
@@ -134,6 +146,6 @@ fn set_refresh_cookie(cookies: &CookieJar<'_>, token: String, secure: bool) {
     );
 }
 
-fn clear_refresh_cookie(cookies: &CookieJar<'_>) {
+pub(crate) fn clear_refresh_cookie(cookies: &CookieJar<'_>) {
     cookies.remove(Cookie::build(REFRESH_COOKIE).path("/").build());
 }

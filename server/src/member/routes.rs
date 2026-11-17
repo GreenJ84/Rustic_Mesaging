@@ -5,13 +5,11 @@ use rocket::State;
 
 use crate::api::ApiError;
 use crate::auth::SystemUser;
-use crate::chat::service::ChatService;
 
 use super::models::{MemberDetailed, MemberShort, MemberUpdateInput, MultiMemberPreview};
 use super::service::MemberService;
 
 use crate::ApiResponse;
-use shared::models::chat::chat::MultiChat;
 
 #[head("/")]
 /// Health check endpoint to verify the service is running.
@@ -55,30 +53,9 @@ fn update(
         .map_err(ApiError::from)
 }
 
-#[delete("/")]
-// TODO(Severe): Route account deletion through the authenticated account lifecycle guard.
-fn delete(user: SystemUser, member_service: &State<MemberService>) -> ApiResponse<String> {
-    let member_id = user.member_id();
-    member_service
-        .delete(member_id)
-        .map_err(ApiError::from)
-        .map(|_| {
-            status::Custom(
-                Status::Ok,
-                format!("Member number {member_id} has been deleted."),
-            )
-        })
-}
-
 /// Registers the private member HTTP handlers.
 pub(super) fn routes() -> Vec<rocket::Route> {
-    routes![
-        head,
-        get,
-        search_members,
-        update,
-        delete
-    ]
+    routes![head, get, search_members, update]
 }
 
 #[cfg(test)]
