@@ -9,6 +9,7 @@ pub(crate) mod deletion;
 pub(crate) mod session;
 pub(crate) mod system_roles;
 pub(crate) use guards::*;
+pub(crate) use session::AuthenticatedPrincipal;
 
 pub fn get_auth_routes() -> Vec<rocket::Route> {
     routes![

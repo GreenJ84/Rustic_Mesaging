@@ -8,6 +8,6 @@ mod service;
 pub(crate) use clock::SessionClock;
 use crypto::SessionTokenCodec;
 pub(super) use error::*;
-pub(super) use models::*;
+pub(crate) use models::*;
 use repository::SessionRepository;
 pub(super) use service::SessionService;
