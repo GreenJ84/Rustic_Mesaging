@@ -1,5 +1,6 @@
 use rocket::http::Status;
 use rocket::response::status;
+use rocket::response::Redirect;
 use rocket::serde::json::Json;
 use rocket::State;
 
@@ -18,15 +19,9 @@ fn head(_principal: SystemUser) -> ApiResponse<()> {
 }
 
 #[get("/")]
-/// Returns the detailed information of the authenticated member.
-fn get(
-    user: SystemUser,
-    member_service: &State<MemberService>,
-) -> ApiResponse<Json<MemberDetailed>> {
-    member_service
-        .get_detailed(user.member_id())
-        .map(|member| status::Custom(Status::Ok, Json(member)))
-        .map_err(ApiError::from)
+/// Redirects the authenticated member to their own profile page.
+fn get() -> Redirect {
+    Redirect::to(uri!(crate::auth::routes::current_member))
 }
 
 #[get("/<username>")]
@@ -87,7 +82,6 @@ mod tests {
         assert!(signatures.contains(&(Method::Get, "/<username>".into())));
         assert!(signatures.contains(&(Method::Get, "/search?<search_term>".into())));
         assert!(signatures.contains(&(Method::Patch, "/".into())));
-        assert!(signatures.contains(&(Method::Delete, "/".into())));
-        assert_eq!(signatures.len(), 6);
+        assert_eq!(signatures.len(), 5);
     }
 }

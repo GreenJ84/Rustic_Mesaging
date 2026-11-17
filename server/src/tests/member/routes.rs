@@ -18,19 +18,29 @@ fn head_confirms_an_authenticated_member_route() {
 }
 
 #[test]
+fn member_root_redirects_to_the_current_member_resource() {
+    let client = client();
+
+    let response = client.get("/member").dispatch();
+
+    assert_eq!(response.status(), Status::SeeOther);
+    assert_eq!(response.headers().get_one("Location"), Some("/me"));
+}
+
+#[test]
 fn protected_member_routes_reject_missing_authentication() {
     let client = client();
 
     for response in [
         client.head("/member").dispatch(),
-        client.get("/member").dispatch(),
+        client.get("/me").dispatch(),
         client.get("/member/some-member").dispatch(),
         client
             .patch("/member")
             .header(ContentType::JSON)
             .body(r#"{"avatar":"robot"}"#)
             .dispatch(),
-        client.delete("/member").dispatch(),
+        client.delete("/me").dispatch(),
     ] {
         assert_eq!(response.status(), Status::Unauthorized);
     }
@@ -42,7 +52,7 @@ fn gets_the_authenticated_member_profile() {
     let registered = register_user(&client, "member_profile");
 
     let response = client
-        .get("/member")
+        .get("/me")
         .header(registered.authorization())
         .dispatch();
 
@@ -394,20 +404,104 @@ fn search_rejects_oversized_terms() {
 fn deleting_an_ordinary_member_removes_the_account_and_session() {
     let client = client();
     let registered = register_user(&client, "member_delete");
-    let member_id = registered.member.id;
 
     let response = client
-        .delete("/member")
+        .delete("/me")
         .header(registered.authorization())
+        .header(ContentType::JSON)
+        .body(json_body(&registered.identity.registration_payload()))
         .dispatch();
 
-    assert_eq!(response.status(), Status::Ok);
-    let expected = format!("Member number {member_id} has been deleted.");
-    assert_eq!(response.into_string().as_deref(), Some(expected.as_str()));
+    assert_eq!(response.status(), Status::NoContent);
 
     let protected = client
-        .get("/member")
+        .get("/me")
         .header(registered.authorization())
         .dispatch();
     assert_eq!(protected.status(), Status::Unauthorized);
+}
+
+#[test]
+fn deletion_requires_the_current_identity_and_password_confirmation() {
+    let client = client();
+    let registered = register_user(&client, "member_delete_confirmation");
+    let mut wrong_identity = registered.identity.registration_payload();
+    wrong_identity["username"] = serde_json::json!("someone_else");
+
+    expect_error(
+        client
+            .delete("/me")
+            .header(registered.authorization())
+            .header(ContentType::JSON)
+            .body(json_body(&wrong_identity))
+            .dispatch(),
+        Status::Unauthorized,
+        "Unauthorized: Invalid username or password.",
+    );
+
+    let mut mismatched_password = registered.identity.registration_payload();
+    mismatched_password["confirm_password"] = serde_json::json!("different-password");
+    expect_error(
+        client
+            .delete("/me")
+            .header(registered.authorization())
+            .header(ContentType::JSON)
+            .body(json_body(&mismatched_password))
+            .dispatch(),
+        Status::BadRequest,
+        "Bad request: Password confirmation does not match.",
+    );
+}
+
+#[test]
+fn deletion_is_blocked_while_the_member_owns_a_server() {
+    let client = client();
+    let registered = register_user(&client, "member_delete_server_owner");
+    let server_name = format!("owned_{}", uuid::Uuid::now_v7().simple());
+    let created = client
+        .post("/servers")
+        .header(registered.authorization())
+        .header(ContentType::JSON)
+        .body(json_body(&serde_json::json!({
+            "name": server_name,
+            "description": "A server that prevents accidental account deletion",
+            "icon": null,
+        })))
+        .dispatch();
+    assert_eq!(created.status(), Status::Created);
+
+    expect_error(
+        client
+            .delete("/me")
+            .header(registered.authorization())
+            .header(ContentType::JSON)
+            .body(json_body(&registered.identity.registration_payload()))
+            .dispatch(),
+        Status::Conflict,
+        "Conflict: Transfer or delete owned servers before deleting the account",
+    );
+}
+
+#[test]
+fn deletion_is_blocked_while_the_member_owns_a_chat() {
+    let client = client();
+    let registered = register_user(&client, "member_delete_chat_owner");
+    let created = client
+        .post("/chat")
+        .header(registered.authorization())
+        .header(ContentType::JSON)
+        .body(r#"{"name":"Owned room","member_ids":[],"group":true}"#)
+        .dispatch();
+    assert_eq!(created.status(), Status::Created);
+
+    expect_error(
+        client
+            .delete("/me")
+            .header(registered.authorization())
+            .header(ContentType::JSON)
+            .body(json_body(&registered.identity.registration_payload()))
+            .dispatch(),
+        Status::Conflict,
+        "Conflict: Delete owned chats before deleting the account",
+    );
 }

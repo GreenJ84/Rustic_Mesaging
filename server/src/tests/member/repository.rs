@@ -93,6 +93,13 @@ fn detailed_and_short_reads_return_the_intended_projections() {
         assert_eq!(detailed.id, created.id());
         assert_eq!(detailed.username, identity.username);
         assert_eq!(detailed.email, identity.email);
+
+        let short = MemberRepository::read_short_by_username(conn, &identity.username)?
+            .expect("short member should exist");
+        assert_eq!(short.id, created.id());
+        assert_eq!(short.username, identity.username);
+        assert_eq!(short.avatar, "default");
+        assert!(MemberRepository::read_short_by_username(conn, "missing-member")?.is_none());
         Ok(())
     });
 }
