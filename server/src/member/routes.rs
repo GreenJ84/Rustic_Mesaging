@@ -29,6 +29,17 @@ fn get(
         .map_err(ApiError::from)
 }
 
+#[get("/<username>")]
+/// Returns the public profile projection for an exact username.
+fn get_by_username(
+    _user: SystemUser,
+    member_service: &State<MemberService>,
+    username: String,
+) -> ApiResponse<Json<MemberShort>> {
+    let member = member_service.get_by_username(username)?;
+    Ok(status::Custom(Status::Ok, Json(member)))
+}
+
 #[get("/search?<search_term>")]
 /// Searches for members based on the provided search term.
 fn search_members(
@@ -55,7 +66,7 @@ fn update(
 
 /// Registers the private member HTTP handlers.
 pub(super) fn routes() -> Vec<rocket::Route> {
-    routes![head, get, search_members, update]
+    routes![head, get, get_by_username, search_members, update]
 }
 
 #[cfg(test)]
@@ -73,9 +84,10 @@ mod tests {
 
         assert!(signatures.contains(&(Method::Head, "/".into())));
         assert!(signatures.contains(&(Method::Get, "/".into())));
+        assert!(signatures.contains(&(Method::Get, "/<username>".into())));
         assert!(signatures.contains(&(Method::Get, "/search?<search_term>".into())));
         assert!(signatures.contains(&(Method::Patch, "/".into())));
         assert!(signatures.contains(&(Method::Delete, "/".into())));
-        assert_eq!(signatures.len(), 7);
+        assert_eq!(signatures.len(), 6);
     }
 }

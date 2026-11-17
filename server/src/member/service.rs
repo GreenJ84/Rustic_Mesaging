@@ -40,6 +40,13 @@ impl MemberService {
         }
     }
 
+    pub(super) fn get_by_username(&self, username: String) -> Result<MemberShort, MemberError> {
+        let username = Validator::validate_text(&username, Some(3), Some(125))
+            .map_err(|error| MemberError::InvalidInput(format!("Username {}", error.message())))?;
+        let mut conn = self.database.get_connection()?;
+        MemberRepository::read_short_by_username(&mut conn, &username)?.ok_or(MemberError::NotFound)
+    }
+
     pub(super) fn search(&self, search_term: String) -> Result<MultiMemberPreview, MemberError> {
         let search = Validator::validate_search_term(search_term).map_err(|e| {
             MemberError::InvalidSearchTerm(format!("Members search term {}", e.message()))

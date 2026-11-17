@@ -105,6 +105,20 @@ impl MemberRepository {
             .map_err(DbError::from)
     }
 
+    /// Reads the public projection for an exact username.
+    pub(crate) fn read_short_by_username(
+        conn: &mut DbConn,
+        username: &str,
+    ) -> Result<Option<MemberShort>, DbError> {
+        m_dsl::member
+            .filter(m_dsl::username.eq(username))
+            .select(MemberShortRow::as_select())
+            .first(conn)
+            .optional()
+            .map(|member| member.map(MemberShort::from))
+            .map_err(DbError::from)
+    }
+
     pub(crate) fn search_usernames(
         conn: &mut DbConn,
         search: SearchValidation,
@@ -158,7 +172,7 @@ impl MemberRepository {
     }
 
     // Deleting Data =============================
-    pub(super) fn delete(conn: &mut DbConn, id: MemberId) -> Result<bool, DbError> {
+    pub(crate) fn delete(conn: &mut DbConn, id: MemberId) -> Result<bool, DbError> {
         diesel::delete(m_dsl::member.find(id))
             .execute(conn)
             .map(|deleted| deleted == 1)
