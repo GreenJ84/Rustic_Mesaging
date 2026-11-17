@@ -4,6 +4,7 @@ use crate::api::ApiError;
 use crate::infra::{DbError, DieselError};
 use crate::member::error::MemberError;
 
+use super::deletion::AccountDeletionError;
 use super::password::PasswordError;
 use super::session::SessionError;
 use super::system_roles::SystemRoleError;
@@ -30,6 +31,7 @@ pub enum AuthError {
     // Subdomain Errors
     Session(SessionError),
     SystemRole(SystemRoleError),
+    AccountDeletion(AccountDeletionError),
 
     // Internal Errors
     PersistenceFailure,
@@ -58,6 +60,7 @@ impl AuthError {
 
             Self::Session(session_error) => session_error.message(),
             Self::SystemRole(system_role_error) => system_role_error.message(),
+            Self::AccountDeletion(error) => error.message().to_string(),
             Self::PersistenceFailure => "Persistence failure occurred".to_string(),
             Self::InternalError(msg) => format!("Internal error occurred: {}", msg),
         }
@@ -77,6 +80,7 @@ impl AuthError {
             Self::AccountDisabled => Status::Forbidden,
             Self::SystemRole(error) => error.status(),
             Self::Session(error) => error.status(),
+            Self::AccountDeletion(error) => error.status(),
             Self::PersistenceFailure | Self::InternalError(_) => Status::InternalServerError,
         }
     }
@@ -94,8 +98,17 @@ impl From<PasswordError> for AuthError {
     }
 }
 impl From<DbError> for AuthError {
-    fn from(_error: DbError) -> Self {
-        Self::PersistenceFailure
+    fn from(error: DbError) -> Self {
+        match AccountDeletionError::from(error) {
+            AccountDeletionError::ServerOwner => {
+                Self::AccountDeletion(AccountDeletionError::ServerOwner)
+            }
+            AccountDeletionError::ChatOwner => {
+                Self::AccountDeletion(AccountDeletionError::ChatOwner)
+            }
+            AccountDeletionError::Persistence(_) => Self::PersistenceFailure,
+            deletion_error => Self::AccountDeletion(deletion_error),
+        }
     }
 }
 impl From<DieselError> for AuthError {
@@ -118,6 +131,11 @@ impl From<MemberError> for AuthError {
         Self::Member(error)
     }
 }
+impl From<AccountDeletionError> for AuthError {
+    fn from(error: AccountDeletionError) -> Self {
+        Self::AccountDeletion(error)
+    }
+}
 
 impl From<AuthError> for ApiError {
     fn from(err: AuthError) -> Self {
@@ -138,6 +156,13 @@ impl From<AuthError> for ApiError {
 
             AuthError::Session(session_error) => ApiError::from(session_error),
             AuthError::SystemRole(system_role_error) => ApiError::from(system_role_error),
+            AuthError::AccountDeletion(error) => match error {
+                AccountDeletionError::Persistence(error) => {
+                    error.log_error("account deletion");
+                    ApiError::InternalError
+                }
+                error => ApiError::Conflict(error.message().to_string()),
+            },
 
             AuthError::PersistenceFailure => ApiError::InternalError,
             AuthError::InternalError(_) => ApiError::InternalError,

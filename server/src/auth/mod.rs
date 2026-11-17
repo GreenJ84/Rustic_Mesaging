@@ -5,6 +5,7 @@ pub mod password;
 pub mod routes;
 pub mod service;
 
+pub(crate) mod deletion;
 pub(crate) mod session;
 pub(crate) mod system_roles;
 pub(crate) use guards::*;

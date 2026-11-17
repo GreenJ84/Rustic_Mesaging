@@ -5,22 +5,6 @@ use crate::auth::system_roles::SystemRoleError;
 use crate::infra::{DbError, DieselError};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) enum DeletionBlock {
-    LastAdministrator,
-    ServerOwner,
-    UnderInvestigation,
-}
-impl DeletionBlock {
-    pub(crate) fn message(&self) -> &str {
-        match self {
-            DeletionBlock::LastAdministrator => "Cannot delete the last administrator",
-            DeletionBlock::ServerOwner => "Cannot delete the server owner",
-            DeletionBlock::UnderInvestigation => "Cannot delete a member under investigation",
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum MemberError {
     NotFound,
 
@@ -31,8 +15,6 @@ pub(crate) enum MemberError {
     InvalidSearchTerm(String),
 
     SystemRoleError(SystemRoleError),
-    DeletionBlocked(DeletionBlock),
-
     PersistenceFailure,
 }
 impl MemberError {
@@ -45,7 +27,6 @@ impl MemberError {
             Self::InvalidChangeset(msg) => msg.to_string(),
             Self::InvalidSearchTerm(msg) => msg.to_string(),
             Self::SystemRoleError(e) => e.message().to_string(),
-            Self::DeletionBlocked(block) => block.message().to_string(),
             Self::PersistenceFailure => "Database error".to_string(),
         }
     }
@@ -53,9 +34,7 @@ impl MemberError {
     pub(crate) fn status(&self) -> Status {
         match self {
             MemberError::NotFound => Status::NotFound,
-            MemberError::UsernameTaken
-            | MemberError::EmailTaken
-            | MemberError::DeletionBlocked(_) => Status::Conflict,
+            MemberError::UsernameTaken | MemberError::EmailTaken => Status::Conflict,
             MemberError::InvalidInput(_)
             | MemberError::InvalidChangeset(_)
             | MemberError::InvalidSearchTerm(_) => Status::BadRequest,
@@ -107,7 +86,6 @@ impl From<MemberError> for ApiError {
             MemberError::InvalidChangeset(msg) => ApiError::BadRequest(msg),
             MemberError::InvalidSearchTerm(msg) => ApiError::BadRequest(msg),
             MemberError::SystemRoleError(e) => e.into(),
-            MemberError::DeletionBlocked(block) => ApiError::Conflict(block.message().to_string()),
             MemberError::PersistenceFailure => ApiError::InternalError,
         }
     }
@@ -115,7 +93,7 @@ impl From<MemberError> for ApiError {
 
 #[cfg(test)]
 mod tests {
-    use super::{DeletionBlock, MemberError};
+    use super::MemberError;
     use crate::api::ApiError;
     use crate::auth::system_roles::SystemRoleError;
     use crate::infra::{DbError, DieselError};
@@ -153,33 +131,6 @@ mod tests {
             DatabaseErrorKind::UniqueViolation,
             Box::new(ConstraintInformation(name)),
         ))
-    }
-
-    #[test]
-    fn deletion_blocks_have_stable_messages() {
-        let cases = [
-            (
-                DeletionBlock::LastAdministrator,
-                "Cannot delete the last administrator",
-            ),
-            (DeletionBlock::ServerOwner, "Cannot delete the server owner"),
-            (
-                DeletionBlock::UnderInvestigation,
-                "Cannot delete a member under investigation",
-            ),
-        ];
-
-        for (block, expected) in cases {
-            assert_eq!(block.message(), expected);
-        }
-    }
-
-    #[test]
-    fn deletion_blocks_map_to_conflict() {
-        let error = ApiError::from(MemberError::DeletionBlocked(
-            DeletionBlock::LastAdministrator,
-        ));
-        assert_eq!(error.status(), Status::Conflict);
     }
 
     #[test]
@@ -229,10 +180,6 @@ mod tests {
             (MemberError::NotFound, Status::NotFound),
             (MemberError::UsernameTaken, Status::Conflict),
             (MemberError::EmailTaken, Status::Conflict),
-            (
-                MemberError::DeletionBlocked(DeletionBlock::ServerOwner),
-                Status::Conflict,
-            ),
             (
                 MemberError::InvalidInput("invalid".into()),
                 Status::BadRequest,
