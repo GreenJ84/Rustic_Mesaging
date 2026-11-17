@@ -1,9 +1,9 @@
 use diesel::Connection;
 
-use crate::{auth::system_roles::SystemRoleService, infra::Database, utils::Validator};
+use crate::{infra::Database, utils::Validator};
 
 use super::{
-    error::{DeletionBlock, MemberError},
+    error::MemberError,
     models::{
         MemberChangeset, MemberDetailed, MemberId, MemberRow, MemberShort, MemberUpdateInput,
         MultiMemberPreview,
@@ -72,23 +72,6 @@ impl MemberService {
             };
             let updated_member = MemberRepository::update(conn, member_id, input)?;
             Ok(MemberDetailed::from(updated_member))
-        })
-    }
-
-    // TODO(Severe): Move full account deletion behind the authenticated account lifecycle flow.
-    pub(super) fn delete(&self, member_id: MemberId) -> Result<(), MemberError> {
-        let mut conn = self.database.get_connection()?;
-        conn.transaction::<(), MemberError, _>(|conn| {
-            if !SystemRoleService::validate_member_deletion(conn, member_id)? {
-                return Err(MemberError::DeletionBlocked(
-                    DeletionBlock::LastAdministrator,
-                ));
-            }
-            if MemberRepository::delete(conn, member_id)? {
-                Ok(())
-            } else {
-                Err(MemberError::NotFound)
-            }
         })
     }
 }

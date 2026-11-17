@@ -8,6 +8,7 @@ use crate::member::models::{
 };
 use crate::member::repository::MemberRepository;
 
+use super::deletion::AccountDeletionError;
 use super::error::AuthError;
 use super::models::{AuthOutcome, LoginInput};
 use super::password::PasswordManager;
@@ -208,6 +209,50 @@ impl AuthService {
             }
             self.sessions.logout_all(conn, principal.member_id)?;
             Ok(())
+        })
+    }
+
+    pub(crate) fn delete_account(
+        &self,
+        principal: &AuthenticatedPrincipal,
+        input: NewMemberInput,
+    ) -> Result<(), AuthError> {
+        if input.password != input.confirm_password {
+            return Err(AuthError::PasswordConfirmationMismatch);
+        }
+
+        let username = input.username.trim();
+        let email = input.email.trim();
+        let mut conn = self.database.get_connection()?;
+        let member = MemberRepository::read(&mut conn, principal.member_id)?
+            .ok_or(AuthError::AccountNotFound)?;
+        if member.username() != username || member.email() != email {
+            return Err(AuthError::InvalidCredentials);
+        }
+        PasswordManager::verify(&input.password, member.password_hash())?;
+        let expected_hash = member.password_hash().to_owned();
+
+        conn.transaction::<(), AuthError, _>(|conn| {
+            let locked = MemberRepository::read_for_update(conn, principal.member_id)?
+                .ok_or(AuthError::AccountNotFound)?;
+            if locked.username() != username
+                || locked.email() != email
+                || locked.password_hash() != expected_hash
+            {
+                return Err(AuthError::InvalidCredentials);
+            }
+            if !SystemRoleService::validate_member_deletion(conn, principal.member_id)
+                .map_err(map_role_auth_error)?
+            {
+                return Err(AccountDeletionError::LastAdministrator.into());
+            }
+            if MemberRepository::delete(conn, principal.member_id)
+                .map_err(AccountDeletionError::from)?
+            {
+                Ok(())
+            } else {
+                Err(AuthError::AccountNotFound)
+            }
         })
     }
 

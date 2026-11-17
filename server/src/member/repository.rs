@@ -68,6 +68,18 @@ impl MemberRepository {
             .map_err(DbError::from)
     }
 
+    pub(crate) fn read_for_update(
+        conn: &mut DbConn,
+        id: MemberId,
+    ) -> Result<Option<MemberRow>, DbError> {
+        m_dsl::member
+            .find(id)
+            .for_update()
+            .first::<MemberRow>(conn)
+            .optional()
+            .map_err(DbError::from)
+    }
+
     pub(crate) fn read_by_username(
         conn: &mut DbConn,
         username: &str,
