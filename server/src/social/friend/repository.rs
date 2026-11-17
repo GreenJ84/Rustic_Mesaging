@@ -9,7 +9,7 @@ use crate::member::models::{MemberDetailedRow, MemberId, MemberShortRow};
 use crate::schema::friend::dsl as friend_dsl;
 use crate::schema::member::dsl as member_dsl;
 
-pub(in crate::social) struct FriendRepository;
+pub(crate) struct FriendRepository;
 
 impl FriendRepository {
     pub(in crate::social) fn create(
@@ -23,7 +23,7 @@ impl FriendRepository {
             .map_err(DbError::from)
     }
 
-    pub(in crate::social) fn exists(
+    pub(crate) fn exists(
         conn: &mut DbConn,
         member_id: MemberId,
         friend_id: MemberId,

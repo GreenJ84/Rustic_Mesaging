@@ -1,5 +1,5 @@
 mod error;
-mod friend;
+pub(crate) mod friend;
 mod request;
 mod routes;
 pub(crate) mod service;
